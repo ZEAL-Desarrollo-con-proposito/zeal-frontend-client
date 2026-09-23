@@ -1,5 +1,6 @@
 import type { SubmitEvent } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import lockIcon from '@/assets/icons/lock.svg';
 import shieldIcon from '@/assets/icons/shield.svg';
 import { Button } from '@/shared/ui/Button/Button';
@@ -25,6 +26,13 @@ export function LoginForm({ onAuthenticated }: Readonly<LoginFormProps>) {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const [notice, setNotice] = useState('');
+
+  // Tras un intento fallido la contraseña es el campo a corregir: se lleva el foco allí.
+  useEffect(() => {
+    if (form.submitError !== null) {
+      passwordRef.current?.focus();
+    }
+  }, [form.submitError]);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,11 +93,21 @@ export function LoginForm({ onAuthenticated }: Readonly<LoginFormProps>) {
         </button>
       </div>
 
-      {form.submitError !== null && (
-        <p className={styles.submitError} role="alert">
-          {form.submitError}
-        </p>
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {form.submitError !== null && (
+          <motion.p
+            key={form.submitError.attempt}
+            className={styles.submitError}
+            role="alert"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, x: [0, -8, 8, -5, 5, 0] }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          >
+            {form.submitError.message}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       <Button type="submit" fullWidth disabled={form.isSubmitting} aria-busy={form.isSubmitting}>
         {form.isSubmitting ? 'Ingresando…' : 'Iniciar sesión'}

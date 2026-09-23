@@ -8,8 +8,6 @@ interface RequestOptions {
   body?: unknown;
 }
 
-const DEFAULT_ERROR_MESSAGE = 'Ocurrió un error inesperado. Intenta de nuevo.';
-
 /**
  * Cliente HTTP JSON. Devuelve `unknown`: cada módulo de API valida la forma de la respuesta,
  * porque lo que llega del servidor es un límite de confianza.
@@ -32,21 +30,18 @@ export async function request(path: string, { method = 'GET', body }: RequestOpt
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, await readErrorMessage(response));
+    throw new ApiError(response.status, await readServerMessage(response));
   }
   return (await response.json()) as unknown;
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+async function readServerMessage(response: Response): Promise<string | undefined> {
   try {
     const payload = (await response.json()) as unknown;
-    if (isMessagePayload(payload)) {
-      return payload.message;
-    }
+    return isMessagePayload(payload) ? payload.message : undefined;
   } catch {
-    // Cuerpo vacío o no JSON: se usa el mensaje genérico.
+    return undefined; // Cuerpo vacío o que no es JSON.
   }
-  return DEFAULT_ERROR_MESSAGE;
 }
 
 function isMessagePayload(payload: unknown): payload is { message: string } {

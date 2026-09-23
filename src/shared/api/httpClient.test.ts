@@ -49,7 +49,7 @@ describe('httpClient.request', () => {
     ['sin cuerpo', () => new HttpResponse(null, { status: 500 })],
     ['con un mensaje vacío', () => HttpResponse.json({ message: ' ' }, { status: 500 })],
     ['con un cuerpo que no es objeto', () => HttpResponse.json('texto', { status: 500 })],
-  ])('usa un mensaje genérico ante un error %s', async (_case, resolver) => {
+  ])('no inventa un mensaje del servidor ante un error %s', async (_case, resolver) => {
     server.use(http.get(`*${ENDPOINT}`, resolver));
 
     const error: unknown = await request(ENDPOINT).catch((reason: unknown) => reason);
@@ -57,7 +57,8 @@ describe('httpClient.request', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
       status: 500,
-      message: 'Ocurrió un error inesperado. Intenta de nuevo.',
+      serverMessage: undefined,
+      message: 'La petición falló con estado HTTP 500',
     });
   });
 

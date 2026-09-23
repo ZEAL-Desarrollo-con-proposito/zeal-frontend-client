@@ -1,11 +1,14 @@
 /** El servidor respondió con un código HTTP de error. */
 export class ApiError extends Error {
   readonly status: number;
+  /** Mensaje legible que envió el servidor en el cuerpo de la respuesta, si lo hubo. */
+  readonly serverMessage: string | undefined;
 
-  constructor(status: number, message: string) {
-    super(message);
+  constructor(status: number, serverMessage?: string) {
+    super(serverMessage ?? `La petición falló con estado HTTP ${status}`);
     this.name = 'ApiError';
     this.status = status;
+    this.serverMessage = serverMessage;
   }
 }
 

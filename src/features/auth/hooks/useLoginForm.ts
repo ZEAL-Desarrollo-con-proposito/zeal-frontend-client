@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { login } from '../api/authApi';
+import { describeLoginError, isRejectedCredentials } from '../model/loginErrorMessage';
 import type { Credentials, Session } from '../model/session';
 
 export type LoginField = keyof Credentials;
 export type FieldErrors = Partial<Record<LoginField, string>>;
-
-const GENERIC_ERROR = 'No pudimos iniciar sesión. Intenta de nuevo.';
 
 /**
  * Forma nombre@dominio.tld: una sola "@" con texto antes, un punto en el dominio que no esté en
@@ -39,17 +38,25 @@ export function validateCredentials({ email, password }: Credentials): FieldErro
 
 export type AuthenticatedHandler = (session: Session, remember: boolean) => void;
 
+/** Fallo del envío. `attempt` distingue intentos fallidos seguidos con el mismo mensaje. */
+export interface SubmitError {
+  message: string;
+  attempt: number;
+}
+
 /** Estado y reglas del formulario de inicio de sesión, separados de su presentación. */
 export function useLoginForm(onAuthenticated: AuthenticatedHandler) {
   const [credentials, setCredentials] = useState<Credentials>({ email: '', password: '' });
   const [remember, setRemember] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<SubmitError | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const failedAttempts = useRef(0);
 
   function updateField(field: LoginField, value: string) {
     setCredentials((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setSubmitError(null);
   }
 
   async function authenticate() {
@@ -61,8 +68,12 @@ export function useLoginForm(onAuthenticated: AuthenticatedHandler) {
         password: credentials.password,
       });
       onAuthenticated(session, remember);
-    } catch {
-      setSubmitError(GENERIC_ERROR);
+    } catch (error) {
+      failedAttempts.current += 1;
+      setSubmitError({ message: describeLoginError(error), attempt: failedAttempts.current });
+      if (isRejectedCredentials(error)) {
+        setCredentials((current) => ({ ...current, password: '' }));
+      }
     } finally {
       setIsSubmitting(false);
     }
