@@ -10,9 +10,15 @@ export interface AuthUser {
   organization: string;
 }
 
-export interface Session {
+/** Respuesta del servidor al iniciar sesión (contrato con HU-BE-01). */
+export interface LoginResponse {
   accessToken: string;
   user: AuthUser;
+}
+
+export interface Session extends LoginResponse {
+  /** Vencimiento del token en milisegundos desde epoch (claim `exp` del JWT). */
+  expiresAt: number;
 }
 
 export interface Credentials {
@@ -24,7 +30,7 @@ export function isRole(value: unknown): value is Role {
   return ROLES.some((role) => role === value);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
@@ -43,6 +49,15 @@ export function isAuthUser(value: unknown): value is AuthUser {
   );
 }
 
-export function isSession(value: unknown): value is Session {
+export function isLoginResponse(value: unknown): value is LoginResponse {
   return isRecord(value) && isNonEmptyString(value.accessToken) && isAuthUser(value.user);
+}
+
+export function isSession(value: unknown): value is Session {
+  return (
+    isLoginResponse(value) &&
+    'expiresAt' in value &&
+    typeof value.expiresAt === 'number' &&
+    Number.isFinite(value.expiresAt)
+  );
 }

@@ -32,6 +32,15 @@
   color: var(--color-ink-700);
 }
 
+.expired {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-mauve-soft);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  color: var(--color-mauve-strong);
+}
+
 @media (max-width: 960px) {
   .page {
     grid-template-columns: minmax(0, 1fr);

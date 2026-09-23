@@ -105,6 +105,21 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 { "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
 ```
 
+## Sesión y seguridad
+
+- **Rutas por rol:** cada rol vive bajo su prefijo (`/empleado`, `/psicologo`, `/admin`). Sin
+  sesión, una ruta protegida manda al login; con la sesión de otro rol muestra "Permiso denegado"
+  (aislamiento entre roles). La autorización real la aplica siempre el backend.
+- **Token:** se envía como `Authorization: Bearer <token>`. El frontend solo lee el claim `exp`
+  para cerrar la sesión al vencer; la firma la valida el servidor.
+- **Almacenamiento:** sin "Recordarme" la sesión vive en `sessionStorage` (se borra al cerrar la
+  pestaña); con "Recordarme", en `localStorage` y se sincroniza entre pestañas. Lo leído del
+  almacenamiento se valida y se descarta si está alterado o vencido.
+- **Cierre de sesión:** manual, por vencimiento del token o cuando el servidor responde 401.
+- **Pendiente para producción:** Web Storage es accesible desde JavaScript; si el backend emite el
+  token en una cookie `HttpOnly` + `SameSite`, el frontend puede dejar de guardarlo. Configurar
+  también una Content-Security-Policy en el servidor que sirva el build.
+
 ## Identidad visual
 
 Los colores, tipografías (Anton, Archivo, IBM Plex Mono) y radios vienen del **Manual de Identidad

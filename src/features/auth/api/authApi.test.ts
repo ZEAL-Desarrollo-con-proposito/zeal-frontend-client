@@ -12,11 +12,13 @@ describe('authApi.login', () => {
 
     expect(session.user).toEqual(employee);
     expect(session.accessToken.split('.')).toHaveLength(3);
+    expect(session.expiresAt).toBeGreaterThan(Date.now());
   });
 
   it.each([
     ['sin token', { user: seedUser('ADMIN') }],
     ['con un rol desconocido', { accessToken: 'token', user: { ...seedUser('ADMIN'), role: 'X' } }],
+    ['con un token sin vencimiento', { accessToken: 'token-opaco', user: seedUser('ADMIN') }],
     ['sin cuerpo JSON de objeto', null],
   ])('rechaza una respuesta %s', async (_case, payload) => {
     server.use(http.post(`*${LOGIN_ENDPOINT}`, () => HttpResponse.json(payload)));

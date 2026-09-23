@@ -1,3 +1,4 @@
+import { LogoutButton } from '@/features/auth/components/LogoutButton';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { formatLongDate, getFirstName } from '@/shared/lib/text';
 import styles from './HomePage.module.css';
@@ -12,6 +13,7 @@ export function HomePage() {
         Hola, {getFirstName(user.fullName)}
       </h1>
       <p className={styles.date}>{formatLongDate(new Date())}</p>
+      <LogoutButton />
     </section>
   );
 }

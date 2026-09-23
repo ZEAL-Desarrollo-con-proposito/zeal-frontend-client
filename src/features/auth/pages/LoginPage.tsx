@@ -1,19 +1,18 @@
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router';
-import { ROLE_HOME_PATH } from '@/app/paths';
+import { Navigate, useLocation } from 'react-router';
+import { resolvePostLoginPath } from '@/app/paths';
 import { LoginForm } from '../components/LoginForm';
 import { LoginHero } from '../components/LoginHero';
 import { useAuth } from '../hooks/useAuth';
-import type { Session } from '../model/session';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
+  const { session, sessionExpired, signIn } = useAuth();
+  const location = useLocation();
 
-  function handleAuthenticated(session: Session) {
-    signIn(session);
-    void navigate(ROLE_HOME_PATH[session.user.role], { replace: true });
+  // Con sesión activa (recién iniciada o restaurada) el login no aplica: se va al destino del rol.
+  if (session !== null) {
+    return <Navigate to={resolvePostLoginPath(session.user.role, location.state)} replace />;
   }
 
   return (
@@ -31,7 +30,12 @@ export function LoginPage() {
             Usa el correo corporativo de tu empresa. Tu organización solo ve métricas agregadas —
             nunca tu información individual.
           </p>
-          <LoginForm onAuthenticated={handleAuthenticated} />
+          {sessionExpired && (
+            <p className={styles.expired} role="status">
+              Tu sesión expiró por seguridad. Vuelve a iniciar sesión para continuar.
+            </p>
+          )}
+          <LoginForm onAuthenticated={signIn} />
         </motion.div>
       </main>
     </div>

@@ -1,13 +1,38 @@
 import type { Role } from '@/features/auth/model/session';
+import { isRecord } from '@/features/auth/model/session';
 
 export const PATHS = {
   root: '/',
   login: '/login',
 } as const;
 
+/** Prefijo de todas las rutas de cada rol: un rol nunca navega fuera de su prefijo. */
+export const ROLE_BASE_PATH: Record<Role, string> = {
+  EMPLEADO: '/empleado',
+  PSICOLOGO: '/psicologo',
+  ADMIN: '/admin',
+};
+
 /** Pantalla de llegada de cada rol después de iniciar sesión (Figma B1, C1 y D1). */
 export const ROLE_HOME_PATH: Record<Role, string> = {
-  EMPLEADO: '/empleado/inicio',
-  PSICOLOGO: '/psicologo/agenda',
-  ADMIN: '/admin/panel',
+  EMPLEADO: `${ROLE_BASE_PATH.EMPLEADO}/inicio`,
+  PSICOLOGO: `${ROLE_BASE_PATH.PSICOLOGO}/agenda`,
+  ADMIN: `${ROLE_BASE_PATH.ADMIN}/panel`,
 };
+
+/** Estado de navegación con el que una ruta protegida manda al login. */
+export interface LoginRedirectState {
+  from: string;
+}
+
+/**
+ * Destino después de iniciar sesión: la ruta que se pidió antes del login si pertenece al rol,
+ * o la pantalla de llegada del rol. El estado de navegación se valida antes de usarse.
+ */
+export function resolvePostLoginPath(role: Role, navigationState: unknown): string {
+  const from =
+    isRecord(navigationState) && typeof navigationState.from === 'string'
+      ? navigationState.from
+      : '';
+  return from.startsWith(`${ROLE_BASE_PATH[role]}/`) ? from : ROLE_HOME_PATH[role];
+}

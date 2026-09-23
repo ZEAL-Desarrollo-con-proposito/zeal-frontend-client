@@ -1,8 +1,8 @@
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
 import { ApiError, NetworkError } from './errors';
-import { request } from './httpClient';
+import { configureHttpAuth, request } from './httpClient';
 
 const ENDPOINT = '/api/prueba';
 
@@ -59,6 +59,37 @@ describe('httpClient.request', () => {
       status: 500,
       serverMessage: undefined,
       message: 'La petición falló con estado HTTP 500',
+    });
+  });
+
+  describe('con una sesión configurada', () => {
+    afterEach(() => {
+      configureHttpAuth(null);
+    });
+
+    it('envía el token y avisa a la sesión cuando el servidor responde 401', async () => {
+      const onUnauthorized = vi.fn();
+      configureHttpAuth({ accessToken: 'token-123', onUnauthorized });
+      server.use(
+        http.get(`*${ENDPOINT}`, ({ request: incoming }) =>
+          HttpResponse.json(
+            { message: incoming.headers.get('Authorization') ?? 'sin token' },
+            { status: 401 },
+          ),
+        ),
+      );
+
+      await expect(request(ENDPOINT)).rejects.toEqual(new ApiError(401, 'Bearer token-123'));
+      expect(onUnauthorized).toHaveBeenCalledOnce();
+    });
+
+    it('no avisa a la sesión ante errores distintos de 401', async () => {
+      const onUnauthorized = vi.fn();
+      configureHttpAuth({ accessToken: 'token-123', onUnauthorized });
+      server.use(http.get(`*${ENDPOINT}`, () => new HttpResponse(null, { status: 403 })));
+
+      await expect(request(ENDPOINT)).rejects.toBeInstanceOf(ApiError);
+      expect(onUnauthorized).not.toHaveBeenCalled();
     });
   });
 

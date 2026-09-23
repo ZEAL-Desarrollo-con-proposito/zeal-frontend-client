@@ -1,7 +1,9 @@
-import { renderHook, screen } from '@testing-library/react';
+import { render, renderHook, screen } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
-import { renderRoute } from '@/test/renderRoute';
-import { useAuth } from './useAuth';
+import { UnexpectedErrorPage } from '@/app/pages/UnexpectedErrorPage';
+import { AuthProvider } from '../context/AuthProvider';
+import { useAuth, useCurrentUser } from './useAuth';
 
 describe('useAuth', () => {
   it('exige estar dentro de <AuthProvider>', () => {
@@ -12,11 +14,21 @@ describe('useAuth', () => {
     );
   });
 
-  it('muestra la página de error si una vista con sesión se abre sin sesión', () => {
+  it('useCurrentUser exige una sesión activa', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    renderRoute('/empleado/inicio');
+    expect(() => renderHook(() => useCurrentUser(), { wrapper: AuthProvider })).toThrow(
+      'No hay una sesión activa',
+    );
+  });
+});
+
+describe('UnexpectedErrorPage', () => {
+  it('ofrece volver al inicio ante un error no controlado', () => {
+    const router = createMemoryRouter([{ path: '/', element: <UnexpectedErrorPage /> }]);
+    render(<RouterProvider router={router} />);
 
     expect(screen.getByRole('heading', { name: 'Algo salió mal' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
   });
 });
