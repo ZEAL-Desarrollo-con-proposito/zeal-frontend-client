@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { formatLongDate, getFirstName } from './text';
+import { formatLongDate, getFirstName, getInitials } from './text';
+
+describe('getInitials', () => {
+  it.each([
+    ['Laura Martínez', 'LM'],
+    [' david  santiago cajamarca ', 'DS'],
+    ['Nexura', 'N'],
+  ])('obtiene las iniciales de "%s"', (fullName, expected) => {
+    expect(getInitials(fullName)).toBe(expected);
+  });
+});
 
 describe('getFirstName', () => {
   it.each([
