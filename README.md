@@ -42,10 +42,67 @@ La aplicación queda en <http://localhost:3000>.
 src/
 ├── app/          # Composición: router, rutas, páginas de estado del sistema
 ├── features/     # Funcionalidades por dominio (auth, ...)
-├── shared/       # Código reutilizable sin conocimiento de negocio (ui, lib)
+├── shared/       # Código reutilizable sin conocimiento de negocio (api, ui, lib)
+├── mocks/        # API local simulado (MSW) para desarrollo y pruebas
 ├── assets/       # Íconos y gráficos exportados desde Figma
 ├── styles/       # Tokens de marca y estilos globales
 └── test/         # Configuración y utilidades de pruebas
+```
+
+## API local simulado
+
+Mientras el backend no esté disponible, el frontend usa [MSW](https://mswjs.io) para simular el
+API: el mismo simulador sirve en desarrollo (Service Worker) y en las pruebas (Node). Se controla
+con variables de entorno (ver `.env.example`):
+
+| Variable            | Valor en desarrollo | Uso                                                     |
+| ------------------- | ------------------- | ------------------------------------------------------- |
+| `VITE_API_MOCKING`  | `enabled`           | `disabled` para consumir el backend real                |
+| `VITE_API_BASE_URL` | _(vacío)_           | URL del API Gateway; vacío = mismo origen del frontend. |
+
+El build de producción nunca incluye el simulador.
+
+### Usuarios semilla (HU-01)
+
+El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos: `Zeal2026*`.
+
+| Rol       | Correo                      | Llega a             |
+| --------- | --------------------------- | ------------------- |
+| Empleado  | `david.cajamarca@nexura.co` | `/empleado/inicio`  |
+| Psicóloga | `laura.martinez@zeal.co`    | `/psicologo/agenda` |
+| Admin     | `talento.humano@nexura.co`  | `/admin/panel`      |
+
+### Contrato de autenticación (acordar con HU-BE-01)
+
+`POST /api/auth/login`
+
+```json
+{ "email": "david.cajamarca@nexura.co", "password": "Zeal2026*" }
+```
+
+**200 OK**
+
+```json
+{
+  "accessToken": "<JWT con sub, role, iat y exp>",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "user": {
+    "id": "usr-empleado-001",
+    "fullName": "David Cajamarca",
+    "email": "david.cajamarca@nexura.co",
+    "role": "EMPLEADO",
+    "organization": "Nexura S.A.S."
+  }
+}
+```
+
+`role` ∈ `EMPLEADO`, `PSICOLOGO`, `ADMIN`.
+
+**401 Unauthorized**
+
+```json
+{ "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
 ```
 
 ## Identidad visual

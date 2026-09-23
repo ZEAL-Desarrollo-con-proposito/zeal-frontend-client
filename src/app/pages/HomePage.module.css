@@ -1,0 +1,18 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 26px var(--space-10);
+}
+
+.title {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-ink-900);
+}
+
+.date {
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}

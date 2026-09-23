@@ -1,7 +1,8 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { MotionGlobalConfig } from 'motion/react';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from '@/mocks/server';
 
 // Las animaciones terminan al instante: las pruebas verifican estados, no transiciones.
 MotionGlobalConfig.skipAnimations = true;
@@ -19,6 +20,16 @@ window.matchMedia = (query: string) =>
     dispatchEvent: () => false,
   }) satisfies MediaQueryList;
 
+// Las pruebas usan el mismo API simulado que el entorno de desarrollo.
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+});
+
 afterEach(() => {
   cleanup();
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
 });

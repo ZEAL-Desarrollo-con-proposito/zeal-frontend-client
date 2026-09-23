@@ -1,0 +1,20 @@
+.checkbox {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-radius: var(--radius-sm);
+  accent-color: var(--color-sage);
+  cursor: pointer;
+}
+
+.label {
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+  cursor: pointer;
+}
