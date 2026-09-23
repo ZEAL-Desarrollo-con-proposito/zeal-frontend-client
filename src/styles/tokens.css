@@ -1,0 +1,69 @@
+/*
+ * Tokens de diseño ZEAL — Manual de Identidad v1.0 (2026-2) y Figma "Flujo de Pantallas".
+ * Regla de marca: los colores de estado (salvia, malva, coral) expresan semántica,
+ * nunca navegación principal.
+ */
+:root {
+  /* Color primario — teal institucional */
+  --color-teal-900: #14282b;
+  --color-teal-800: #2c4f54;
+  --color-teal-700: #3e6f74;
+  --color-teal-600: #4d7f85;
+  --color-teal-500: #6fa3a6;
+  --color-teal-400: #8abec0;
+  --color-teal-300: #b4d9da;
+  --color-teal-200: #dceeee;
+  --color-teal-100: #f2fafa;
+
+  /* Colores de estado y roles */
+  --color-sage: #7fb89f; /* Bienestar / éxito */
+  --color-sage-strong: #5a9c82;
+  --color-sage-soft: #eaf3ee;
+  --color-mauve: #b7a0c0; /* Pendiente / crecimiento */
+  --color-mauve-strong: #7a6383;
+  --color-mauve-soft: #f1e9f0;
+  --color-coral: #f08f85; /* Urgencia / atención */
+  --color-coral-strong: #b85b50;
+  --color-coral-soft: #fbeae7;
+  --color-unclassified: #c3cbca;
+
+  /* Neutros */
+  --color-ink-900: #3a4344;
+  --color-ink-700: #5c6567;
+  --color-ink-500: #838c8d;
+  --color-border: #e6e2da;
+  --color-surface-muted: #f1eee7;
+  --color-background: #f8f6f1;
+  --color-surface: #ffffff;
+  --color-focus: #4d7f85;
+
+  /* Tipografía */
+  --font-display: 'Anton', 'Impact', sans-serif;
+  --font-body: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --text-h1: 1.875rem; /* 30px — Archivo Bold */
+  --text-h2: 1.25rem; /* 20px — Archivo SemiBold */
+  --text-h3: 1rem; /* 16px — Archivo Medium */
+  --text-body: 0.875rem; /* 14px — Archivo Regular */
+  --text-caption: 0.75rem; /* 12px — Archivo Medium */
+  --text-badge: 0.625rem; /* 10px — IBM Plex Mono, mayúsculas */
+
+  /* Forma */
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-pill: 999px;
+  --border-width: 1.25px;
+
+  /* Espaciado y layout */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --control-height: 48px;
+  --sidebar-width: 248px;
+  --topbar-height: 76px;
+}

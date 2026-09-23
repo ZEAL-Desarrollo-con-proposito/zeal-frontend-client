@@ -1,0 +1,126 @@
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--space-10) 88px 128px;
+  overflow: hidden;
+  background: var(--color-teal-800);
+}
+
+.decoration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Hexágonos de 300 px anclados al borde derecho, como en Figma A1 (hero de 760 px). */
+.hexagon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 300px;
+  height: 300px;
+}
+
+.hexagonImage {
+  transform: rotate(-90deg);
+}
+
+.hexagonTeal {
+  top: -390px;
+  right: -100px;
+}
+
+.hexagonSage {
+  top: -120px;
+  right: -180px;
+}
+
+.hexagonMist {
+  top: 220px;
+  right: -60px;
+}
+
+.hexagonMauve {
+  top: 460px;
+  right: -150px;
+}
+
+.copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 520px;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 6rem;
+  line-height: 1.1;
+  letter-spacing: 2px;
+  color: var(--color-surface);
+}
+
+.tagline {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-teal-300);
+}
+
+.propositions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.proposition {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: 0.9375rem;
+  color: var(--color-teal-200);
+}
+
+.footer {
+  position: absolute;
+  bottom: 72px;
+  left: 88px;
+  font-family: var(--font-mono);
+  font-size: var(--text-badge);
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--color-teal-500);
+}
+
+@media (max-width: 960px) {
+  .hero {
+    min-height: auto;
+    padding: var(--space-8) var(--space-6);
+  }
+
+  .copy {
+    gap: var(--space-2);
+  }
+
+  .wordmark {
+    font-size: 3.5rem;
+  }
+
+  .tagline {
+    font-size: var(--text-h3);
+  }
+
+  .propositions,
+  .footer,
+  .hexagonMist,
+  .hexagonMauve {
+    display: none;
+  }
+}

@@ -1,0 +1,55 @@
+.button {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 28px;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Acción de bienestar — verde salvia */
+.primary {
+  background: var(--color-sage);
+  color: var(--color-surface);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-sage-strong);
+}
+
+.primary:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-ink-500);
+}
+
+.outline {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-teal-800);
+}
+
+.outline:hover:not(:disabled) {
+  border-color: var(--color-teal-400);
+}
+
+.outline:disabled {
+  color: var(--color-ink-500);
+}
