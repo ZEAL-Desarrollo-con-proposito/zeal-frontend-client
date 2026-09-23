@@ -38,7 +38,7 @@
   background: var(--color-mauve-soft);
   font-size: var(--text-caption);
   line-height: 1.45;
-  color: var(--color-mauve-strong);
+  color: var(--color-mauve-text);
 }
 
 @media (max-width: 960px) {

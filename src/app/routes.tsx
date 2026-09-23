@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { ROLES } from '@/features/auth/model/session';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { AppLayout } from './layout/AppLayout';
+import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 import { HomePage } from './pages/HomePage';
@@ -25,10 +26,19 @@ export const routes: RouteObject[] = [
         children: [
           {
             element: <AppLayout />,
-            children: NAVIGATION[role].map(({ path, label }) => ({
-              path,
-              element: path === ROLE_HOME_PATH[role] ? <HomePage /> : <SectionPage title={label} />,
-            })),
+            children: NAVIGATION[role].map((section) => {
+              const handle: PageHandle = { title: section.label };
+              return {
+                path: section.path,
+                handle,
+                element:
+                  section.path === ROLE_HOME_PATH[role] ? (
+                    <HomePage />
+                  ) : (
+                    <SectionPage section={section} />
+                  ),
+              };
+            }),
           },
         ],
       })),

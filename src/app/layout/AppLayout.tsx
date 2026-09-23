@@ -1,20 +1,25 @@
 import type { PanInfo } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useMatches } from 'react-router';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
+import { CloseIcon, MenuIcon } from '@/shared/ui/icons';
 import { ROLE_PROFILE } from '../navigation';
 import { isDismissGesture } from './drawerGesture';
+import { findPageTitle } from './pageHandle';
 import { Sidebar } from './Sidebar';
 import styles from './AppLayout.module.css';
 
 const MOBILE_MENU_ID = 'menu-movil';
+const DEFAULT_DOCUMENT_TITLE = 'ZEAL — Cuidado de la salud mental en el trabajo';
 
 /** Estructura de las pantallas con sesión: barra lateral por rol, barra superior y contenido. */
 export function AppLayout() {
   const user = useCurrentUser();
+  const profile = ROLE_PROFILE[user.role];
   const { pathname } = useLocation();
+  const pageTitle = findPageTitle(useMatches()) ?? profile.label;
   const [isMenuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -38,6 +43,14 @@ export function AppLayout() {
       dismissMenu();
     }
   }
+
+  // El título de la pestaña dice dónde está la persona (útil con varias pestañas y lectores de pantalla).
+  useEffect(() => {
+    document.title = `${pageTitle} · ZEAL`;
+    return () => {
+      document.title = DEFAULT_DOCUMENT_TITLE;
+    };
+  }, [pageTitle]);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -128,7 +141,18 @@ export function AppLayout() {
             <MenuIcon />
           </button>
           <span className={styles.topbarBrand}>ZEAL</span>
-          <Avatar name={user.fullName} tone={ROLE_PROFILE[user.role].avatarTone} />
+          <p className={styles.context}>
+            <span>{profile.label}</span>
+            <span aria-hidden="true">/</span>
+            <span className={styles.contextPage}>{pageTitle}</span>
+          </p>
+          <div className={styles.account}>
+            <span className={styles.accountIdentity}>
+              <span className={styles.accountName}>{user.fullName}</span>
+              <span className={styles.accountDetail}>{user.organization}</span>
+            </span>
+            <Avatar name={user.fullName} tone={profile.avatarTone} />
+          </div>
         </header>
 
         <main id="contenido" className={styles.content} tabIndex={-1}>
@@ -143,31 +167,5 @@ export function AppLayout() {
         </main>
       </div>
     </div>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 7h16M4 12h16M4 17h16"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 6l12 12M18 6L6 18"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }

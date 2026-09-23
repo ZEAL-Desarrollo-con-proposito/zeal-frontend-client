@@ -19,9 +19,11 @@
   --color-sage: #7fb89f; /* Bienestar / éxito */
   --color-sage-strong: #5a9c82;
   --color-sage-soft: #eaf3ee;
+  --color-sage-text: #3a735c; /* Texto sobre sage-soft con contraste AA (4.9:1) */
   --color-mauve: #b7a0c0; /* Pendiente / crecimiento */
   --color-mauve-strong: #7a6383;
   --color-mauve-soft: #f1e9f0;
+  --color-mauve-text: #6f5878; /* Texto sobre mauve-soft con contraste AA (5.3:1) */
   --color-coral: #f08f85; /* Urgencia / atención */
   --color-coral-strong: #b85b50;
   --color-coral-soft: #fbeae7;
@@ -64,6 +66,18 @@
   --space-8: 32px;
   --space-10: 40px;
   --control-height: 48px;
+  --touch-target: 44px;
   --sidebar-width: 248px;
   --topbar-height: 76px;
+
+  /* Tarjetas */
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 2px rgb(20 40 43 / 4%);
+  --shadow-card-hover: 0 10px 24px -12px rgb(20 40 43 / 22%);
+
+  /* Escala de apilamiento: nada fuera de estos niveles */
+  --z-sticky: 10;
+  --z-overlay: 20;
+  --z-drawer: 30;
+  --z-skip-link: 50;
 }

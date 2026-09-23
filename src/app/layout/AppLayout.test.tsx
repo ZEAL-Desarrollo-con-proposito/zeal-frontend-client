@@ -57,6 +57,22 @@ describe('Layout base con menú por rol', () => {
     expect(sidebar.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
   });
 
+  it('indica en la barra superior y en la pestaña dónde está la persona', async () => {
+    const { user, unmount } = renderAs('EMPLEADO');
+    const topbar = within(screen.getByRole('banner'));
+
+    expect(topbar.getByText('Inicio')).toBeInTheDocument();
+    expect(document.title).toBe('Inicio · ZEAL');
+
+    await user.click(desktopSidebar().getByRole('link', { name: 'Talleres' }));
+
+    expect(topbar.getByText('Talleres')).toBeInTheDocument();
+    expect(document.title).toBe('Talleres · ZEAL');
+
+    unmount();
+    expect(document.title).toBe('ZEAL — Cuidado de la salud mental en el trabajo');
+  });
+
   it('muestra la identidad del usuario y un enlace para saltar al contenido', () => {
     renderAs('PSICOLOGO');
 

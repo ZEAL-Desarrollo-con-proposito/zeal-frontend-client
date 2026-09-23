@@ -1,3 +1,4 @@
+import shieldIcon from '@/assets/icons/shield.svg';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { PATHS } from '../paths';
 import { StatusPage } from './StatusPage';
@@ -6,6 +7,7 @@ import { StatusPage } from './StatusPage';
 export function UnexpectedErrorPage() {
   return (
     <StatusPage
+      icon={shieldIcon}
       code="Error inesperado"
       title="Algo salió mal"
       description="No pudimos mostrar esta pantalla. Vuelve al inicio e inténtalo de nuevo."

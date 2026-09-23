@@ -7,6 +7,6 @@ import { routes } from '@/app/routes';
 export function renderRoute(initialPath: string) {
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
   const user = userEvent.setup();
-  render(<RouterProvider router={router} />);
-  return { router, user };
+  const { unmount } = render(<RouterProvider router={router} />);
+  return { router, user, unmount };
 }

@@ -1,3 +1,4 @@
+import lockIcon from '@/assets/icons/lock.svg';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { ROLE_HOME_PATH } from '../paths';
@@ -9,6 +10,7 @@ export function ForbiddenPage() {
 
   return (
     <StatusPage
+      icon={lockIcon}
       code="Error 403 · Permiso denegado"
       title="Esta sección no está disponible para tu rol"
       description="ZEAL aísla la información de cada rol para proteger la confidencialidad de las personas."

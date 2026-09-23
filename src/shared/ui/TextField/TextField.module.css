@@ -51,3 +51,10 @@
   font-size: var(--text-caption);
   color: var(--color-coral-strong);
 }
+
+/* iOS amplía la página al enfocar campos de menos de 16 px. */
+@media (max-width: 767px) {
+  .input {
+    font-size: 1rem;
+  }
+}
