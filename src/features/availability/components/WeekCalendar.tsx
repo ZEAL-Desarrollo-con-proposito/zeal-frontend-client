@@ -22,6 +22,8 @@ interface WeekCalendarProps {
   onRetry: () => void;
   /** Atajo con el mouse o el dedo: una hora libre prellena el formulario "Abrir franja". */
   onSelectHour: (day: Date, hour: number) => void;
+  /** Una franja abierta se puede eliminar (con confirmación); las reservadas no. */
+  onSelectSlot: (slot: Slot) => void;
 }
 
 /** Grilla semanal por horas (Figma C8). Cada día es una lista de franjas para lectores de pantalla. */
@@ -31,6 +33,7 @@ export function WeekCalendar({
   status,
   onRetry,
   onSelectHour,
+  onSelectSlot,
 }: Readonly<WeekCalendarProps>) {
   const baseId = useId();
   const today = new Date();
@@ -83,7 +86,7 @@ export function WeekCalendar({
                   <ul className={styles.slotList}>
                     <AnimatePresence initial={false}>
                       {slotsOfDay(slots, day).map((slot) => (
-                        <SlotBlock key={slot.id} slot={slot} />
+                        <SlotBlock key={slot.id} slot={slot} onSelect={onSelectSlot} />
                       ))}
                     </AnimatePresence>
                   </ul>
@@ -111,25 +114,49 @@ export function WeekCalendar({
   );
 }
 
-function SlotBlock({ slot }: Readonly<{ slot: Slot }>) {
+interface SlotBlockProps {
+  slot: Slot;
+  onSelect: (slot: Slot) => void;
+}
+
+function SlotBlock({ slot, onSelect }: Readonly<SlotBlockProps>) {
   const { top, height } = slotBox(slot);
+  const isReserved = slot.status === 'RESERVADA';
   const start = new Date(slot.startsAt);
-  const end = new Date(slot.endsAt);
+  const timeRange = `${formatTime(start)} – ${formatTime(new Date(slot.endsAt))}`;
+  const statusLabel = SLOT_STATUS_LABEL[slot.status];
+  const content = (
+    <>
+      <span className={styles.slotTime}>{timeRange}</span>
+      <span className={styles.slotStatus}>{statusLabel}</span>
+    </>
+  );
 
   return (
     <motion.li
       layout
-      className={cx(styles.slot, slot.status === 'RESERVADA' ? styles.reserved : styles.available)}
+      className={cx(styles.slot, isReserved ? styles.reserved : styles.available)}
       style={{ top, height }}
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.92 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >
-      <span className={styles.slotTime}>
-        {formatTime(start)} – {formatTime(end)}
-      </span>
-      <span className={styles.slotStatus}>{SLOT_STATUS_LABEL[slot.status]}</span>
+      {isReserved ? (
+        content
+      ) : (
+        <button
+          type="button"
+          className={styles.slotButton}
+          // Incluye el texto visible (WCAG 2.5.3) y el día, que en la grilla solo da la columna.
+          aria-label={`Eliminar franja del ${formatLongDate(start).toLowerCase()}, ${timeRange} (${statusLabel})`}
+          onClick={() => {
+            onSelect(slot);
+          }}
+        >
+          {content}
+        </button>
+      )}
     </motion.li>
   );
 }

@@ -40,6 +40,21 @@
   color: var(--color-ink-500);
 }
 
+/* Acción destructiva (eliminar): coral de urgencia, oscurecido para contraste AA con blanco. */
+.danger {
+  background: var(--color-coral-strong);
+  color: var(--color-surface);
+}
+
+.danger:hover:not(:disabled) {
+  background: #a04d43;
+}
+
+.danger:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-ink-500);
+}
+
 .outline {
   background: var(--color-surface);
   border-color: var(--color-border);

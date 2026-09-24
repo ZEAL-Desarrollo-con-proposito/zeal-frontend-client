@@ -5,7 +5,13 @@ import { ApiError, InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { buildSession } from '@/test/credentials';
 import type { Role } from '@/features/auth/model/session';
-import { createSlot, fetchMySlots, MY_SLOTS_ENDPOINT, SLOTS_ENDPOINT } from './availabilityApi';
+import {
+  createSlot,
+  deleteSlot,
+  fetchMySlots,
+  MY_SLOTS_ENDPOINT,
+  SLOTS_ENDPOINT,
+} from './availabilityApi';
 
 const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 
@@ -96,5 +102,15 @@ describe('availabilityApi.fetchMySlots', () => {
     });
 
     expect(response.status).toBe(400);
+  });
+
+  it('deleteSlot exige sesión y responde 404 si la franja no existe', async () => {
+    await expect(deleteSlot('franja-1')).rejects.toMatchObject({ status: 401 });
+
+    authenticateAs('PSICOLOGO');
+    await expect(deleteSlot('franja-inexistente')).rejects.toEqual(
+      new ApiError(404, 'La franja ya no existe'),
+    );
+    await expect(deleteSlot('franja-2')).resolves.toBeUndefined();
   });
 });

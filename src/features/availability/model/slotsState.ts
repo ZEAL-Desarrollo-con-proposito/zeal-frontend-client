@@ -12,6 +12,7 @@ export interface SlotsState {
 export type SlotsAction =
   | { type: 'load-start'; requestId: number }
   | { type: 'created'; slot: Slot }
+  | { type: 'removed'; id: string }
   | { type: 'load-success'; requestId: number; slots: Slot[] }
   | { type: 'load-failure'; requestId: number };
 
@@ -34,5 +35,7 @@ export function slotsReducer(state: SlotsState, action: SlotsAction): SlotsState
       return action.requestId === state.requestId ? { ...state, status: 'error' } : state;
     case 'created':
       return { ...state, slots: upsert(state.slots, action.slot) };
+    case 'removed':
+      return { ...state, slots: state.slots.filter(({ id }) => id !== action.id) };
   }
 }

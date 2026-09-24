@@ -1,10 +1,13 @@
+import { AnimatePresence } from 'motion/react';
 import { useRef, useState } from 'react';
 import { useWeekParam } from '@/shared/hooks/useWeekParam';
 import { addDays } from '@/shared/lib/dates';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { WeekNavigator } from '@/shared/ui/WeekNavigator/WeekNavigator';
 import { CreateSlotForm } from '../components/CreateSlotForm';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { useCreateSlotForm } from '../hooks/useCreateSlotForm';
+import { useDeleteSlot } from '../hooks/useDeleteSlot';
 import { useWeeklySlots } from '../hooks/useWeeklySlots';
 import { WORKDAYS_PER_WEEK, workdaysOf } from '../model/calendar';
 import { describeSlot } from '../model/slot';
@@ -15,7 +18,7 @@ export function AvailabilityPage() {
   const [weekStart, setWeek] = useWeekParam();
   const weekEnd = addDays(weekStart, WORKDAYS_PER_WEEK - 1);
   const days = workdaysOf(weekStart);
-  const { status, slots, retry, addSlot } = useWeeklySlots(weekStart, weekEnd);
+  const { status, slots, retry, addSlot, removeSlot } = useWeeklySlots(weekStart, weekEnd);
   const [announcement, setAnnouncement] = useState('');
   const daySelectRef = useRef<HTMLSelectElement>(null);
 
@@ -24,6 +27,19 @@ export function AvailabilityPage() {
     setAnnouncement(`Abriste la franja del ${describeSlot(slot)}.`);
   });
 
+  const deletion = useDeleteSlot({
+    onDeleted: (slot, outcome) => {
+      removeSlot(slot.id);
+      setAnnouncement(
+        outcome === 'deleted'
+          ? `Eliminaste la franja del ${describeSlot(slot)}.`
+          : 'Esa franja ya había sido eliminada.',
+      );
+    },
+    onConflict: retry,
+  });
+
+  const target = deletion.target;
   const available = slots.filter((slot) => slot.status === 'DISPONIBLE').length;
   const reserved = slots.length - available;
 
@@ -52,6 +68,7 @@ export function AvailabilityPage() {
               form.prefill(day, hour);
               daySelectRef.current?.focus();
             }}
+            onSelectSlot={deletion.request}
           />
         </section>
 
@@ -83,6 +100,24 @@ export function AvailabilityPage() {
           </section>
         </aside>
       </div>
+
+      <AnimatePresence>
+        {target !== null && (
+          <ConfirmDialog
+            key={target.id}
+            title="¿Eliminar esta franja?"
+            description={`La franja del ${describeSlot(target)} dejará de estar disponible para tus pacientes.`}
+            confirmLabel="Eliminar franja"
+            pendingLabel="Eliminando…"
+            isPending={deletion.isPending}
+            error={deletion.error}
+            onCancel={deletion.cancel}
+            onConfirm={() => {
+              void deletion.confirm(target);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

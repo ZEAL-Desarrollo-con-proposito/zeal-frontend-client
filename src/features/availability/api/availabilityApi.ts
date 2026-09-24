@@ -26,6 +26,11 @@ export async function createSlot(input: NewSlot): Promise<Slot> {
   return payload;
 }
 
+/** Elimina una franja abierta. El servidor rechaza (409) las que ya están reservadas. */
+export async function deleteSlot(id: string): Promise<void> {
+  await request(`${SLOTS_ENDPOINT}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 /** Franjas del psicólogo autenticado entre dos fechas (inclusive). */
 export async function fetchMySlots({ from, to }: DateRange, signal?: AbortSignal): Promise<Slot[]> {
   const payload = await request(MY_SLOTS_ENDPOINT, {

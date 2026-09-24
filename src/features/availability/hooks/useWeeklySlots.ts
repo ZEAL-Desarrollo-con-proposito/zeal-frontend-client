@@ -41,5 +41,9 @@ export function useWeeklySlots(from: Date, to: Date) {
     dispatch({ type: 'created', slot });
   }
 
-  return { ...state, retry, addSlot };
+  function removeSlot(id: string) {
+    dispatch({ type: 'removed', id });
+  }
+
+  return { ...state, retry, addSlot, removeSlot };
 }

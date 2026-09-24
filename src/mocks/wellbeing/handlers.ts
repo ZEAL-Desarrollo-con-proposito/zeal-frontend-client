@@ -80,4 +80,29 @@ export const wellbeingHandlers = [
     writeWellbeingDb(db);
     return HttpResponse.json(slot, { status: 201 });
   }),
+
+  http.delete<{ id: string }>(`*${SLOTS_ENDPOINT}/:id`, async ({ request, params }) => {
+    await delay();
+    const user = authorize(request, 'PSICOLOGO');
+    if (user instanceof Response) {
+      return user;
+    }
+    const db = readWellbeingDb();
+    const slot = db.slots.find(
+      ({ id, psychologistId }) => id === params.id && psychologistId === user.id,
+    );
+    if (slot === undefined) {
+      return errorBody(404, 'Not Found', 'La franja ya no existe');
+    }
+    if (slot.status === 'RESERVADA') {
+      return errorBody(
+        409,
+        'Conflict',
+        'No puedes eliminar una franja reservada. Pide al paciente reprogramar o cancelar la cita.',
+      );
+    }
+    db.slots = db.slots.filter(({ id }) => id !== slot.id);
+    writeWellbeingDb(db);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

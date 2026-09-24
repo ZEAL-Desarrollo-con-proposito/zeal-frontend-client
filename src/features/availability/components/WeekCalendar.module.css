@@ -156,6 +156,33 @@
   color: var(--color-surface);
 }
 
+.slotButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  width: calc(100% + 20px);
+  height: calc(100% + 8px);
+  margin: -4px -10px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.slotButton:hover {
+  background: var(--color-coral-soft);
+}
+
+.slotButton:hover .slotStatus::after {
+  content: ' · Eliminar';
+}
+
 .slotTime {
   font-weight: 600;
 }
