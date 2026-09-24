@@ -103,15 +103,34 @@
     var(--color-background);
 }
 
+.hourCell {
+  position: absolute;
+  right: 0;
+  left: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.hourCell:hover {
+  background: var(--color-sage-soft);
+}
+
+/* La lista no intercepta clics: solo las franjas, así las horas libres siguen siendo clicables. */
 .slotList {
   position: absolute;
   inset: 0;
   padding: 0;
   list-style: none;
+  pointer-events: none;
 }
 
 .slot {
   position: absolute;
+  pointer-events: auto;
   right: 4px;
   left: 4px;
   display: flex;

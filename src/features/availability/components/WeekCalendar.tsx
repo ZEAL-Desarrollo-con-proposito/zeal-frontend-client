@@ -20,10 +20,18 @@ interface WeekCalendarProps {
   slots: Slot[];
   status: LoadStatus;
   onRetry: () => void;
+  /** Atajo con el mouse o el dedo: una hora libre prellena el formulario "Abrir franja". */
+  onSelectHour: (day: Date, hour: number) => void;
 }
 
 /** Grilla semanal por horas (Figma C8). Cada día es una lista de franjas para lectores de pantalla. */
-export function WeekCalendar({ days, slots, status, onRetry }: Readonly<WeekCalendarProps>) {
+export function WeekCalendar({
+  days,
+  slots,
+  status,
+  onRetry,
+  onSelectHour,
+}: Readonly<WeekCalendarProps>) {
   const baseId = useId();
   const today = new Date();
 
@@ -57,6 +65,21 @@ export function WeekCalendar({ days, slots, status, onRetry }: Readonly<WeekCale
                   <span className="visually-hidden">{formatLongDate(day)}</span>
                 </h3>
                 <div className={styles.dayBody} style={{ height: CALENDAR_HEIGHT_PX }}>
+                  {/* Redundante para teclado y lectores de pantalla: el formulario cubre ese camino. */}
+                  {CALENDAR_HOURS.map((hour, hourIndex) => (
+                    <button
+                      key={hour}
+                      type="button"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      title={`Abrir franja el ${formatLongDate(day).toLowerCase()} a las ${String(hour)}:00`}
+                      className={styles.hourCell}
+                      style={{ top: hourIndex * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                      onClick={() => {
+                        onSelectHour(day, hour);
+                      }}
+                    />
+                  ))}
                   <ul className={styles.slotList}>
                     <AnimatePresence initial={false}>
                       {slotsOfDay(slots, day).map((slot) => (

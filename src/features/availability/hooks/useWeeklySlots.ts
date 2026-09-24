@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { fetchMySlots } from '../api/availabilityApi';
+import type { Slot } from '../model/slot';
 import { INITIAL_SLOTS_STATE, slotsReducer } from '../model/slotsState';
 
 /**
@@ -35,5 +36,10 @@ export function useWeeklySlots(from: Date, to: Date) {
     setAttempt((current) => current + 1);
   }
 
-  return { ...state, retry };
+  /** Aplica una franja confirmada por el servidor (idempotente). */
+  function addSlot(slot: Slot) {
+    dispatch({ type: 'created', slot });
+  }
+
+  return { ...state, retry, addSlot };
 }

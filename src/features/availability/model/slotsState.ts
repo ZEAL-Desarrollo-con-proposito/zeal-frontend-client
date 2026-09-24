@@ -11,10 +11,16 @@ export interface SlotsState {
 
 export type SlotsAction =
   | { type: 'load-start'; requestId: number }
+  | { type: 'created'; slot: Slot }
   | { type: 'load-success'; requestId: number; slots: Slot[] }
   | { type: 'load-failure'; requestId: number };
 
 export const INITIAL_SLOTS_STATE: SlotsState = { requestId: 0, status: 'loading', slots: [] };
+
+/** Inserta o reemplaza por id: aplicar dos veces la misma franja no la duplica. */
+function upsert(slots: Slot[], slot: Slot): Slot[] {
+  return [...slots.filter(({ id }) => id !== slot.id), slot];
+}
 
 export function slotsReducer(state: SlotsState, action: SlotsAction): SlotsState {
   switch (action.type) {
@@ -26,5 +32,7 @@ export function slotsReducer(state: SlotsState, action: SlotsAction): SlotsState
         : state;
     case 'load-failure':
       return action.requestId === state.requestId ? { ...state, status: 'error' } : state;
+    case 'created':
+      return { ...state, slots: upsert(state.slots, action.slot) };
   }
 }

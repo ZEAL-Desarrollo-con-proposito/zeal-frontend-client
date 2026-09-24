@@ -5,7 +5,7 @@ import { ApiError, InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { buildSession } from '@/test/credentials';
 import type { Role } from '@/features/auth/model/session';
-import { fetchMySlots, MY_SLOTS_ENDPOINT } from './availabilityApi';
+import { createSlot, fetchMySlots, MY_SLOTS_ENDPOINT, SLOTS_ENDPOINT } from './availabilityApi';
 
 const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 
@@ -62,4 +62,39 @@ describe('availabilityApi.fetchMySlots', () => {
       expect(response.status).toBe(400);
     },
   );
+
+  it('createSlot rechaza una respuesta que no cumple el contrato', async () => {
+    server.use(
+      http.post(`*${SLOTS_ENDPOINT}`, () => HttpResponse.json({ id: 'x' }, { status: 201 })),
+    );
+
+    await expect(
+      createSlot({ startsAt: '2026-09-23T15:00:00.000Z', endsAt: '2026-09-23T16:00:00.000Z' }),
+    ).rejects.toBeInstanceOf(InvalidResponseError);
+  });
+
+  it('el servidor rechaza horas que no son fechas y exige sesión', async () => {
+    await expect(createSlot({ startsAt: 'hoy', endsAt: 'mañana' })).rejects.toMatchObject({
+      status: 401,
+    });
+
+    authenticateAs('PSICOLOGO');
+
+    await expect(createSlot({ startsAt: 'hoy', endsAt: 'mañana' })).rejects.toEqual(
+      new ApiError(400, 'La hora de fin debe ser posterior a la de inicio'),
+    );
+  });
+
+  it('el servidor rechaza un cuerpo sin horas', async () => {
+    const response = await fetch(new URL(SLOTS_ENDPOINT, window.location.origin), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${buildSession('PSICOLOGO').accessToken}`,
+      },
+      body: JSON.stringify({ startsAt: 1 }),
+    });
+
+    expect(response.status).toBe(400);
+  });
 });
