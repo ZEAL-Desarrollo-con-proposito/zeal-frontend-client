@@ -2,6 +2,9 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+// Zona horaria fija en las pruebas: agendas y calendarios se ven igual en cualquier máquina o CI.
+process.env.TZ = 'America/Bogota';
+
 // Puerto 3000 definido en la guía de arquitectura (Paso 4: puertos locales).
 const FRONTEND_PORT = 3000;
 

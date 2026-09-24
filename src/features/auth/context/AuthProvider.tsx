@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import type { Session } from '../model/session';
 import { SESSION_STORAGE_KEY, sessionStore } from '../storage/sessionStore';
@@ -30,7 +30,9 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, [endSession]);
 
   // Mientras hay sesión: autoriza las peticiones y la cierra cuando vence el token.
-  useEffect(() => {
+  // Layout effect: se registra antes de los efectos de las páginas hijas, que ya piden datos
+  // con el token en su primer render.
+  useLayoutEffect(() => {
     if (session === null) {
       return undefined;
     }

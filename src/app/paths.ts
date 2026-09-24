@@ -20,6 +20,12 @@ export const ROLE_HOME_PATH: Record<Role, string> = {
   ADMIN: `${ROLE_BASE_PATH.ADMIN}/panel`,
 };
 
+/** Rutas del psicólogo con pantalla propia. */
+export const PSYCHOLOGIST_PATHS = {
+  agenda: ROLE_HOME_PATH.PSICOLOGO,
+  availability: `${ROLE_BASE_PATH.PSICOLOGO}/disponibilidad`,
+} as const;
+
 /** Estado de navegación con el que una ruta protegida manda al login. */
 export interface LoginRedirectState {
   from: string;
