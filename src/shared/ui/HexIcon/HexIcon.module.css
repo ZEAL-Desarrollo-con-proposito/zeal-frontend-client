@@ -1,0 +1,31 @@
+.hex {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+}
+
+.md {
+  width: 46px;
+  height: 42px;
+}
+
+.lg {
+  width: 64px;
+  height: 58px;
+}
+
+.lg img {
+  width: 26px;
+  height: 26px;
+}
+
+/* Los íconos de navegación del Figma están dibujados para fondo teal oscuro. */
+.dark {
+  background: var(--color-teal-800);
+}
+
+.soft {
+  background: var(--color-teal-200);
+}

@@ -1,0 +1,24 @@
+.avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-surface);
+}
+
+.avatar[data-tone='sage'] {
+  background: var(--color-sage);
+}
+
+.avatar[data-tone='teal'] {
+  background: var(--color-teal-600);
+}
+
+.avatar[data-tone='mauve'] {
+  background: var(--color-mauve);
+}

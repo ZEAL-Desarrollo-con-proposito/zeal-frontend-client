@@ -1,0 +1,53 @@
+/* Figma A1: hero de 760 px + panel de 680 px sobre un lienzo de 1440 px. */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 760fr) minmax(0, 680fr);
+  min-height: 100dvh;
+}
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-6);
+  background: var(--color-surface);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: min(396px, 100%);
+}
+
+.title {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-ink-900);
+}
+
+.intro {
+  line-height: 1.55;
+  color: var(--color-ink-700);
+}
+
+.expired {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-mauve-soft);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  color: var(--color-mauve-text);
+}
+
+@media (max-width: 960px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .panel {
+    align-items: flex-start;
+  }
+}
