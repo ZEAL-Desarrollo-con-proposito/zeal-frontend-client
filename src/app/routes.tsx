@@ -4,6 +4,7 @@ import { Navigate } from 'react-router';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { ROLES } from '@/features/auth/model/session';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
+import { AgendaPage } from '@/features/agenda/pages/AgendaPage';
 import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
@@ -18,6 +19,7 @@ import { RootLayout } from './RootLayout';
 
 /** Secciones del menú que ya tienen su pantalla; el resto muestra su estado vacío. */
 const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
+  [PSYCHOLOGIST_PATHS.agenda]: <AgendaPage />,
   [PSYCHOLOGIST_PATHS.availability]: <AvailabilityPage />,
 };
 

@@ -12,7 +12,7 @@ import {
 } from '../model/calendar';
 import type { Slot } from '../model/slot';
 import { SLOT_STATUS_LABEL } from '../model/slot';
-import type { LoadStatus } from '../model/slotsState';
+import type { LoadStatus } from '@/shared/hooks/useFetch';
 import styles from './WeekCalendar.module.css';
 
 interface WeekCalendarProps {

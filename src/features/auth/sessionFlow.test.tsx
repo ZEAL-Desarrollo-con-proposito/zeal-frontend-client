@@ -49,7 +49,7 @@ describe('manejo de la sesión y rutas protegidas', () => {
     const { router } = renderRoute('/login');
 
     expect(router.state.location.pathname).toBe(ROLE_HOME_PATH.PSICOLOGO);
-    expect(screen.getByRole('heading', { name: 'Hola, Laura' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mi agenda' })).toBeInTheDocument();
   });
 
   it('manda al login a quien abre una ruta protegida sin sesión', async () => {

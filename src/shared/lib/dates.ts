@@ -31,6 +31,18 @@ export function addDays(date: Date, days: number): Date {
   return result;
 }
 
+/** Semana laboral de lunes a viernes, como las grillas del Figma (C1 y C8). */
+export const WORKDAYS_PER_WEEK = 5;
+
+export function workdaysOf(weekStart: Date): Date[] {
+  return Array.from({ length: WORKDAYS_PER_WEEK }, (_, index) => addDays(weekStart, index));
+}
+
+/** Viernes de la semana laboral que empieza en `weekStart`. */
+export function workweekEnd(weekStart: Date): Date {
+  return addDays(weekStart, WORKDAYS_PER_WEEK - 1);
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return atMidnight(a).getTime() === atMidnight(b).getTime();
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Slot } from './slot';
 import { compareByStart, isSlot } from './slot';
-import { HOUR_HEIGHT_PX, slotBox, slotsOfDay, workdaysOf } from './calendar';
+import { workdaysOf } from '@/shared/lib/dates';
+import { HOUR_HEIGHT_PX, slotBox, slotsOfDay } from './calendar';
 
 function slot(id: string, start: Date, end: Date, status: Slot['status'] = 'DISPONIBLE'): Slot {
   return {

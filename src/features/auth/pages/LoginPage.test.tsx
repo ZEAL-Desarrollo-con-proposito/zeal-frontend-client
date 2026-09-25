@@ -23,7 +23,7 @@ function submitButton() {
 describe('Pantalla de inicio de sesión', () => {
   it.each<[Role, string]>([
     ['EMPLEADO', 'Hola, David'],
-    ['PSICOLOGO', 'Hola, Laura'],
+    ['PSICOLOGO', 'Mi agenda'],
     ['ADMIN', 'Hola, Talento'],
   ])('lleva al usuario %s a su pantalla de llegada', async (role, greeting) => {
     const { router, user } = renderRoute('/login');

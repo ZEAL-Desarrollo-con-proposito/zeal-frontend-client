@@ -1,4 +1,4 @@
-import { addDays, isSameDay, minutesSinceMidnight } from '@/shared/lib/dates';
+import { isSameDay, minutesSinceMidnight } from '@/shared/lib/dates';
 import type { Slot } from './slot';
 import { compareByStart } from './slot';
 
@@ -6,8 +6,6 @@ import { compareByStart } from './slot';
 export const CALENDAR_START_HOUR = 7;
 export const CALENDAR_END_HOUR = 19;
 export const HOUR_HEIGHT_PX = 56;
-/** Lunes a viernes, como la grilla del Figma. */
-export const WORKDAYS_PER_WEEK = 5;
 
 export const CALENDAR_HOURS = Array.from(
   { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
@@ -15,10 +13,6 @@ export const CALENDAR_HOURS = Array.from(
 );
 
 export const CALENDAR_HEIGHT_PX = CALENDAR_HOURS.length * HOUR_HEIGHT_PX;
-
-export function workdaysOf(weekStart: Date): Date[] {
-  return Array.from({ length: WORKDAYS_PER_WEEK }, (_, index) => addDays(weekStart, index));
-}
 
 export function slotsOfDay(slots: readonly Slot[], day: Date): Slot[] {
   return slots.filter((slot) => isSameDay(new Date(slot.startsAt), day)).sort(compareByStart);

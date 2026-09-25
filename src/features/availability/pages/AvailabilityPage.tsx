@@ -2,7 +2,7 @@ import { AnimatePresence } from 'motion/react';
 import { useRef, useState } from 'react';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { useWeekParam } from '@/shared/hooks/useWeekParam';
-import { addDays } from '@/shared/lib/dates';
+import { workdaysOf, workweekEnd } from '@/shared/lib/dates';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { WeekNavigator } from '@/shared/ui/WeekNavigator/WeekNavigator';
 import { CreateSlotForm } from '../components/CreateSlotForm';
@@ -10,14 +10,13 @@ import { WeekCalendar } from '../components/WeekCalendar';
 import { useCreateSlotForm } from '../hooks/useCreateSlotForm';
 import { useDeleteSlot } from '../hooks/useDeleteSlot';
 import { useWeeklySlots } from '../hooks/useWeeklySlots';
-import { WORKDAYS_PER_WEEK, workdaysOf } from '../model/calendar';
 import { describeSlot } from '../model/slot';
 import styles from './AvailabilityPage.module.css';
 
 /** Figma C8 · Disponibilidad — bloques de atención del psicólogo (HU-FE-02). */
 export function AvailabilityPage() {
   const [weekStart, setWeek] = useWeekParam();
-  const weekEnd = addDays(weekStart, WORKDAYS_PER_WEEK - 1);
+  const weekEnd = workweekEnd(weekStart);
   const days = workdaysOf(weekStart);
   const user = useCurrentUser();
   const [announcement, setAnnouncement] = useState('');
