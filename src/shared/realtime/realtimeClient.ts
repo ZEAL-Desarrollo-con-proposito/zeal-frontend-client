@@ -1,0 +1,50 @@
+/**
+ * Puerto de tiempo real: la aplicación depende de esta interfaz, no de STOMP ni de SockJS.
+ * Hay un adaptador para el Real-Time Gateway (STOMP sobre SockJS) y otro simulado para la demo.
+ */
+
+export type RealtimeStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting';
+
+export type RealtimeListener = (payload: unknown) => void;
+
+export interface RealtimeClient {
+  connect: () => void;
+  disconnect: () => void;
+  /** Se suscribe a un destino; devuelve la función para cancelar la suscripción. */
+  subscribe: (destination: string, listener: RealtimeListener) => () => void;
+  getStatus: () => RealtimeStatus;
+  /** Veces que la conexión se recuperó después de caerse (para pedir de nuevo lo perdido). */
+  getRecoveries: () => number;
+  onChange: (listener: () => void) => () => void;
+}
+
+export type RealtimeClientFactory = (accessToken: string) => RealtimeClient;
+
+/** Estado de conexión observable, compartido por los adaptadores. */
+export function createStatusStore() {
+  let status: RealtimeStatus = 'idle';
+  let recoveries = 0;
+  let hasConnected = false;
+  const listeners = new Set<() => void>();
+
+  return {
+    getStatus: () => status,
+    getRecoveries: () => recoveries,
+    set: (next: RealtimeStatus) => {
+      if (next === 'connected') {
+        recoveries += hasConnected ? 1 : 0;
+        hasConnected = true;
+      }
+      status = next;
+      listeners.forEach((listener) => {
+        listener();
+      });
+    },
+    onChange: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}

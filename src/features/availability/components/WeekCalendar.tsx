@@ -86,7 +86,12 @@ export function WeekCalendar({
                   <ul className={styles.slotList}>
                     <AnimatePresence initial={false}>
                       {slotsOfDay(slots, day).map((slot) => (
-                        <SlotBlock key={slot.id} slot={slot} onSelect={onSelectSlot} />
+                        // La clave incluye el estado: un cambio en vivo (p. ej. reservada) se anima.
+                        <SlotBlock
+                          key={`${slot.id}-${slot.status}`}
+                          slot={slot}
+                          onSelect={onSelectSlot}
+                        />
                       ))}
                     </AnimatePresence>
                   </ul>

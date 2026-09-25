@@ -64,7 +64,7 @@ describe('Mi disponibilidad · eliminar franja', () => {
     await waitFor(() => {
       expect(wednesday().getAllByRole('listitem')).toHaveLength(6);
     });
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(screen.getByRole('status', { name: 'Avisos de disponibilidad' })).toHaveTextContent(
       'Eliminaste la franja del miércoles, 23 de septiembre de 10:00 a 10:50.',
     );
   });
@@ -136,7 +136,9 @@ describe('Mi disponibilidad · eliminar franja', () => {
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
-    expect(screen.getByRole('status')).toHaveTextContent('Esa franja ya había sido eliminada.');
+    expect(screen.getByRole('status', { name: 'Avisos de disponibilidad' })).toHaveTextContent(
+      'Esa franja ya había sido eliminada.',
+    );
   });
 
   it('sin conexión mantiene el diálogo para reintentar y no se cierra mientras elimina', async () => {

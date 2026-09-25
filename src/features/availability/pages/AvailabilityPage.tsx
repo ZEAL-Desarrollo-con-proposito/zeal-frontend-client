@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'motion/react';
 import { useRef, useState } from 'react';
+import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { useWeekParam } from '@/shared/hooks/useWeekParam';
 import { addDays } from '@/shared/lib/dates';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
@@ -18,8 +19,22 @@ export function AvailabilityPage() {
   const [weekStart, setWeek] = useWeekParam();
   const weekEnd = addDays(weekStart, WORKDAYS_PER_WEEK - 1);
   const days = workdaysOf(weekStart);
-  const { status, slots, retry, addSlot, removeSlot } = useWeeklySlots(weekStart, weekEnd);
+  const user = useCurrentUser();
   const [announcement, setAnnouncement] = useState('');
+  const { status, slots, retry, addSlot, removeSlot } = useWeeklySlots({
+    from: weekStart,
+    to: weekEnd,
+    psychologistId: user.id,
+    onRealtimeEvent: (event) => {
+      if (event.type === 'ACTUALIZADA') {
+        setAnnouncement(
+          event.slot.status === 'RESERVADA'
+            ? `Un paciente reservó tu franja del ${describeSlot(event.slot)}.`
+            : `Se liberó tu franja del ${describeSlot(event.slot)}.`,
+        );
+      }
+    },
+  });
   const daySelectRef = useRef<HTMLSelectElement>(null);
 
   const form = useCreateSlotForm(weekStart, (slot) => {
@@ -52,7 +67,7 @@ export function AvailabilityPage() {
         </p>
       </header>
 
-      <p className={styles.announcement} role="status">
+      <p className={styles.announcement} role="status" aria-label="Avisos de disponibilidad">
         {announcement}
       </p>
 

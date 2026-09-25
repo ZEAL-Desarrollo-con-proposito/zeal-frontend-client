@@ -2,8 +2,10 @@ import { delay, http, HttpResponse } from 'msw';
 import { MY_SLOTS_ENDPOINT, SLOTS_ENDPOINT } from '@/features/availability/api/availabilityApi';
 import type { Slot } from '@/features/availability/model/slot';
 import { compareByStart } from '@/features/availability/model/slot';
+import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
 import { addDays, parseIsoDate } from '@/shared/lib/dates';
 import { authorize, errorBody } from '../mockAuth';
+import { publishMockEvent } from '../realtime';
 import { nextId, readWellbeingDb, writeWellbeingDb } from './db';
 
 interface NewSlotBody {
@@ -78,6 +80,7 @@ export const wellbeingHandlers = [
     };
     db.slots.push(slot);
     writeWellbeingDb(db);
+    publishMockEvent(SLOTS_TOPIC, { type: 'CREADA', slot });
     return HttpResponse.json(slot, { status: 201 });
   }),
 
@@ -103,6 +106,7 @@ export const wellbeingHandlers = [
     }
     db.slots = db.slots.filter(({ id }) => id !== slot.id);
     writeWellbeingDb(db);
+    publishMockEvent(SLOTS_TOPIC, { type: 'ELIMINADA', slot });
     return new HttpResponse(null, { status: 204 });
   }),
 ];

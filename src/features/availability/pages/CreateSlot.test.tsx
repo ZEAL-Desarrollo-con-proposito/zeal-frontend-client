@@ -44,7 +44,7 @@ describe('Mi disponibilidad · abrir franja', () => {
 
     expect(await wednesday().findByText('12:00 – 13:00')).toBeInTheDocument();
     expect(wednesday().getAllByRole('listitem')).toHaveLength(8);
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(screen.getByRole('status', { name: 'Avisos de disponibilidad' })).toHaveTextContent(
       'Abriste la franja del miércoles, 23 de septiembre de 12:00 a 13:00.',
     );
   });

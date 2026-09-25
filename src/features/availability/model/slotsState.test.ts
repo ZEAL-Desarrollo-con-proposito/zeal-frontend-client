@@ -15,7 +15,7 @@ describe('slotsReducer', () => {
     const loading = slotsReducer(INITIAL_SLOTS_STATE, { type: 'load-start', requestId: 1 });
     const ready = slotsReducer(loading, { type: 'load-success', requestId: 1, slots: [slotA] });
 
-    expect(ready).toEqual({ requestId: 1, status: 'ready', slots: [slotA] });
+    expect(ready).toMatchObject({ requestId: 1, status: 'ready', slots: [slotA] });
   });
 
   it('descarta respuestas de cargas anteriores (la última petición gana)', () => {
@@ -37,5 +37,56 @@ describe('slotsReducer', () => {
     const loading = slotsReducer(INITIAL_SLOTS_STATE, { type: 'load-start', requestId: 3 });
 
     expect(slotsReducer(loading, { type: 'load-failure', requestId: 3 }).status).toBe('error');
+  });
+
+  it('reaplica sobre la foto del servidor los eventos que llegan mientras carga', () => {
+    const slotB = { ...slotA, id: 'b' };
+    const loading = slotsReducer(INITIAL_SLOTS_STATE, { type: 'load-start', requestId: 1 });
+    const withEvents = [
+      { type: 'CREADA' as const, slot: slotB },
+      { type: 'ELIMINADA' as const, slot: slotA },
+    ].reduce((state, event) => slotsReducer(state, { type: 'event', event }), loading);
+
+    const ready = slotsReducer(withEvents, { type: 'load-success', requestId: 1, slots: [slotA] });
+
+    expect(ready.slots).toEqual([slotB]);
+    expect(ready.pendingEvents).toEqual([]);
+  });
+
+  it('una franja eliminada no revive por respuestas o eventos atrasados', () => {
+    const ready = slotsReducer(
+      slotsReducer(INITIAL_SLOTS_STATE, { type: 'load-start', requestId: 1 }),
+      { type: 'load-success', requestId: 1, slots: [slotA] },
+    );
+    const removed = slotsReducer(ready, { type: 'removed', id: 'a' });
+
+    const late = [
+      slotsReducer(removed, { type: 'created', slot: slotA }),
+      slotsReducer(removed, { type: 'event', event: { type: 'ACTUALIZADA', slot: slotA } }),
+      slotsReducer(removed, { type: 'event', event: { type: 'ELIMINADA', slot: slotA } }),
+      slotsReducer(slotsReducer(removed, { type: 'load-start', requestId: 2 }), {
+        type: 'load-success',
+        requestId: 2,
+        slots: [slotA],
+      }),
+    ];
+
+    expect(late.map((state) => state.slots)).toEqual([[], [], [], []]);
+  });
+
+  it('un evento de actualización reemplaza la franja sin duplicarla', () => {
+    const ready = slotsReducer(
+      slotsReducer(INITIAL_SLOTS_STATE, { type: 'load-start', requestId: 1 }),
+      { type: 'load-success', requestId: 1, slots: [slotA] },
+    );
+    const reserved = { ...slotA, status: 'RESERVADA' as const };
+
+    const next = slotsReducer(ready, {
+      type: 'event',
+      event: { type: 'ACTUALIZADA', slot: reserved },
+    });
+
+    expect(next.slots).toEqual([reserved]);
+    expect(next.pendingEvents).toEqual([]);
   });
 });

@@ -10,6 +10,8 @@ const FRONTEND_PORT = 3000;
 
 export default defineConfig({
   plugins: [react()],
+  // sockjs-client referencia la variable `global` de Node; en el navegador equivale a globalThis.
+  define: { global: 'globalThis' },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -19,6 +21,8 @@ export default defineConfig({
   preview: { port: FRONTEND_PORT, strictPort: true },
   test: {
     environment: 'jsdom',
+    // Procesos aislados: el tiempo real simulado (BroadcastChannel) no cruza archivos de prueba.
+    pool: 'forks',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     coverage: {
