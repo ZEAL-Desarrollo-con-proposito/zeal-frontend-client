@@ -1,3 +1,4 @@
+import { generatePath } from 'react-router';
 import type { Role } from '@/features/auth/model/session';
 import { isRecord } from '@/features/auth/model/session';
 
@@ -20,11 +21,17 @@ export const ROLE_HOME_PATH: Record<Role, string> = {
   ADMIN: `${ROLE_BASE_PATH.ADMIN}/panel`,
 };
 
-/** Rutas del psicólogo con pantalla propia. */
+/** Rutas del psicólogo con pantalla propia. La sala cuelga de la agenda, desde donde se entra. */
 export const PSYCHOLOGIST_PATHS = {
   agenda: ROLE_HOME_PATH.PSICOLOGO,
   availability: `${ROLE_BASE_PATH.PSICOLOGO}/disponibilidad`,
+  sessionRoom: `${ROLE_HOME_PATH.PSICOLOGO}/sala/:reservationId`,
 } as const;
+
+/** Sala de la sesión de una reserva. */
+export function sessionRoomPath(reservationId: string): string {
+  return generatePath(PSYCHOLOGIST_PATHS.sessionRoom, { reservationId });
+}
 
 /** Estado de navegación con el que una ruta protegida manda al login. */
 export interface LoginRedirectState {

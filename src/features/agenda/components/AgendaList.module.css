@@ -1,0 +1,86 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dayTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-badge);
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-ink-700);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  min-height: 64px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.row[data-status='CANCELADA'] .name,
+.row[data-status='CANCELADA'] .time {
+  text-decoration: line-through;
+  color: var(--color-ink-500);
+}
+
+.time {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-ink-900);
+}
+
+.person {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--color-ink-900);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .time {
+    grid-column: 1 / -1;
+  }
+}

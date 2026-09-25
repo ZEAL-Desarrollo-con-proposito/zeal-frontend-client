@@ -13,7 +13,6 @@ function quickAccess() {
 describe('Pantalla de llegada', () => {
   it.each<[Role, string]>([
     ['EMPLEADO', 'Hola, David'],
-    ['PSICOLOGO', 'Hola, Laura'],
     ['ADMIN', 'Hola, Talento'],
   ])('da la bienvenida a %s con su propósito y su garantía de privacidad', (role, greeting) => {
     storeSession(role);
@@ -25,10 +24,10 @@ describe('Pantalla de llegada', () => {
   });
 
   it('ofrece un acceso rápido a cada sección del rol, salvo la pantalla actual', () => {
-    storeSession('PSICOLOGO');
-    renderRoute(ROLE_HOME_PATH.PSICOLOGO);
+    storeSession('EMPLEADO');
+    renderRoute(ROLE_HOME_PATH.EMPLEADO);
 
-    const sections = NAVIGATION.PSICOLOGO.slice(1);
+    const sections = NAVIGATION.EMPLEADO.slice(1);
     const links = quickAccess().getAllByRole('link');
     expect(links).toHaveLength(sections.length);
     for (const [index, section] of sections.entries()) {

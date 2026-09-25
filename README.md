@@ -129,6 +129,33 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
 
 `status` ∈ `DISPONIBLE`, `RESERVADA`.
 
+### Contrato de agenda (acordar con HU-BE-03)
+
+Mismas reglas de autenticación y rol `PSICOLOGO`. La ventana para entrar a la sala la fija el
+servidor (en el simulador: desde 10 minutos antes del inicio hasta el fin de la sesión); el frontend
+solo la compara con el reloj.
+
+| Método y ruta                                                          | Respuesta                                  |
+| ---------------------------------------------------------------------- | ------------------------------------------ |
+| `GET /api/wellbeing/reservas/agenda?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` | `200` reservas del psicólogo, por inicio   |
+| `GET /api/wellbeing/reservas/{id}`                                     | `200` reserva · `404` no existe o es ajena |
+
+```json
+{
+  "id": "reserva-16",
+  "employee": { "id": "usr-empleado-001", "fullName": "David Cajamarca" },
+  "startsAt": "2026-09-23T14:00:00.000Z",
+  "endsAt": "2026-09-23T14:50:00.000Z",
+  "status": "CONFIRMADA",
+  "joinOpensAt": "2026-09-23T13:50:00.000Z",
+  "joinClosesAt": "2026-09-23T14:50:00.000Z"
+}
+```
+
+`status` ∈ `CONFIRMADA`, `CANCELADA`, `FINALIZADA`. `joinOpensAt` y `joinClosesAt` son `null` si la
+reserva no admite ingreso. Cuando una franja cambia de estado (`ACTUALIZADA` en `/topic/franjas`) la
+agenda se vuelve a pedir.
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto

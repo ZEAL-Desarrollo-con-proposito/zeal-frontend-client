@@ -1,0 +1,150 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1112px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-ink-900);
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+
+/* Figma C1: tarjetas KPI con cifra grande. */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column-reverse;
+  /* La cifra va arriba y alineada entre tarjetas aunque la etiqueta ocupe dos líneas. */
+  justify-content: flex-end;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.kpi dt {
+  font-size: var(--text-caption);
+  color: var(--color-ink-700);
+}
+
+.kpi dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  line-height: 1;
+  color: var(--color-teal-800);
+}
+
+.layout {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+.card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* Mientras llega otra semana, lo anterior se atenúa para que no se lea como vigente. */
+.results {
+  transition: opacity 150ms ease-out;
+}
+
+.card[aria-busy='true'] .results {
+  opacity: 0.5;
+}
+
+.side {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* En una sola columna, la próxima sesión va primero: es lo que se busca al abrir la agenda. */
+  /* Mientras llega otra semana, lo anterior se atenúa para que no se lea como vigente. */
+  .results {
+    transition: opacity 150ms ease-out;
+  }
+
+  .card[aria-busy='true'] .results {
+    opacity: 0.5;
+  }
+
+  .side {
+    flex-basis: auto;
+    order: -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .kpis {
+    gap: var(--space-2);
+  }
+
+  .kpi {
+    padding: var(--space-3);
+  }
+
+  .kpi dd {
+    font-size: 2rem;
+  }
+
+  .card {
+    padding: var(--space-4);
+  }
+}

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { describeMutationError } from '@/shared/api/describeError';
-import { isSameDay, toIsoDate } from '@/shared/lib/dates';
+import { isSameDay, toIsoDate, workdaysOf } from '@/shared/lib/dates';
 import { createSlot } from '../api/availabilityApi';
-import { workdaysOf } from '../model/calendar';
 import type { Slot } from '../model/slot';
 import type { SlotDraft } from '../model/slotDraft';
 import { draftToNewSlot, hourToTime, validateDraft } from '../model/slotDraft';

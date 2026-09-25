@@ -1,7 +1,6 @@
+import type { LoadStatus } from '@/shared/hooks/useFetch';
 import type { Slot } from './slot';
 import type { SlotEvent } from './slotEvent';
-
-export type LoadStatus = 'loading' | 'ready' | 'error';
 
 export interface SlotsState {
   /** Carga vigente: solo sus resultados se aplican (la última petición gana). */
