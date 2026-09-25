@@ -95,9 +95,12 @@ describe('Mi disponibilidad · en tiempo real (RT-2)', () => {
         'Un paciente reservó tu franja del miércoles, 23 de septiembre de 10:00 a 10:50.',
       );
     });
-    expect(wednesday().getByText('10:00 – 10:50').nextElementSibling).toHaveTextContent(
-      'Reservada',
-    );
+    // La franja cambia de key con su estado: la versión anterior sale con su animación.
+    await waitFor(() => {
+      expect(wednesday().getByText('10:00 – 10:50').nextElementSibling).toHaveTextContent(
+        'Reservada',
+      );
+    });
 
     act(() => {
       publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA', slot });
