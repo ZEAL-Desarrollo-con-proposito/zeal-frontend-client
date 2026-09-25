@@ -3,25 +3,28 @@ import { describe, expect, it, vi } from 'vitest';
 import { fetchReducer, useFetch } from './useFetch';
 
 describe('fetchReducer', () => {
-  const loading = { requestId: 2, status: 'loading' as const, data: 'anterior' };
+  const loading = { requestId: 2, status: 'loading' as const, data: 'anterior', error: null };
+  const failure = new Error('caída');
 
   it('ignora la respuesta o el fallo de una petición que ya no es la vigente', () => {
     expect(fetchReducer(loading, { type: 'success', requestId: 1, data: 'atrasada' })).toBe(
       loading,
     );
-    expect(fetchReducer(loading, { type: 'failure', requestId: 1 })).toBe(loading);
+    expect(fetchReducer(loading, { type: 'failure', requestId: 1, error: failure })).toBe(loading);
   });
 
   it('conserva los datos anteriores mientras carga y si la petición falla', () => {
-    expect(fetchReducer(loading, { type: 'failure', requestId: 2 })).toEqual({
+    expect(fetchReducer(loading, { type: 'failure', requestId: 2, error: failure })).toEqual({
       ...loading,
       status: 'error',
+      error: failure,
     });
-    expect(fetchReducer({ ...loading, status: 'ready' }, { type: 'start', requestId: 3 })).toEqual({
-      requestId: 3,
-      status: 'loading',
-      data: 'anterior',
-    });
+    expect(
+      fetchReducer(
+        { ...loading, status: 'error', error: failure },
+        { type: 'start', requestId: 3 },
+      ),
+    ).toEqual({ requestId: 3, status: 'loading', data: 'anterior', error: null });
   });
 });
 
@@ -56,6 +59,7 @@ describe('useFetch', () => {
     await waitFor(() => {
       expect(result.current.status).toBe('error');
     });
+    expect(result.current.error).toEqual(new Error('caída'));
 
     act(() => {
       result.current.reload();

@@ -65,8 +65,9 @@ describe('joinState', () => {
   });
 
   it('abre la sala desde la apertura hasta el cierre, ambos incluidos', () => {
-    expect(joinState(reservation(), at(23, 9, 50).getTime())).toEqual({ kind: 'open' });
-    expect(joinState(reservation(), at(23, 10, 50).getTime())).toEqual({ kind: 'open' });
+    const open = { kind: 'open', closesAt: at(23, 10, 50) };
+    expect(joinState(reservation(), at(23, 9, 50).getTime())).toEqual(open);
+    expect(joinState(reservation(), at(23, 10, 50).getTime())).toEqual(open);
   });
 
   it('cierra la sala cuando pasó la ventana', () => {

@@ -75,7 +75,7 @@ export function AgendaPage() {
         </section>
         {isCurrentWeek && (
           <aside className={styles.side} aria-label="Resumen de hoy">
-            <NextSessionCard reservation={nextSession(reservations, now)} />
+            <NextSessionCard reservation={nextSession(reservations, now)} now={now} />
           </aside>
         )}
       </div>

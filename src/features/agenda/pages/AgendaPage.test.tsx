@@ -5,12 +5,13 @@ import { PSYCHOLOGIST_PATHS } from '@/app/paths';
 import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
 import { publishMockEvent } from '@/mocks/realtime';
 import { server } from '@/mocks/server';
-import { readWellbeingDb, writeWellbeingDb } from '@/mocks/wellbeing/db';
+import { readWellbeingDb } from '@/mocks/wellbeing/db';
 import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
 import { createStatusStore } from '@/shared/realtime/realtimeClient';
 import { freezeTime } from '@/test/clock';
 import { storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
+import { cancelReservationAt } from '@/test/wellbeing';
 import { AGENDA_ENDPOINT } from '../api/agendaApi';
 
 const TODAY = 'Hoy · Miércoles, 23 de septiembre';
@@ -39,22 +40,6 @@ function row(dayName: string, time: string) {
 
 function kpi(label: string) {
   return screen.getByText(label).nextElementSibling?.textContent;
-}
-
-/** Cancela en la "base de datos" del servidor la reserva de una franja, como lo haría el paciente. */
-function cancelReservationAt(start: Date) {
-  const db = readWellbeingDb();
-  const reservation = db.reservations.find(
-    (candidate) => candidate.startsAt === start.toISOString(),
-  );
-  const slot = db.slots.find((candidate) => candidate.id === reservation?.slotId);
-  if (reservation === undefined || slot === undefined) {
-    throw new Error('Reserva semilla no encontrada');
-  }
-  reservation.status = 'CANCELADA';
-  slot.status = 'DISPONIBLE';
-  writeWellbeingDb(db);
-  return slot;
 }
 
 function countAgendaRequests() {

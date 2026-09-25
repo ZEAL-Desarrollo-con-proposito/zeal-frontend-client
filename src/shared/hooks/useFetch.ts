@@ -6,24 +6,25 @@ interface FetchState<T> {
   requestId: number;
   status: LoadStatus;
   data: T | null;
+  error: unknown;
 }
 
 type FetchAction<T> =
   | { type: 'start'; requestId: number }
   | { type: 'success'; requestId: number; data: T }
-  | { type: 'failure'; requestId: number };
+  | { type: 'failure'; requestId: number; error: unknown };
 
 /** Solo la petición vigente cambia el estado: una respuesta atrasada nunca pisa a la última. */
 export function fetchReducer<T>(state: FetchState<T>, action: FetchAction<T>): FetchState<T> {
   if (action.type === 'start') {
-    return { ...state, requestId: action.requestId, status: 'loading' };
+    return { ...state, requestId: action.requestId, status: 'loading', error: null };
   }
   if (action.requestId !== state.requestId) {
     return state;
   }
   return action.type === 'success'
     ? { ...state, status: 'ready', data: action.data }
-    : { ...state, status: 'error' };
+    : { ...state, status: 'error', error: action.error };
 }
 
 /**
@@ -35,6 +36,7 @@ export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<
     requestId: 0,
     status: 'loading',
     data: null,
+    error: null,
   });
   const [attempt, setAttempt] = useState(0);
   const counter = useRef(0);
@@ -49,8 +51,8 @@ export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<
       (data) => {
         dispatch({ type: 'success', requestId, data });
       },
-      () => {
-        dispatch({ type: 'failure', requestId });
+      (error: unknown) => {
+        dispatch({ type: 'failure', requestId, error });
       },
     );
     return () => {
@@ -62,5 +64,5 @@ export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<
     setAttempt((current) => current + 1);
   }
 
-  return { status: state.status, data: state.data, reload };
+  return { status: state.status, data: state.data, error: state.error, reload };
 }

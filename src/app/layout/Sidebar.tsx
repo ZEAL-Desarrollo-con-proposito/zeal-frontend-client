@@ -32,7 +32,6 @@ export function Sidebar({ user, layoutGroupId, onNavigate }: Readonly<SidebarPro
               <li key={item.path}>
                 <NavLink
                   to={item.path}
-                  end
                   onClick={onNavigate}
                   className={({ isActive }) => cx(styles.link, isActive && styles.active)}
                 >

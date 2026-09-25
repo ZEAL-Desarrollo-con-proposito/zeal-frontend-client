@@ -3,7 +3,8 @@ import { formatLongDate, formatTime, isSameDay } from '@/shared/lib/dates';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { Badge } from '@/shared/ui/Badge/Badge';
 import type { AgendaDay, Reservation } from '../model/reservation';
-import { reservationBadge } from '../model/reservation';
+import { joinState, reservationBadge } from '../model/reservation';
+import { JoinRoomLink } from './JoinRoomLink';
 import styles from './AgendaList.module.css';
 
 interface AgendaListProps {
@@ -67,7 +68,10 @@ function ReservationRow({ reservation, now, index }: Readonly<ReservationRowProp
         <Avatar name={reservation.employee.fullName} tone="sage" />
         <span className={styles.name}>{reservation.employee.fullName}</span>
       </span>
-      <Badge tone={badge.tone}>{badge.label}</Badge>
+      <span className={styles.actions}>
+        <Badge tone={badge.tone}>{badge.label}</Badge>
+        {joinState(reservation, now).kind === 'open' && <JoinRoomLink reservation={reservation} />}
+      </span>
     </motion.li>
   );
 }

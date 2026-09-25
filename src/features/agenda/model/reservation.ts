@@ -45,7 +45,7 @@ export function isReservation(value: unknown): value is Reservation {
 }
 
 export type JoinState =
-  | { kind: 'open' }
+  | { kind: 'open'; closesAt: Date }
   | { kind: 'upcoming'; opensAt: Date }
   | { kind: 'closed' }
   | { kind: 'unavailable' };
@@ -59,7 +59,8 @@ export function joinState(reservation: Reservation, now: number): JoinState {
   if (now < opensAt) {
     return { kind: 'upcoming', opensAt: new Date(opensAt) };
   }
-  return now > Date.parse(reservation.joinClosesAt) ? { kind: 'closed' } : { kind: 'open' };
+  const closesAt = Date.parse(reservation.joinClosesAt);
+  return now > closesAt ? { kind: 'closed' } : { kind: 'open', closesAt: new Date(closesAt) };
 }
 
 export function isInProgress(reservation: Reservation, now: number): boolean {
