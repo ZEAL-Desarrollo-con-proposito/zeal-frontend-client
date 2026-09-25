@@ -1,0 +1,46 @@
+/* Figma: Badge / EN LÍNEA (Archivo SemiBold 10 px, mayúsculas, píldora). */
+.badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-badge);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge::before {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  content: '';
+}
+
+.badge[data-status='connected'] {
+  background: var(--color-sage-soft);
+  color: var(--color-sage-text);
+}
+
+.badge[data-status='connecting'],
+.badge[data-status='reconnecting'] {
+  background: var(--color-mauve-soft);
+  color: var(--color-mauve-text);
+}
+
+.badge[data-status='reconnecting']::before {
+  animation: blink 1s ease-in-out infinite;
+}
+
+.badge[data-status='idle'] {
+  background: var(--color-coral-soft);
+  color: var(--color-coral-strong);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}

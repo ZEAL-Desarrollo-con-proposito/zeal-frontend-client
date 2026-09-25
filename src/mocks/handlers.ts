@@ -1,18 +1,16 @@
 import { delay, http, HttpResponse } from 'msw';
 import { LOGIN_ENDPOINT } from '@/features/auth/api/authApi';
+import { errorBody } from './mockAuth';
 import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
 import { findSeedUser } from './seedUsers';
+import { wellbeingHandlers } from './wellbeing/handlers';
 
 interface LoginRequestBody {
   email?: unknown;
   password?: unknown;
 }
 
-function errorBody(status: number, error: string, message: string) {
-  return HttpResponse.json({ status, error, message }, { status });
-}
-
-export const handlers = [
+const authHandlers = [
   http.post<never, LoginRequestBody>(`*${LOGIN_ENDPOINT}`, async ({ request }) => {
     await delay();
     const { email, password } = await request.json();
@@ -34,3 +32,5 @@ export const handlers = [
     });
   }),
 ];
+
+export const handlers = [...authHandlers, ...wellbeingHandlers];

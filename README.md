@@ -55,10 +55,11 @@ Mientras el backend no esté disponible, el frontend usa [MSW](https://mswjs.io)
 API: el mismo simulador sirve en desarrollo (Service Worker) y en las pruebas (Node). Se controla
 con variables de entorno (ver `.env.example`):
 
-| Variable            | Valor en desarrollo | Uso                                                     |
-| ------------------- | ------------------- | ------------------------------------------------------- |
-| `VITE_API_MOCKING`  | `enabled`           | `disabled` para consumir el backend real                |
-| `VITE_API_BASE_URL` | _(vacío)_           | URL del API Gateway; vacío = mismo origen del frontend. |
+| Variable            | Valor en desarrollo        | Uso                                                     |
+| ------------------- | -------------------------- | ------------------------------------------------------- |
+| `VITE_API_MOCKING`  | `enabled`                  | `disabled` para consumir el backend real                |
+| `VITE_API_BASE_URL` | _(vacío)_                  | URL del API Gateway; vacío = mismo origen del frontend. |
+| `VITE_REALTIME_URL` | `http://localhost:8083/ws` | Endpoint SockJS del Real-Time Gateway (sin simulador).  |
 
 El build de producción nunca incluye el simulador.
 
@@ -104,6 +105,42 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 ```json
 { "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
 ```
+
+### Contrato de disponibilidad (acordar con HU-BE-02)
+
+Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 403). Las reglas de
+negocio viven en el backend; el frontend muestra el `message` del error tal cual.
+
+| Método y ruta                                                           | Respuesta                                                                |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GET /api/wellbeing/franjas/mias?desde=AAAA-MM-DD&hasta=AAAA-MM-DD`     | `200` lista de franjas                                                   |
+| `POST /api/wellbeing/franjas` con `{ "startsAt", "endsAt" }` (ISO 8601) | `201` franja · `400` horario inválido o pasado · `409` se cruza con otra |
+| `DELETE /api/wellbeing/franjas/{id}`                                    | `204` · `404` ya no existe · `409` está reservada                        |
+
+```json
+{
+  "id": "franja-16",
+  "psychologistId": "usr-psicologo-001",
+  "startsAt": "2026-09-23T14:00:00.000Z",
+  "endsAt": "2026-09-23T14:50:00.000Z",
+  "status": "DISPONIBLE"
+}
+```
+
+`status` ∈ `DISPONIBLE`, `RESERVADA`.
+
+## Tiempo real (RT-2)
+
+- **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
+  `http://localhost:8083/ws`), con `Authorization: Bearer <token>` en el frame `CONNECT`,
+  reconexión automática cada 5 s y heartbeats de 10 s. La barra superior muestra el estado.
+- **Destino `/topic/franjas`:** `{ "type": "CREADA" | "ELIMINADA" | "ACTUALIZADA", "slot": <franja> }`.
+- **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
+  la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
+  recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
+- **Con el simulador:** el tiempo real se simula entre pestañas del mismo navegador. Para verlo,
+  inicia sesión como psicóloga con "Recordarme", abre `/psicologo/disponibilidad` en dos pestañas y
+  abre o elimina una franja en una de ellas.
 
 ## Sesión y seguridad
 

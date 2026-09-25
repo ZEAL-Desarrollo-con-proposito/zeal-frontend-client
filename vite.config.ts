@@ -2,11 +2,16 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+// Zona horaria fija en las pruebas: agendas y calendarios se ven igual en cualquier máquina o CI.
+process.env.TZ = 'America/Bogota';
+
 // Puerto 3000 definido en la guía de arquitectura (Paso 4: puertos locales).
 const FRONTEND_PORT = 3000;
 
 export default defineConfig({
   plugins: [react()],
+  // sockjs-client referencia la variable `global` de Node; en el navegador equivale a globalThis.
+  define: { global: 'globalThis' },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -16,6 +21,8 @@ export default defineConfig({
   preview: { port: FRONTEND_PORT, strictPort: true },
   test: {
     environment: 'jsdom',
+    // Procesos aislados: el tiempo real simulado (BroadcastChannel) no cruza archivos de prueba.
+    pool: 'forks',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     coverage: {

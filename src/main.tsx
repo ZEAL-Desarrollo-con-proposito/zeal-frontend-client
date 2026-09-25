@@ -9,13 +9,27 @@ import './styles/global.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { resolveRealtimeUrl } from './shared/config/realtimeUrl';
+import type { RealtimeClientFactory } from './shared/realtime/realtimeClient';
+import { createStompRealtimeClient } from './shared/realtime/stompRealtimeClient';
 
-/** El API local simulado solo existe en desarrollo: el build de producción lo elimina. */
-async function enableApiMocking() {
-  if (import.meta.env.DEV && import.meta.env.VITE_API_MOCKING === 'enabled') {
-    const { worker } = await import('./mocks/browser');
+const isApiMockingEnabled = import.meta.env.DEV && import.meta.env.VITE_API_MOCKING === 'enabled';
+
+/**
+ * Composición del backend: en desarrollo con simulador se usan MSW y el tiempo real simulado
+ * (el build de producción los elimina); en otro caso, el API Gateway y el Real-Time Gateway.
+ */
+async function createBackendAdapters(): Promise<RealtimeClientFactory> {
+  if (isApiMockingEnabled) {
+    const [{ worker }, { createMockRealtimeClient }] = await Promise.all([
+      import('./mocks/browser'),
+      import('./mocks/realtime'),
+    ]);
     await worker.start({ onUnhandledRequest: 'bypass' });
+    return () => createMockRealtimeClient();
   }
+  const realtimeUrl = resolveRealtimeUrl(import.meta.env.VITE_REALTIME_URL);
+  return (accessToken) => createStompRealtimeClient(realtimeUrl, accessToken);
 }
 
 const rootElement = document.getElementById('root');
@@ -23,10 +37,10 @@ if (!rootElement) {
   throw new Error('No se encontró el elemento raíz #root en index.html');
 }
 
-await enableApiMocking();
+const realtimeClientFactory = await createBackendAdapters();
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <App realtimeClientFactory={realtimeClientFactory} />
   </StrictMode>,
 );

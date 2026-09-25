@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useMatches } from 'react-router';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
+import { RealtimeStatusBadge } from './RealtimeStatusBadge';
 import { CloseIcon, MenuIcon } from '@/shared/ui/icons';
 import { ROLE_PROFILE } from '../navigation';
 import { isDismissGesture } from './drawerGesture';
@@ -147,6 +148,7 @@ export function AppLayout() {
             <span className={styles.contextPage}>{pageTitle}</span>
           </p>
           <div className={styles.account}>
+            <RealtimeStatusBadge />
             <span className={styles.accountIdentity}>
               <span className={styles.accountName}>{user.fullName}</span>
               <span className={styles.accountDetail}>{user.organization}</span>

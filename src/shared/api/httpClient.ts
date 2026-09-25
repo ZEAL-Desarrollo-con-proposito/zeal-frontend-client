@@ -6,7 +6,12 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
+  query?: Record<string, string>;
+  /** Permite cancelar la petición (p. ej. al cambiar de semana antes de que responda). */
+  signal?: AbortSignal;
 }
+
+const NO_CONTENT = 204;
 
 /** Credencial de la sesión activa y reacción cuando el servidor la rechaza. */
 export interface HttpAuth {
@@ -23,9 +28,12 @@ export function configureHttpAuth(auth: HttpAuth | null): void {
 
 /**
  * Cliente HTTP JSON. Devuelve `unknown`: cada módulo de API valida la forma de la respuesta,
- * porque lo que llega del servidor es un límite de confianza.
+ * porque lo que llega del servidor es un límite de confianza. Una respuesta 204 devuelve `null`.
  */
-export async function request(path: string, { method = 'GET', body }: RequestOptions = {}) {
+export async function request(
+  path: string,
+  { method = 'GET', body, query = {}, signal }: RequestOptions = {},
+) {
   const auth = httpAuth;
   const headers = new Headers({ Accept: 'application/json' });
   if (body !== undefined) {
@@ -34,15 +42,23 @@ export async function request(path: string, { method = 'GET', body }: RequestOpt
   if (auth !== null) {
     headers.set('Authorization', `Bearer ${auth.accessToken}`);
   }
+  const url = new URL(path, API_BASE_URL);
+  for (const [name, value] of Object.entries(query)) {
+    url.searchParams.set(name, value);
+  }
 
   let response: Response;
   try {
-    response = await fetch(new URL(path, API_BASE_URL), {
+    response = await fetch(url, {
       method,
       headers,
       body: body === undefined ? null : JSON.stringify(body),
+      signal: signal ?? null,
     });
   } catch (cause) {
+    if (isAbortError(cause)) {
+      throw cause; // Cancelación pedida por quien llama: no es un fallo de red.
+    }
     throw new NetworkError({ cause });
   }
 
@@ -52,7 +68,17 @@ export async function request(path: string, { method = 'GET', body }: RequestOpt
     }
     throw new ApiError(response.status, await readServerMessage(response));
   }
+  if (response.status === NO_CONTENT) {
+    return null;
+  }
   return (await response.json()) as unknown;
+}
+
+/** Compara por nombre: la excepción puede venir de otro contexto (p. ej. el fetch nativo). */
+export function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+  );
 }
 
 async function readServerMessage(response: Response): Promise<string | undefined> {

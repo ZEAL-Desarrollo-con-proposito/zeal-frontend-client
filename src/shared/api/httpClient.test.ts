@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
 import { ApiError, NetworkError } from './errors';
-import { configureHttpAuth, request } from './httpClient';
+import { configureHttpAuth, isAbortError, request } from './httpClient';
 
 const ENDPOINT = '/api/prueba';
 
@@ -15,6 +15,35 @@ describe('httpClient.request', () => {
     );
 
     await expect(request(ENDPOINT)).resolves.toEqual({ contentType: null });
+  });
+
+  it('agrega los parámetros de consulta y devuelve null ante un 204', async () => {
+    let search = '';
+    server.use(
+      http.delete(`*${ENDPOINT}`, ({ request: incoming }) => {
+        search = new URL(incoming.url).search;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(
+      request(ENDPOINT, { method: 'DELETE', query: { desde: '2026-09-21', motivo: 'a b' } }),
+    ).resolves.toBeNull();
+    expect(search).toBe('?desde=2026-09-21&motivo=a+b');
+  });
+
+  it('propaga la cancelación sin confundirla con un fallo de red', async () => {
+    server.use(http.get(`*${ENDPOINT}`, () => HttpResponse.json({ ok: true })));
+    const controller = new AbortController();
+    controller.abort();
+
+    const error: unknown = await request(ENDPOINT, { signal: controller.signal }).catch(
+      (reason: unknown) => reason,
+    );
+
+    expect(isAbortError(error)).toBe(true);
+    expect(error).not.toBeInstanceOf(NetworkError);
+    expect(isAbortError(new Error('otro'))).toBe(false);
   });
 
   it('envía el cuerpo como JSON', async () => {

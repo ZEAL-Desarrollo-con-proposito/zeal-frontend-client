@@ -1,14 +1,16 @@
+import type { Ref } from 'react';
 import type { HTMLMotionProps } from 'motion/react';
 import { motion } from 'motion/react';
 import { cx } from '@/shared/lib/cx';
 import { pressFeedback } from './pressFeedback';
 import styles from './Button.module.css';
 
-export type ButtonVariant = 'primary' | 'outline';
+export type ButtonVariant = 'primary' | 'outline' | 'danger';
 
 interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: ButtonVariant;
   fullWidth?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({
