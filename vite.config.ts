@@ -23,6 +23,10 @@ export default defineConfig({
     environment: 'jsdom',
     // Procesos aislados: el tiempo real simulado (BroadcastChannel) no cruza archivos de prueba.
     pool: 'forks',
+    maxWorkers: 8,
+    isolate: true,
+    testTimeout: 15000,
+    hookTimeout: 15000,
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     coverage: {
@@ -32,6 +36,7 @@ export default defineConfig({
         'src/main.tsx',
         'src/mocks/browser.ts',
         'src/test/**',
+        'src/mocks/**',
         'src/**/*.test.{ts,tsx}',
         'src/**/*.d.ts',
       ],
