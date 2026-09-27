@@ -214,12 +214,42 @@ El estado de cada cita lo decide el servidor (una confirmada que ya terminó lle
 "Mis citas" las agrupa en Próximas, Historial y Canceladas (`?vista=`) y se vuelve a pedir con
 cada `ACTUALIZADA`, así que una cita agendada en otra pestaña aparece al instante.
 
+### Contrato de notificaciones (acordar con HU-BE-06)
+
+Cualquier rol autenticado; cada persona solo ve y cambia las suyas.
+
+| Método y ruta                         | Respuesta                                             |
+| ------------------------------------- | ----------------------------------------------------- |
+| `GET /api/notificaciones`             | `200` notificaciones propias, la más reciente primero |
+| `POST /api/notificaciones/{id}/leida` | `204` · `404` no existe o es ajena (se da por leída)  |
+| `POST /api/notificaciones/leidas`     | `204` marca todas las propias como leídas             |
+
+```json
+{
+  "id": "notificacion-4",
+  "type": "RESERVA_CONFIRMADA",
+  "title": "Tu cita quedó confirmada",
+  "message": "Laura Martínez · miércoles, 23 de septiembre de 10:00 a 10:50",
+  "createdAt": "2026-09-23T14:20:00.000Z",
+  "read": false,
+  "link": "/empleado/mis-citas"
+}
+```
+
+`link` es una ruta interna o `null`; el cliente rechaza cualquier otra cosa (p. ej. una URL
+externa). Marcar como leída es optimista: si el servidor falla, el cambio se deshace y se avisa.
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
   `http://localhost:8083/ws`), con `Authorization: Bearer <token>` en el frame `CONNECT`,
   reconexión automática cada 5 s y heartbeats de 10 s. La barra superior muestra el estado.
 - **Destino `/topic/franjas`:** `{ "type": "CREADA" | "ELIMINADA" | "ACTUALIZADA", "slot": <franja> }`.
+- **Cola privada `/user/queue/notificaciones`** (destino de usuario de STOMP: el gateway solo
+  entrega a la persona autenticada en el `CONNECT`): `{ "type": "NUEVA", "notification": <notificación> }`
+  cuando llega una (se muestra un aviso emergente una sola vez y suma a la campana) o
+  `{ "type": "LEIDAS", "ids": [...] }` cuando se marcan como leídas en otra pestaña o equipo. Lo
+  que llega mientras carga la lista no se pierde, y al reconectar se vuelve a pedir.
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.

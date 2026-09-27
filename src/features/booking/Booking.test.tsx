@@ -132,6 +132,26 @@ describe('Agendar cita (HU-FE-05)', () => {
     expect(await panel().findByRole('heading', { name: 'Agenda tu sesión' })).toBeInTheDocument();
   });
 
+  it('confirma la reserva con un aviso emergente que lleva a Mis citas', async () => {
+    const { router, user } = await openLaura();
+
+    await confirmBooking(user, '10:00 – 10:50');
+
+    const toasts = within(screen.getByRole('region', { name: 'Avisos' }));
+    expect(await toasts.findByText('Tu cita quedó confirmada')).toBeInTheDocument();
+    expect(
+      toasts.getByText('Laura Martínez · miércoles, 23 de septiembre de 10:00 a 10:50'),
+    ).toBeInTheDocument();
+
+    // Llega por la cola privada de notificaciones, una sola vez.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(toasts.getAllByText('Tu cita quedó confirmada')).toHaveLength(1);
+
+    await user.click(toasts.getByRole('link', { name: 'Ver mis citas' }));
+
+    expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.appointments);
+  });
+
   it('elegir otro bloque después de agendar muestra su resumen', async () => {
     const { user } = await openLaura();
     await confirmBooking(user, '10:00 – 10:50');

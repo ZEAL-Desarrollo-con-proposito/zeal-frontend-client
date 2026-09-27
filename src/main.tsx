@@ -26,7 +26,7 @@ async function createBackendAdapters(): Promise<RealtimeClientFactory> {
       import('./mocks/realtime'),
     ]);
     await worker.start({ onUnhandledRequest: 'bypass' });
-    return () => createMockRealtimeClient();
+    return (accessToken) => createMockRealtimeClient(accessToken);
   }
   const realtimeUrl = resolveRealtimeUrl(import.meta.env.VITE_REALTIME_URL);
   return (accessToken) => createStompRealtimeClient(realtimeUrl, accessToken);

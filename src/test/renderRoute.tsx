@@ -9,7 +9,8 @@ import { RealtimeFactoryContext } from '@/shared/realtime/RealtimeContext';
 /** Renderiza la aplicación completa en una ruta inicial, con un router en memoria. */
 export function renderRoute(
   initialPath: string,
-  realtimeClientFactory: RealtimeClientFactory = () => createMockRealtimeClient(),
+  realtimeClientFactory: RealtimeClientFactory = (accessToken) =>
+    createMockRealtimeClient(accessToken),
 ) {
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
   const user = userEvent.setup();

@@ -79,5 +79,6 @@
   --z-sticky: 10;
   --z-overlay: 20;
   --z-drawer: 30;
+  --z-toast: 40;
   --z-skip-link: 50;
 }
