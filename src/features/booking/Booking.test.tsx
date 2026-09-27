@@ -11,7 +11,7 @@ import { storeSession } from '@/test/credentials';
 import { fakeMediaQueryList } from '@/test/media';
 import { renderRoute } from '@/test/renderRoute';
 
-const WEDNESDAY = 'Bloques libres del miércoles, 23 de septiembre';
+const WEDNESDAY = 'Bloques del miércoles, 23 de septiembre';
 
 async function openLaura() {
   storeSession('EMPLEADO');

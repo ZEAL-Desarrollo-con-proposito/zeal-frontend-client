@@ -15,14 +15,18 @@ interface ConfirmDialogProps {
   error: string | null;
   /** Estilo del botón de confirmar: `danger` para acciones destructivas (por defecto). */
   confirmVariant?: ButtonVariant;
+  /** La acción ya no es posible (p. ej. el bloque dejó de estar libre): solo queda cancelar. */
+  confirmDisabled?: boolean;
+  cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /**
- * Confirmación de acciones importantes (eliminar, agendar): foco atrapado entre sus botones, Escape cancela y al
- * cerrar el foco vuelve a quien lo abrió. Se monta en <body> para no depender de transformaciones
- * de sus ancestros. Quien lo usa lo envuelve en <AnimatePresence> para animar su salida.
+ * Confirmación de acciones importantes (eliminar, agendar): foco atrapado entre sus botones,
+ * Escape cancela y al cerrar el foco vuelve a quien lo abrió. Se monta en <body> para no depender
+ * de transformaciones de sus ancestros. Quien lo usa lo envuelve en <AnimatePresence> para animar
+ * su salida.
  */
 export function ConfirmDialog(props: Readonly<ConfirmDialogProps>) {
   return createPortal(<DialogContent {...props} />, document.body);
@@ -36,6 +40,8 @@ function DialogContent({
   isPending,
   error,
   confirmVariant = 'danger',
+  confirmDisabled = false,
+  cancelLabel = 'Cancelar',
   onConfirm,
   onCancel,
 }: Readonly<ConfirmDialogProps>) {
@@ -60,7 +66,8 @@ function DialogContent({
     }
     if (event.key === 'Tab') {
       event.preventDefault();
-      const target = document.activeElement === cancelRef.current ? confirmRef : cancelRef;
+      const onCancelButton = document.activeElement === cancelRef.current;
+      const target = onCancelButton && !confirmDisabled ? confirmRef : cancelRef;
       target.current?.focus();
     }
   }
@@ -99,13 +106,13 @@ function DialogContent({
         )}
         <div className={styles.actions}>
           <Button ref={cancelRef} variant="outline" onClick={onCancel} disabled={isPending}>
-            Cancelar
+            {cancelLabel}
           </Button>
           <Button
             ref={confirmRef}
             variant={confirmVariant}
             onClick={onConfirm}
-            disabled={isPending}
+            disabled={isPending || confirmDisabled}
             aria-busy={isPending}
           >
             {isPending ? pendingLabel : confirmLabel}

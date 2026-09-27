@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Slot } from '@/features/availability/model/slot';
-import { bookableSlots, freeSlotNotice } from './freeSlots';
+import { freeSlotNotice, isBookable, upcomingSlots } from './weekSlots';
 
 const at = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute);
 
@@ -14,19 +14,27 @@ function slot(id: string, hour: number, status: Slot['status'] = 'DISPONIBLE'): 
   };
 }
 
-describe('bookableSlots', () => {
-  it('deja solo los bloques libres que aún no empiezan, en orden', () => {
+describe('upcomingSlots', () => {
+  it('deja los bloques que aún no empiezan, libres u ocupados, en orden', () => {
     const slots = [
       slot('tarde', 15),
-      slot('reservado', 11, 'RESERVADA'),
+      slot('ocupado', 11, 'RESERVADA'),
       slot('ya', 9),
       slot('pronto', 10),
     ];
 
-    expect(bookableSlots(slots, at(9, 20).getTime()).map(({ id }) => id)).toEqual([
+    expect(upcomingSlots(slots, at(9, 20).getTime()).map(({ id }) => id)).toEqual([
       'pronto',
+      'ocupado',
       'tarde',
     ]);
+  });
+});
+
+describe('isBookable', () => {
+  it('solo un bloque libre se puede elegir', () => {
+    expect(isBookable(slot('libre', 10))).toBe(true);
+    expect(isBookable(slot('ocupado', 10, 'RESERVADA'))).toBe(false);
   });
 });
 

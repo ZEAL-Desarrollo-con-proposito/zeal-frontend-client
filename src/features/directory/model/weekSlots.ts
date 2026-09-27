@@ -3,14 +3,16 @@ import { compareByStart, describeSlot } from '@/features/availability/model/slot
 import type { SlotEvent } from '@/features/availability/model/slotEvent';
 
 /**
- * Bloques que el empleado puede reservar entre los que tiene en pantalla. El servidor entrega solo
- * bloques libres y futuros; los eventos en vivo también traen los que alguien reserva, y un bloque
- * puede empezar mientras la página sigue abierta.
+ * Bloques de la semana que aún no empiezan, libres u ocupados (Figma B3), en orden. El servidor
+ * entrega solo bloques futuros; un bloque puede empezar mientras la página sigue abierta.
  */
-export function bookableSlots(slots: readonly Slot[], now: number): Slot[] {
-  return slots
-    .filter((slot) => slot.status === 'DISPONIBLE' && Date.parse(slot.startsAt) > now)
-    .sort(compareByStart);
+export function upcomingSlots(slots: readonly Slot[], now: number): Slot[] {
+  return slots.filter((slot) => Date.parse(slot.startsAt) > now).sort(compareByStart);
+}
+
+/** Un empleado solo puede elegir un bloque libre. */
+export function isBookable(slot: Slot): boolean {
+  return slot.status === 'DISPONIBLE';
 }
 
 /** Aviso para el empleado cuando cambia en vivo un bloque del psicólogo que está viendo. */

@@ -18,12 +18,12 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { ChevronLeftIcon } from '@/shared/ui/icons';
 import { WeekNavigator } from '@/shared/ui/WeekNavigator/WeekNavigator';
-import { fetchFreeSlots } from '../api/directoryApi';
+import { fetchUpcomingSlots } from '../api/directoryApi';
 import { ConfidentialityNote } from '../components/ConfidentialityNote';
-import { FreeSlotsWeek } from '../components/FreeSlotsWeek';
+import { WeekSlots } from '../components/WeekSlots';
 import { PsychologistProfile } from '../components/PsychologistProfile';
 import { usePsychologist } from '../hooks/usePsychologist';
-import { bookableSlots, freeSlotNotice } from '../model/freeSlots';
+import { freeSlotNotice, isBookable, upcomingSlots } from '../model/weekSlots';
 import styles from './PsychologistPage.module.css';
 
 interface Notice {
@@ -53,8 +53,9 @@ export function PsychologistPage() {
     from: weekStart,
     to: weekEnd,
     psychologistId,
-    load: (range, signal) => fetchFreeSlots(psychologistId, range, signal),
+    load: (range, signal) => fetchUpcomingSlots(psychologistId, range, signal),
     onRealtimeEvent: (event: SlotEvent) => {
+      flow.slotChanged(event);
       const start = Date.parse(event.slot.startsAt);
       // Solo se avisa lo que cambia en la semana que se está mirando, y no la reserva propia.
       const inWeek = start >= weekStart.getTime() && start < addDays(weekEnd, 1).getTime();
@@ -77,7 +78,8 @@ export function PsychologistPage() {
   }
 
   const backTo = directoryReturnPath(location.state);
-  const slots = bookableSlots(week.slots, now);
+  const slots = upcomingSlots(week.slots, now);
+  const hasFreeSlots = slots.some(isBookable);
   const psychologist = profile.data;
 
   if (profile.error instanceof ApiError && profile.error.status === 404) {
@@ -122,7 +124,7 @@ export function PsychologistPage() {
       <div className={styles.layout}>
         <section
           className={styles.card}
-          aria-label="Bloques libres"
+          aria-label="Bloques de la semana"
           aria-busy={week.status === 'loading'}
         >
           <WeekNavigator weekStart={weekStart} weekEnd={weekEnd} onChange={setWeek} />
@@ -147,14 +149,14 @@ export function PsychologistPage() {
 
           {week.status === 'error' && (
             <div className={styles.feedback} role="alert">
-              <p>No pudimos cargar los bloques libres.</p>
+              <p>No pudimos cargar los bloques de la semana.</p>
               <Button variant="outline" onClick={week.retry}>
                 Reintentar
               </Button>
             </div>
           )}
 
-          <FreeSlotsWeek
+          <WeekSlots
             days={workdaysOf(weekStart)}
             slots={slots}
             now={now}
@@ -163,7 +165,7 @@ export function PsychologistPage() {
             onSelect={selectSlot}
           />
 
-          {week.status === 'ready' && slots.length === 0 && (
+          {week.status === 'ready' && !hasFreeSlots && (
             <div className={styles.emptyWeek}>
               <p>No hay bloques libres esta semana.</p>
               <Button
@@ -185,6 +187,7 @@ export function PsychologistPage() {
                 psychologistName={psychologist.fullName}
                 selected={flow.selected}
                 booked={flow.booked}
+                alert={flow.alert}
                 onBook={flow.booking.request}
                 onClear={flow.clear}
                 onDismissBooked={flow.dismissBooked}
@@ -203,6 +206,8 @@ export function PsychologistPage() {
                   confirmLabel="Confirmar cita"
                   pendingLabel="Agendando…"
                   confirmVariant="primary"
+                  confirmDisabled={flow.booking.unavailable}
+                  cancelLabel={flow.booking.unavailable ? 'Elegir otro bloque' : 'Cancelar'}
                   isPending={flow.booking.isPending}
                   error={flow.booking.error}
                   onCancel={flow.booking.cancel}

@@ -16,10 +16,18 @@ export function useBookSlot({ onBooked }: BookSlotHandlers) {
   const [target, setTarget] = useState<Slot | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   function request(slot: Slot) {
     setTarget(slot);
     setError(null);
+    setUnavailable(false);
+  }
+
+  /** El bloque en confirmación dejó de estar libre en vivo: ya no se puede confirmar. */
+  function markUnavailable(message: string) {
+    setError(message);
+    setUnavailable(true);
   }
 
   function cancel() {
@@ -40,5 +48,5 @@ export function useBookSlot({ onBooked }: BookSlotHandlers) {
     }
   }
 
-  return { target, isPending, error, request, cancel, confirm };
+  return { target, isPending, error, unavailable, request, markUnavailable, cancel, confirm };
 }

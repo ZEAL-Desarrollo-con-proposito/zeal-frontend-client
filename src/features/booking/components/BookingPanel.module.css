@@ -24,6 +24,16 @@
   color: var(--color-ink-700);
 }
 
+/* Coral de atención (manual de identidad): el bloque elegido dejó de estar libre. */
+.alert {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-coral-strong);
+}
+
 .details {
   display: flex;
   flex-direction: column;

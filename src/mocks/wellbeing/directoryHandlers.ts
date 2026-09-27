@@ -8,16 +8,16 @@ import type { PsychologistRecord, WellbeingDb } from './db';
 import { readWellbeingDb } from './db';
 import { isWithin, readRange } from './range';
 
+/** Bloques que aún no empiezan, libres u ocupados (sin revelar quién reservó). */
+function upcomingSlotsOf(db: WellbeingDb, psychologistId: string, now: number): Slot[] {
+  return db.slots
+    .filter((slot) => slot.psychologistId === psychologistId && Date.parse(slot.startsAt) > now)
+    .sort(compareByStart);
+}
+
 /** Regla de negocio del backend: un empleado solo puede reservar bloques disponibles y futuros. */
 function freeSlotsOf(db: WellbeingDb, psychologistId: string, now: number): Slot[] {
-  return db.slots
-    .filter(
-      (slot) =>
-        slot.psychologistId === psychologistId &&
-        slot.status === 'DISPONIBLE' &&
-        Date.parse(slot.startsAt) > now,
-    )
-    .sort(compareByStart);
+  return upcomingSlotsOf(db, psychologistId, now).filter((slot) => slot.status === 'DISPONIBLE');
 }
 
 function toPsychologist(record: PsychologistRecord, db: WellbeingDb, now: number): Psychologist {
@@ -79,7 +79,7 @@ export const directoryHandlers = [
       if (!db.psychologists.some(({ id }) => id === params.id)) {
         return errorBody(404, 'Not Found', NOT_FOUND);
       }
-      const slots = freeSlotsOf(db, params.id, Date.now()).filter((slot) =>
+      const slots = upcomingSlotsOf(db, params.id, Date.now()).filter((slot) =>
         isWithin(slot.startsAt, range),
       );
       return HttpResponse.json(slots);
