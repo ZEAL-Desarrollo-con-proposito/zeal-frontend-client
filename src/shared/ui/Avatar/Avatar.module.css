@@ -11,6 +11,18 @@
   color: var(--color-surface);
 }
 
+.avatar[data-size='lg'] {
+  width: 52px;
+  height: 52px;
+  font-size: 1.125rem;
+}
+
+.avatar[data-size='xl'] {
+  width: 88px;
+  height: 88px;
+  font-size: 2rem;
+}
+
 .avatar[data-tone='sage'] {
   background: var(--color-sage);
 }

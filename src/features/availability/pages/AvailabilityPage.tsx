@@ -5,6 +5,7 @@ import { useWeekParam } from '@/shared/hooks/useWeekParam';
 import { workdaysOf, workweekEnd } from '@/shared/lib/dates';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { WeekNavigator } from '@/shared/ui/WeekNavigator/WeekNavigator';
+import { fetchMySlots } from '../api/availabilityApi';
 import { CreateSlotForm } from '../components/CreateSlotForm';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { useCreateSlotForm } from '../hooks/useCreateSlotForm';
@@ -24,6 +25,7 @@ export function AvailabilityPage() {
     from: weekStart,
     to: weekEnd,
     psychologistId: user.id,
+    load: fetchMySlots,
     onRealtimeEvent: (event) => {
       if (event.type === 'ACTUALIZADA') {
         setAnnouncement(

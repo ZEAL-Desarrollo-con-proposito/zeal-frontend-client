@@ -28,6 +28,33 @@ export const PSYCHOLOGIST_PATHS = {
   sessionRoom: `${ROLE_HOME_PATH.PSICOLOGO}/sala/:reservationId`,
 } as const;
 
+/** Rutas del empleado con pantalla propia. El perfil de un psicólogo cuelga de Bienestar. */
+export const EMPLOYEE_PATHS = {
+  wellbeing: `${ROLE_BASE_PATH.EMPLEADO}/bienestar`,
+  appointments: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas`,
+  psychologist: `${ROLE_BASE_PATH.EMPLEADO}/bienestar/psicologos/:psychologistId`,
+} as const;
+
+export function psychologistPath(psychologistId: string): string {
+  return generatePath(EMPLOYEE_PATHS.psychologist, { psychologistId });
+}
+
+/** Estado con el que el directorio abre un perfil, para volver con los mismos filtros. */
+export interface DirectoryReturnState {
+  directorySearch: string;
+}
+
+/** Vuelta al directorio con los filtros que tenía; el estado de navegación se valida antes de usarse. */
+export function directoryReturnPath(navigationState: unknown): string {
+  const search =
+    isRecord(navigationState) &&
+    typeof navigationState.directorySearch === 'string' &&
+    navigationState.directorySearch.startsWith('?')
+      ? navigationState.directorySearch
+      : '';
+  return `${EMPLOYEE_PATHS.wellbeing}${search}`;
+}
+
 /** Sala de la sesión de una reserva. */
 export function sessionRoomPath(reservationId: string): string {
   return generatePath(PSYCHOLOGIST_PATHS.sessionRoom, { reservationId });

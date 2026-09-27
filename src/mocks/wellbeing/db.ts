@@ -20,7 +20,16 @@ export interface ReservationRecord {
   status: ReservationStatus;
 }
 
+/** Perfil público de un psicólogo en el directorio (HU-04). */
+export interface PsychologistRecord {
+  id: string;
+  fullName: string;
+  title: string;
+  focusAreas: string[];
+}
+
 export interface WellbeingDb {
+  psychologists: PsychologistRecord[];
   slots: Slot[];
   reservations: ReservationRecord[];
   sequence: number;
@@ -31,6 +40,54 @@ export const SEED_PSYCHOLOGIST_ID = 'usr-psicologo-001';
 export const SESSION_MINUTES = 50;
 
 const SEED_HOURS = [8, 9, 10, 11, 14, 15, 16];
+
+const SEED_PSYCHOLOGISTS: readonly PsychologistRecord[] = [
+  {
+    id: SEED_PSYCHOLOGIST_ID,
+    fullName: 'Laura Martínez',
+    title: 'Psicóloga clínica',
+    focusAreas: ['Ansiedad laboral', 'Burnout'],
+  },
+  {
+    id: 'usr-psicologo-002',
+    fullName: 'Andrés Rojas',
+    title: 'Psicólogo organizacional',
+    focusAreas: ['Carrera', 'Burnout'],
+  },
+  {
+    id: 'usr-psicologo-003',
+    fullName: 'Valeria Castro',
+    title: 'Psicóloga clínica',
+    focusAreas: ['Duelo', 'Ansiedad laboral'],
+  },
+  {
+    id: 'usr-psicologo-004',
+    fullName: 'Camila Duarte',
+    title: 'Psicóloga de la salud',
+    focusAreas: ['Sueño', 'Ansiedad laboral'],
+  },
+];
+
+/**
+ * Agendas del resto del directorio, para que la demo muestre cada estado: Andrés tiene bloques
+ * libres hoy, Valeria tiene la semana llena y Camila aún no abre bloques.
+ */
+interface SeedSchedule {
+  psychologistId: string;
+  hours: readonly number[];
+  isReserved: (weekIndex: number, hour: number) => boolean;
+}
+
+const OTHER_SCHEDULES: readonly SeedSchedule[] = [
+  {
+    psychologistId: 'usr-psicologo-002',
+    hours: [8, 13, 17],
+    isReserved: (week, hour) => week === 0 && hour === 8,
+  },
+  { psychologistId: 'usr-psicologo-003', hours: [9, 11, 15], isReserved: (week) => week === 0 },
+];
+
+const SEED_DAYS = 12;
 interface SeedEmployee {
   id: string;
   fullName: string;
@@ -58,43 +115,82 @@ function isCurrentHour(start: Date, now: Date): boolean {
   return start.getTime() <= now.getTime() && now.getTime() < start.getTime() + 60 * 60_000;
 }
 
-/** Dos semanas de jornada de la psicóloga semilla, relativas a `now` para que la demo siempre tenga datos. */
-export function seedWellbeingDb(now: Date): WellbeingDb {
-  const db: WellbeingDb = { slots: [], reservations: [], sequence: 0 };
+/** Días laborales de las dos semanas semilla, con su semana (0 = la actual). */
+function seedWorkdays(now: Date): { day: Date; weekIndex: number }[] {
   const monday = startOfWeek(now);
+  return Array.from({ length: SEED_DAYS }, (_, dayIndex) => ({
+    day: addDays(monday, dayIndex),
+    weekIndex: Math.floor(dayIndex / 7),
+  })).filter(({ day }) => day.getDay() !== 0 && day.getDay() !== 6);
+}
 
-  for (let dayIndex = 0; dayIndex < 12; dayIndex += 1) {
-    const day = addDays(monday, dayIndex);
-    if (day.getDay() === 0 || day.getDay() === 6) {
-      continue;
-    }
+/** Crea una franja (y su reserva, si la tiene) con el siguiente id del simulador. */
+function seedSlot(
+  db: WellbeingDb,
+  now: Date,
+  psychologistId: string,
+  start: Date,
+  booking: { reserved: boolean; cancelled: boolean; employee: SeedEmployee },
+): void {
+  db.sequence += 1;
+  const end = new Date(start.getTime() + SESSION_MINUTES * 60_000);
+  const slot: Slot = {
+    id: `franja-${String(db.sequence)}`,
+    psychologistId,
+    startsAt: start.toISOString(),
+    endsAt: end.toISOString(),
+    status: booking.reserved ? 'RESERVADA' : 'DISPONIBLE',
+  };
+  db.slots.push(slot);
+  if (booking.reserved || booking.cancelled) {
+    db.reservations.push({
+      id: `reserva-${String(db.sequence)}`,
+      slotId: slot.id,
+      psychologistId,
+      employee: { id: booking.employee.id, fullName: booking.employee.fullName },
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+      status: reservationStatus(booking.reserved, end, now),
+    });
+  }
+}
+
+/** Dos semanas de jornada del directorio, relativas a `now` para que la demo siempre tenga datos. */
+export function seedWellbeingDb(now: Date): WellbeingDb {
+  const db: WellbeingDb = {
+    psychologists: SEED_PSYCHOLOGISTS.map((psychologist) => ({
+      ...psychologist,
+      focusAreas: [...psychologist.focusAreas],
+    })),
+    slots: [],
+    reservations: [],
+    sequence: 0,
+  };
+  const workdays = seedWorkdays(now);
+
+  // La psicóloga semilla va primero: sus ids (franja-1…franja-70) no cambian entre versiones.
+  for (const { day } of workdays) {
     for (const hour of SEED_HOURS) {
-      db.sequence += 1;
       const start = atHour(day, hour);
-      const end = new Date(start.getTime() + SESSION_MINUTES * 60_000);
+      const sequence = db.sequence + 1;
       // La franja de la hora actual siempre está reservada por el empleado semilla: permite probar
       // "Entrar a la sala" en cualquier demo durante la jornada.
       const reservedNow = isCurrentHour(start, now);
-      const reserved = reservedNow || db.sequence % 3 === 0;
-      const slot: Slot = {
-        id: `franja-${db.sequence}`,
-        psychologistId: SEED_PSYCHOLOGIST_ID,
-        startsAt: start.toISOString(),
-        endsAt: end.toISOString(),
-        status: reserved ? 'RESERVADA' : 'DISPONIBLE',
-      };
-      db.slots.push(slot);
+      seedSlot(db, now, SEED_PSYCHOLOGIST_ID, start, {
+        reserved: reservedNow || sequence % 3 === 0,
+        cancelled: sequence % 7 === 0,
+        employee: cyclic(SEED_EMPLOYEES, reservedNow ? 0 : sequence),
+      });
+    }
+  }
 
-      if (reserved || db.sequence % 7 === 0) {
-        const employee = cyclic(SEED_EMPLOYEES, reservedNow ? 0 : db.sequence);
-        db.reservations.push({
-          id: `reserva-${db.sequence}`,
-          slotId: slot.id,
-          psychologistId: SEED_PSYCHOLOGIST_ID,
-          employee: { id: employee.id, fullName: employee.fullName },
-          startsAt: slot.startsAt,
-          endsAt: slot.endsAt,
-          status: reservationStatus(reserved, end, now),
+  for (const schedule of OTHER_SCHEDULES) {
+    for (const { day, weekIndex } of workdays) {
+      for (const hour of schedule.hours) {
+        seedSlot(db, now, schedule.psychologistId, atHour(day, hour), {
+          reserved: schedule.isReserved(weekIndex, hour),
+          cancelled: false,
+          employee: cyclic(SEED_EMPLOYEES, db.sequence + 1),
         });
       }
     }
@@ -113,6 +209,8 @@ function isWellbeingDb(value: unknown): value is WellbeingDb {
   return (
     typeof value === 'object' &&
     value !== null &&
+    'psychologists' in value &&
+    Array.isArray(value.psychologists) &&
     'slots' in value &&
     Array.isArray(value.slots) &&
     'reservations' in value &&

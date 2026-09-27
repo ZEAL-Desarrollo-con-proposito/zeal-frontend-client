@@ -3,6 +3,7 @@ import { LOGIN_ENDPOINT } from '@/features/auth/api/authApi';
 import { errorBody } from './mockAuth';
 import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
 import { findSeedUser } from './seedUsers';
+import { directoryHandlers } from './wellbeing/directoryHandlers';
 import { wellbeingHandlers } from './wellbeing/handlers';
 
 interface LoginRequestBody {
@@ -33,4 +34,4 @@ const authHandlers = [
   }),
 ];
 
-export const handlers = [...authHandlers, ...wellbeingHandlers];
+export const handlers = [...authHandlers, ...wellbeingHandlers, ...directoryHandlers];

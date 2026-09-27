@@ -5,27 +5,15 @@ import { MY_SLOTS_ENDPOINT, SLOTS_ENDPOINT } from '@/features/availability/api/a
 import type { Slot } from '@/features/availability/model/slot';
 import { compareByStart } from '@/features/availability/model/slot';
 import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
-import { addDays, parseIsoDate } from '@/shared/lib/dates';
 import { authorize, errorBody } from '../mockAuth';
 import { publishMockEvent } from '../realtime';
 import type { ReservationRecord } from './db';
 import { nextId, readWellbeingDb, writeWellbeingDb } from './db';
+import { isWithin, readRange } from './range';
 
 interface NewSlotBody {
   startsAt?: unknown;
   endsAt?: unknown;
-}
-
-function readRange(request: Request): { from: Date; to: Date } | null {
-  const params = new URL(request.url).searchParams;
-  const from = parseIsoDate(params.get('desde') ?? '');
-  const to = parseIsoDate(params.get('hasta') ?? '');
-  return from === null || to === null ? null : { from, to: addDays(to, 1) };
-}
-
-function isWithin(isoDateTime: string, { from, to }: { from: Date; to: Date }): boolean {
-  const time = Date.parse(isoDateTime);
-  return time >= from.getTime() && time < to.getTime();
 }
 
 function parseTime(value: unknown): number {

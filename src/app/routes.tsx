@@ -8,6 +8,8 @@ import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { AgendaPage } from '@/features/agenda/pages/AgendaPage';
 import { SessionRoomPage } from '@/features/agenda/pages/SessionRoomPage';
 import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
+import { DirectoryPage } from '@/features/directory/pages/DirectoryPage';
+import { PsychologistPage } from '@/features/directory/pages/PsychologistPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
@@ -16,17 +18,25 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SectionPage } from './pages/SectionPage';
 import { UnexpectedErrorPage } from './pages/UnexpectedErrorPage';
-import { PATHS, PSYCHOLOGIST_PATHS, ROLE_HOME_PATH } from './paths';
+import { EMPLOYEE_PATHS, PATHS, PSYCHOLOGIST_PATHS, ROLE_HOME_PATH } from './paths';
 import { RootLayout } from './RootLayout';
 
 /** Secciones del menú que ya tienen su pantalla; el resto muestra su estado vacío. */
 const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [PSYCHOLOGIST_PATHS.agenda]: <AgendaPage />,
   [PSYCHOLOGIST_PATHS.availability]: <AvailabilityPage />,
+  [EMPLOYEE_PATHS.wellbeing]: <DirectoryPage />,
 };
 
 /** Pantallas de un rol que no están en el menú (se llega a ellas desde otra pantalla). */
 const ROLE_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+  EMPLEADO: [
+    {
+      path: EMPLOYEE_PATHS.psychologist,
+      handle: { title: 'Perfil del psicólogo' } satisfies PageHandle,
+      element: <PsychologistPage />,
+    },
+  ],
   PSICOLOGO: [
     {
       path: PSYCHOLOGIST_PATHS.sessionRoom,
