@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link, useLocation, useParams } from 'react-router';
 import { directoryReturnPath } from '@/app/paths';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { useWeeklySlots } from '@/features/availability/hooks/useWeeklySlots';
+import type { Slot } from '@/features/availability/model/slot';
+import { describeSlot } from '@/features/availability/model/slot';
 import type { SlotEvent } from '@/features/availability/model/slotEvent';
+import { BookingPanel } from '@/features/booking/components/BookingPanel';
+import { useBookingFlow } from '@/features/booking/hooks/useBookingFlow';
 import { ApiError } from '@/shared/api/errors';
 import { useNow } from '@/shared/hooks/useNow';
 import { useWeekParam } from '@/shared/hooks/useWeekParam';
 import { addDays, workdaysOf, workweekEnd } from '@/shared/lib/dates';
 import { Button } from '@/shared/ui/Button/Button';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { ChevronLeftIcon } from '@/shared/ui/icons';
 import { WeekNavigator } from '@/shared/ui/WeekNavigator/WeekNavigator';
@@ -26,7 +31,13 @@ interface Notice {
   text: string;
 }
 
-/** Figma B13 · Perfil del psicólogo con sus bloques libres de la semana (HU-FE-04). */
+/** En pantallas angostas el resumen queda bajo la semana: se acerca al elegir un bloque. */
+function revealPanel(panel: HTMLElement | null) {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  panel?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+/** Figma B13 y B3 · Perfil del psicólogo, sus bloques libres y la reserva (HU-FE-04, HU-FE-05). */
 export function PsychologistPage() {
   const { psychologistId = '' } = useParams();
   const location = useLocation();
@@ -36,6 +47,7 @@ export function PsychologistPage() {
   const weekEnd = workweekEnd(weekStart);
   const profile = usePsychologist(psychologistId);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const week = useWeeklySlots({
     from: weekStart,
@@ -44,12 +56,25 @@ export function PsychologistPage() {
     load: (range, signal) => fetchFreeSlots(psychologistId, range, signal),
     onRealtimeEvent: (event: SlotEvent) => {
       const start = Date.parse(event.slot.startsAt);
-      // Solo se avisa lo que cambia en la semana que se está mirando.
-      if (start >= weekStart.getTime() && start < addDays(weekEnd, 1).getTime()) {
+      // Solo se avisa lo que cambia en la semana que se está mirando, y no la reserva propia.
+      const inWeek = start >= weekStart.getTime() && start < addDays(weekEnd, 1).getTime();
+      if (inWeek && !flow.isOwnBooking(event.slot.id)) {
         setNotice((current) => ({ id: (current?.id ?? 0) + 1, text: freeSlotNotice(event) }));
       }
     },
   });
+
+  const flow = useBookingFlow({
+    onBooked: (slot) => {
+      week.addSlot({ ...slot, status: 'RESERVADA' });
+    },
+  });
+  const target = flow.booking.target;
+
+  function selectSlot(slot: Slot) {
+    flow.select(slot);
+    revealPanel(panelRef.current);
+  }
 
   const backTo = directoryReturnPath(location.state);
   const slots = bookableSlots(week.slots, now);
@@ -134,6 +159,8 @@ export function PsychologistPage() {
             slots={slots}
             now={now}
             loading={week.status === 'loading'}
+            selectedId={flow.selected?.id ?? null}
+            onSelect={selectSlot}
           />
 
           {week.status === 'ready' && slots.length === 0 && (
@@ -152,11 +179,39 @@ export function PsychologistPage() {
         </section>
 
         {psychologist !== null && (
-          <aside className={styles.side} aria-label="Privacidad">
+          <aside className={styles.side} aria-label="Reserva y privacidad">
+            <div ref={panelRef}>
+              <BookingPanel
+                psychologistName={psychologist.fullName}
+                selected={flow.selected}
+                booked={flow.booked}
+                onBook={flow.booking.request}
+                onClear={flow.clear}
+                onDismissBooked={flow.dismissBooked}
+              />
+            </div>
             <ConfidentialityNote
               psychologistName={psychologist.fullName}
               organization={user.organization}
             />
+            <AnimatePresence>
+              {target !== null && (
+                <ConfirmDialog
+                  key={target.id}
+                  title="¿Agendar esta cita?"
+                  description={`Sesión 1:1 con ${psychologist.fullName} el ${describeSlot(target)}.`}
+                  confirmLabel="Confirmar cita"
+                  pendingLabel="Agendando…"
+                  confirmVariant="primary"
+                  isPending={flow.booking.isPending}
+                  error={flow.booking.error}
+                  onCancel={flow.booking.cancel}
+                  onConfirm={() => {
+                    void flow.booking.confirm(target);
+                  }}
+                />
+              )}
+            </AnimatePresence>
           </aside>
         )}
       </div>

@@ -2,6 +2,7 @@ import type { KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import type { ButtonVariant } from '../Button/Button';
 import { Button } from '../Button/Button';
 import styles from './ConfirmDialog.module.css';
 
@@ -12,12 +13,14 @@ interface ConfirmDialogProps {
   pendingLabel: string;
   isPending: boolean;
   error: string | null;
+  /** Estilo del botón de confirmar: `danger` para acciones destructivas (por defecto). */
+  confirmVariant?: ButtonVariant;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /**
- * Confirmación de acciones destructivas: foco atrapado entre sus botones, Escape cancela y al
+ * Confirmación de acciones importantes (eliminar, agendar): foco atrapado entre sus botones, Escape cancela y al
  * cerrar el foco vuelve a quien lo abrió. Se monta en <body> para no depender de transformaciones
  * de sus ancestros. Quien lo usa lo envuelve en <AnimatePresence> para animar su salida.
  */
@@ -32,6 +35,7 @@ function DialogContent({
   pendingLabel,
   isPending,
   error,
+  confirmVariant = 'danger',
   onConfirm,
   onCancel,
 }: Readonly<ConfirmDialogProps>) {
@@ -99,7 +103,7 @@ function DialogContent({
           </Button>
           <Button
             ref={confirmRef}
-            variant="danger"
+            variant={confirmVariant}
             onClick={onConfirm}
             disabled={isPending}
             aria-busy={isPending}

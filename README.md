@@ -184,6 +184,31 @@ En el perfil, los bloques de la semana se actualizan con los eventos de ese psic
 reservado desaparece al instante y se avisa) y el perfil se vuelve a pedir para refrescar su
 próximo bloque.
 
+### Contrato de reservas del empleado (acordar con HU-BE-05)
+
+Rol `EMPLEADO`. La reserva es atómica en el servidor: validar el bloque y asignarlo ocurre como
+una sola operación, así que un bloque nunca queda con dos citas.
+
+| Método y ruta                                          | Respuesta                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `POST /api/wellbeing/reservas` con `{ "slotId": "…" }` | `201` cita · `409` otra persona lo tomó o se cruza con otra cita · `404` · `400` ya empezó |
+
+```json
+{
+  "id": "reserva-71",
+  "psychologist": {
+    "id": "usr-psicologo-001",
+    "fullName": "Laura Martínez",
+    "title": "Psicóloga clínica"
+  },
+  "startsAt": "2026-09-23T15:00:00.000Z",
+  "endsAt": "2026-09-23T15:50:00.000Z",
+  "status": "CONFIRMADA"
+}
+```
+
+Al reservar, el servidor publica `ACTUALIZADA` en `/topic/franjas` con la franja ya `RESERVADA`.
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto

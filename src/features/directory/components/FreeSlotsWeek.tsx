@@ -15,13 +15,23 @@ interface FreeSlotsWeekProps {
   slots: readonly Slot[];
   now: number;
   loading: boolean;
+  selectedId: string | null;
+  onSelect: (slot: Slot) => void;
 }
 
 /**
- * Figma B13 · "Próximos bloques libres", extendido a la semana: una columna por día. Los bloques
- * aparecen y desaparecen con una transición corta cuando cambian en vivo.
+ * Figma B13 · "Próximos bloques libres", extendido a la semana (una columna por día), con la
+ * selección de B3: se elige un bloque para agendarlo. Los bloques aparecen y desaparecen con una
+ * transición corta cuando cambian en vivo.
  */
-export function FreeSlotsWeek({ days, slots, now, loading }: Readonly<FreeSlotsWeekProps>) {
+export function FreeSlotsWeek({
+  days,
+  slots,
+  now,
+  loading,
+  selectedId,
+  onSelect,
+}: Readonly<FreeSlotsWeekProps>) {
   const today = new Date(now);
 
   return (
@@ -45,13 +55,21 @@ export function FreeSlotsWeek({ days, slots, now, loading }: Readonly<FreeSlotsW
                   <motion.li
                     key={slot.id}
                     layout
-                    className={styles.slot}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.85 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
                   >
-                    {formatTime(new Date(slot.startsAt))} – {formatTime(new Date(slot.endsAt))}
+                    <button
+                      type="button"
+                      className={styles.slot}
+                      aria-pressed={slot.id === selectedId}
+                      onClick={() => {
+                        onSelect(slot);
+                      }}
+                    >
+                      {formatTime(new Date(slot.startsAt))} – {formatTime(new Date(slot.endsAt))}
+                    </button>
                   </motion.li>
                 ))}
               </AnimatePresence>
