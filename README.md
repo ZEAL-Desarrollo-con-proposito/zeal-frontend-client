@@ -36,6 +36,9 @@ La aplicación queda en <http://localhost:3000>.
 | `npm run test:coverage` | Pruebas con reporte de cobertura (`coverage/lcov.info` para SonarQube)    |
 | `npm run verify`        | Tipos + lint + formato + pruebas con cobertura (lo mismo que corre el CI) |
 
+Las pruebas corren un proceso por archivo (aislamiento del tiempo real simulado) y usan como máximo
+la mitad de los núcleos, para no saturar la máquina.
+
 ## Estructura
 
 ```
