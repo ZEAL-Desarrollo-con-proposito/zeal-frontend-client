@@ -214,6 +214,31 @@ El estado de cada cita lo decide el servidor (una confirmada que ya terminó lle
 "Mis citas" las agrupa en Próximas, Historial y Canceladas (`?vista=`) y se vuelve a pedir con
 cada `ACTUALIZADA`, así que una cita agendada en otra pestaña aparece al instante.
 
+### Contrato de notificaciones (acordar con HU-BE-06)
+
+Cualquier rol autenticado; cada persona solo ve y cambia las suyas.
+
+| Método y ruta                         | Respuesta                                             |
+| ------------------------------------- | ----------------------------------------------------- |
+| `GET /api/notificaciones`             | `200` notificaciones propias, la más reciente primero |
+| `POST /api/notificaciones/{id}/leida` | `204` · `404` no existe o es ajena (se da por leída)  |
+| `POST /api/notificaciones/leidas`     | `204` marca todas las propias como leídas             |
+
+```json
+{
+  "id": "notificacion-4",
+  "type": "RESERVA_CONFIRMADA",
+  "title": "Tu cita quedó confirmada",
+  "message": "Laura Martínez · miércoles, 23 de septiembre de 10:00 a 10:50",
+  "createdAt": "2026-09-23T14:20:00.000Z",
+  "read": false,
+  "link": "/empleado/mis-citas"
+}
+```
+
+`link` es una ruta interna o `null`; el cliente rechaza cualquier otra cosa (p. ej. una URL
+externa). Marcar como leída es optimista: si el servidor falla, el cambio se deshace y se avisa.
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto

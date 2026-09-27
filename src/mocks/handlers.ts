@@ -2,6 +2,7 @@ import { delay, http, HttpResponse } from 'msw';
 import { LOGIN_ENDPOINT } from '@/features/auth/api/authApi';
 import { errorBody } from './mockAuth';
 import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
+import { notificationHandlers } from './notifications/handlers';
 import { findSeedUser } from './seedUsers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
 import { directoryHandlers } from './wellbeing/directoryHandlers';
@@ -41,4 +42,5 @@ export const handlers = [
   ...bookingHandlers,
   ...wellbeingHandlers,
   ...directoryHandlers,
+  ...notificationHandlers,
 ];

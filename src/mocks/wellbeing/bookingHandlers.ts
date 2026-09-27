@@ -2,8 +2,10 @@ import { delay, http, HttpResponse } from 'msw';
 import { RESERVATIONS_ENDPOINT } from '@/features/agenda/api/agendaApi';
 import { MY_APPOINTMENTS_ENDPOINT } from '@/features/appointments/api/appointmentsApi';
 import type { Appointment } from '@/features/appointments/model/appointment';
+import { describeSlot } from '@/features/availability/model/slot';
 import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
 import { authorize, errorBody } from '../mockAuth';
+import { notify } from '../notifications/db';
 import { publishMockEvent } from '../realtime';
 import type { PsychologistRecord, ReservationRecord } from './db';
 import { nextId, readWellbeingDb, writeWellbeingDb } from './db';
@@ -105,6 +107,13 @@ export const bookingHandlers = [
     db.reservations.push(record);
     writeWellbeingDb(db);
     publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA', slot });
+    // El servicio de notificaciones confirma la reserva a quien la hizo (HU-BE-06).
+    notify(user.id, {
+      type: 'RESERVA_CONFIRMADA',
+      title: 'Tu cita quedó confirmada',
+      message: `${psychologist.fullName} · ${describeSlot(slot)}`,
+      link: '/empleado/mis-citas',
+    });
     return HttpResponse.json(toAppointment(record, psychologist, Date.now()), { status: 201 });
   }),
 ];

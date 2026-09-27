@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RESERVATIONS_ENDPOINT } from '@/features/agenda/api/agendaApi';
 import type { Role } from '@/features/auth/model/session';
+import { readNotificationsDb } from '@/mocks/notifications/db';
 import { server } from '@/mocks/server';
 import type { WellbeingDb } from '@/mocks/wellbeing/db';
 import { readWellbeingDb, writeWellbeingDb } from '@/mocks/wellbeing/db';
@@ -63,6 +64,15 @@ describe('bookingApi.bookSlot', () => {
     expect(db.reservations.find(({ id }) => id === appointment.id)).toMatchObject({
       slotId,
       employee: { id: 'usr-empleado-001', fullName: 'David Cajamarca' },
+    });
+    // El servicio de notificaciones le confirma la reserva a quien la hizo.
+    expect(readNotificationsDb().notifications.at(-1)).toMatchObject({
+      userId: 'usr-empleado-001',
+      type: 'RESERVA_CONFIRMADA',
+      title: 'Tu cita quedó confirmada',
+      message: 'Andrés Rojas · miércoles, 23 de septiembre de 13:00 a 13:50',
+      read: false,
+      link: '/empleado/mis-citas',
     });
   });
 

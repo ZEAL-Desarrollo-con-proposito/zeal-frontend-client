@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useMatches } from 'react-router';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { RealtimeStatusBadge } from './RealtimeStatusBadge';
 import { CloseIcon, MenuIcon } from '@/shared/ui/icons';
@@ -148,6 +149,7 @@ export function AppLayout() {
             <span className={styles.contextPage}>{pageTitle}</span>
           </p>
           <div className={styles.account}>
+            <NotificationBell />
             <RealtimeStatusBadge />
             <span className={styles.accountIdentity}>
               <span className={styles.accountName}>{user.fullName}</span>
