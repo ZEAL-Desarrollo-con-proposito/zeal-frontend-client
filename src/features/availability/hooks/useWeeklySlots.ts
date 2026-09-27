@@ -1,4 +1,6 @@
 import { useEffect, useEffectEvent, useReducer, useRef, useState } from 'react';
+import type { ApiError } from '@/shared/api/errors';
+import { isForbidden } from '@/shared/api/errors';
 import type { DateRange } from '@/shared/lib/dates';
 import { addDays } from '@/shared/lib/dates';
 import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
@@ -22,6 +24,7 @@ interface WeeklySlotsOptions {
  * - cancela la petición anterior al cambiar de rango y descarta respuestas atrasadas;
  * - aplica los eventos del Real-Time Gateway (también los que llegan durante la carga);
  * - al recuperarse la conexión vuelve a pedir la semana para no perder cambios.
+ * Un 403 no se reintenta: se lanza para que la ruta muestre "Permiso denegado".
  */
 export function useWeeklySlots({
   from,
@@ -32,6 +35,7 @@ export function useWeeklySlots({
 }: WeeklySlotsOptions) {
   const [state, dispatch] = useReducer(slotsReducer, INITIAL_SLOTS_STATE);
   const [attempt, setAttempt] = useState(0);
+  const [denied, setDenied] = useState<ApiError | null>(null);
   const { recoveries } = useRealtimeStatus();
   const requestCounter = useRef(0);
   const fromTime = from.getTime();
@@ -47,7 +51,11 @@ export function useWeeklySlots({
       (slots) => {
         dispatch({ type: 'load-success', requestId, slots });
       },
-      () => {
+      (error: unknown) => {
+        if (isForbidden(error)) {
+          setDenied(error);
+          return;
+        }
         dispatch({ type: 'load-failure', requestId });
       },
     );
@@ -62,6 +70,10 @@ export function useWeeklySlots({
       onRealtimeEvent(payload);
     }
   });
+
+  if (denied !== null) {
+    throw denied;
+  }
 
   function retry() {
     setAttempt((current) => current + 1);

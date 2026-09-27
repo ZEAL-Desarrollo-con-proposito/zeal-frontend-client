@@ -1,11 +1,21 @@
 import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { Role } from '@/features/auth/model/session';
+import { sessionStore } from '@/features/auth/storage/sessionStore';
 import { server } from '@/mocks/server';
-import { storeSession } from '@/test/credentials';
+import { buildSession, storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
-import { EMPLOYEE_PATHS, ROLE_HOME_PATH, sessionRoomPath } from './paths';
+import { EMPLOYEE_PATHS, PSYCHOLOGIST_PATHS, ROLE_HOME_PATH, sessionRoomPath } from './paths';
 
 const DENIED_TITLE = 'Esta sección no está disponible para tu rol';
+
+/** Sesión alterada en el navegador: dice ser de `role`, pero el token es del administrador. */
+function storeTamperedSession(role: Role) {
+  sessionStore.save(
+    { ...buildSession(role), accessToken: buildSession('ADMIN').accessToken },
+    false,
+  );
+}
 
 /** Rutas del API que se pidieron durante la prueba. */
 function recordRequests() {
@@ -47,7 +57,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
       storeSession('ADMIN');
       const { router, user } = renderRoute(path);
 
-      expect(await deniedHeading()).toBeInTheDocument();
+      expect(await deniedHeading()).toHaveFocus();
       expect(
         screen.queryByRole('complementary', { name: 'Barra lateral' }),
       ).not.toBeInTheDocument();
@@ -58,11 +68,32 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     },
   );
 
+  it('si el servidor responde 403, reemplaza la pantalla sin mostrar nada de su contenido', async () => {
+    storeTamperedSession('EMPLEADO');
+    const { router, user } = renderRoute(EMPLOYEE_PATHS.wellbeing);
+
+    expect(await deniedHeading()).toHaveFocus();
+    expect(screen.queryByText(/Laura Martínez/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+
+    // Al salir, la aplicación vuelve a su estructura normal.
+    await user.click(screen.getByRole('link', { name: 'Ir a mi inicio' }));
+    expect(router.state.location.pathname).toBe(ROLE_HOME_PATH.EMPLEADO);
+    expect(await screen.findByRole('complementary', { name: 'Barra lateral' })).toBeInTheDocument();
+  });
+
+  it('también cuando el 403 llega al cargar la semana de franjas', async () => {
+    storeTamperedSession('PSICOLOGO');
+    renderRoute(PSYCHOLOGIST_PATHS.availability);
+
+    expect(await deniedHeading()).toBeInTheDocument();
+  });
+
   it('una dirección inexistente dentro del propio rol sigue siendo "no encontrada"', () => {
     storeSession('EMPLEADO');
     renderRoute('/empleado/seccion-que-no-existe');
 
-    expect(screen.getByRole('heading', { name: 'No encontramos esta página' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'No encontramos esta página' })).toHaveFocus();
   });
 
   it('sin sesión, un enlace a una conversación manda primero al login', () => {

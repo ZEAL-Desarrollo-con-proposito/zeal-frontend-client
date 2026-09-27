@@ -267,6 +267,10 @@ externa). Marcar como leída es optimista: si el servidor falla, el cambio se de
   (aislamiento entre roles), también ante direcciones que no existen bajo ese prefijo (p. ej. un
   enlace al chat de un empleado abierto por el administrador). La autorización real la aplica
   siempre el backend.
+- **403 del servidor (HU-FE-11):** si lo que carga una pantalla responde 403, la pantalla se
+  reemplaza por "Permiso denegado", sin nada de su contenido y sin ofrecer reintento. Aplica a toda
+  carga hecha con `useFetch` o `useLiveFetch` (y a la semana de franjas): una pantalla nueva, como
+  el chat, lo hereda al usar esos hooks.
 - **Token:** se envía como `Authorization: Bearer <token>`. El frontend solo lee el claim `exp`
   para cerrar la sesión al vencer; la firma la valida el servidor.
 - **Almacenamiento:** sin "Recordarme" la sesión vive en `sessionStorage` (se borra al cerrar la

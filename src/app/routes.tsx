@@ -14,6 +14,7 @@ import { PsychologistPage } from '@/features/directory/pages/PsychologistPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
+import { ForbiddenBoundary } from './pages/ForbiddenBoundary';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -61,6 +62,7 @@ export const routes: RouteObject[] = [
       { path: PATHS.login, element: <LoginPage /> },
       ...ROLES.map((role) => ({
         element: <ProtectedRoute role={role} forbidden={<ForbiddenPage />} />,
+        errorElement: <ForbiddenBoundary />,
         children: [
           {
             element: <AppLayout />,

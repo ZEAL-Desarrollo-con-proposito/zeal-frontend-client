@@ -12,6 +12,11 @@ export class ApiError extends Error {
   }
 }
 
+/** El servidor negó el acceso (403): quien pide no tiene permiso, y reintentar no cambia nada. */
+export function isForbidden(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 403;
+}
+
 /** El servidor respondió con éxito pero con una forma distinta a la del contrato. */
 export class InvalidResponseError extends Error {
   constructor(resource: string) {
