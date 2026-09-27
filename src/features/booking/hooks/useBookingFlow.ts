@@ -1,10 +1,7 @@
 import { useRef, useState } from 'react';
-import { EMPLOYEE_PATHS } from '@/app/paths';
 import type { Appointment } from '@/features/appointments/model/appointment';
 import type { Slot } from '@/features/availability/model/slot';
-import { describeSlot } from '@/features/availability/model/slot';
 import type { SlotEvent } from '@/features/availability/model/slotEvent';
-import { useToast } from '@/shared/ui/Toast/useToast';
 import { isSlotLost, lostSlotMessage } from '../model/lostSlot';
 import { useBookSlot } from './useBookSlot';
 
@@ -26,7 +23,6 @@ export function useBookingFlow({ onBooked, onRejected }: BookingFlowOptions) {
   /** Por qué se soltó la selección (el bloque dejó de estar libre en vivo). */
   const [alert, setAlert] = useState<string | null>(null);
   const ownBookings = useRef(new Set<string>());
-  const showToast = useToast();
 
   const booking = useBookSlot({
     onBooked: (appointment, slot) => {
@@ -34,12 +30,6 @@ export function useBookingFlow({ onBooked, onRejected }: BookingFlowOptions) {
       setSelected(null);
       setBooked(appointment);
       onBooked(slot);
-      showToast({
-        tone: 'success',
-        title: 'Tu cita quedó confirmada',
-        message: `${appointment.psychologist.fullName} · ${describeSlot(appointment)}`,
-        action: { label: 'Ver mis citas', to: EMPLOYEE_PATHS.appointments },
-      });
     },
     onRejected: (message) => {
       setSelected(null);

@@ -245,6 +245,11 @@ externa). Marcar como leída es optimista: si el servidor falla, el cambio se de
   `http://localhost:8083/ws`), con `Authorization: Bearer <token>` en el frame `CONNECT`,
   reconexión automática cada 5 s y heartbeats de 10 s. La barra superior muestra el estado.
 - **Destino `/topic/franjas`:** `{ "type": "CREADA" | "ELIMINADA" | "ACTUALIZADA", "slot": <franja> }`.
+- **Cola privada `/user/queue/notificaciones`** (destino de usuario de STOMP: el gateway solo
+  entrega a la persona autenticada en el `CONNECT`): `{ "type": "NUEVA", "notification": <notificación> }`
+  cuando llega una (se muestra un aviso emergente una sola vez y suma a la campana) o
+  `{ "type": "LEIDAS", "ids": [...] }` cuando se marcan como leídas en otra pestaña o equipo. Lo
+  que llega mientras carga la lista no se pierde, y al reconectar se vuelve a pedir.
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.

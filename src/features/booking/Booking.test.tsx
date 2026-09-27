@@ -143,6 +143,10 @@ describe('Agendar cita (HU-FE-05)', () => {
       toasts.getByText('Laura Martínez · miércoles, 23 de septiembre de 10:00 a 10:50'),
     ).toBeInTheDocument();
 
+    // Llega por la cola privada de notificaciones, una sola vez.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(toasts.getAllByText('Tu cita quedó confirmada')).toHaveLength(1);
+
     await user.click(toasts.getByRole('link', { name: 'Ver mis citas' }));
 
     expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.appointments);

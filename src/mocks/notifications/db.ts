@@ -1,4 +1,6 @@
 import type { Notification } from '@/features/notifications/model/notification';
+import { NOTIFICATIONS_QUEUE } from '@/features/notifications/model/notificationEvent';
+import { publishToUser } from '../realtime';
 
 /**
  * "Base de datos" del servicio de notificaciones simulado, en localStorage para compartirla entre
@@ -92,7 +94,10 @@ export function toNotification(record: NotificationRecord): Notification {
   return { id, type, title, message, createdAt, read, link };
 }
 
-/** Crea una notificación para una persona (como el servicio al recibir un evento del sistema). */
+/**
+ * Crea una notificación para una persona (como el servicio al recibir un evento del sistema) y
+ * la empuja a su cola privada en tiempo real.
+ */
 export function notify(
   userId: string,
   content: Pick<Notification, 'type' | 'title' | 'message' | 'link'>,
@@ -108,5 +113,7 @@ export function notify(
   };
   db.notifications.push(record);
   writeNotificationsDb(db);
-  return toNotification(record);
+  const notification = toNotification(record);
+  publishToUser(userId, NOTIFICATIONS_QUEUE, { type: 'NUEVA', notification });
+  return notification;
 }

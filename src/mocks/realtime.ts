@@ -1,5 +1,6 @@
 import type { RealtimeClient, RealtimeListener } from '@/shared/realtime/realtimeClient';
 import { createStatusStore } from '@/shared/realtime/realtimeClient';
+import { readMockTokenSubject } from './mockToken';
 
 /**
  * Real-Time Gateway simulado. Los handlers de MSW publican en un BroadcastChannel y cada pestaña
@@ -11,15 +12,29 @@ export const MOCK_REALTIME_CHANNEL = 'zeal-mock-realtime';
 interface Envelope {
   destination: string;
   payload: unknown;
+  /** Destinatario de un mensaje de usuario (`/user/...`); sin él, llega a todas las sesiones. */
+  userId?: string;
 }
 
-export function publishMockEvent(destination: string, payload: unknown): void {
+function post(envelope: Envelope): void {
   const channel = new BroadcastChannel(MOCK_REALTIME_CHANNEL);
-  channel.postMessage({ destination, payload } satisfies Envelope);
+  channel.postMessage(envelope);
   channel.close();
 }
 
-export function createMockRealtimeClient(): RealtimeClient {
+/** Mensaje para todas las sesiones suscritas al destino (p. ej. `/topic/franjas`). */
+export function publishMockEvent(destination: string, payload: unknown): void {
+  post({ destination, payload });
+}
+
+/** Mensaje a la cola privada de una persona, como `convertAndSendToUser` en Spring. */
+export function publishToUser(userId: string, destination: string, payload: unknown): void {
+  post({ destination, payload, userId });
+}
+
+/** Cliente simulado; con el token sabe a quién pertenece y recibe solo sus mensajes privados. */
+export function createMockRealtimeClient(accessToken?: string): RealtimeClient {
+  const subject = accessToken === undefined ? null : readMockTokenSubject(accessToken);
   const store = createStatusStore();
   const subscriptions = new Map<number, { destination: string; listener: RealtimeListener }>();
   let channel: BroadcastChannel | null = null;
@@ -29,6 +44,9 @@ export function createMockRealtimeClient(): RealtimeClient {
     connect() {
       channel = new BroadcastChannel(MOCK_REALTIME_CHANNEL);
       channel.onmessage = ({ data }: MessageEvent<Envelope>) => {
+        if (data.userId !== undefined && data.userId !== subject) {
+          return;
+        }
         subscriptions.forEach(({ destination, listener }) => {
           if (destination === data.destination) {
             listener(data.payload);
