@@ -38,6 +38,10 @@ function overlaps(record: ReservationRecord, start: number, end: number): boolea
   return Date.parse(record.startsAt) < end && start < Date.parse(record.endsAt);
 }
 
+/*regla que puse para que se pueda cancelar minimo 24 h de plazo */
+const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+
 export const bookingHandlers = [
   // Citas del empleado autenticado; las de un psicólogo que ya no está en el directorio no se listan.
   http.get(`*${MY_APPOINTMENTS_ENDPOINT}`, async ({ request }) => {
@@ -115,5 +119,48 @@ export const bookingHandlers = [
       link: '/empleado/mis-citas',
     });
     return HttpResponse.json(toAppointment(record, psychologist, Date.now()), { status: 201 });
+  }),
+
+
+  /**
+   * Cancela una cita propia (HU-BE-07). Idempotente: si ya estaba cancelada, se devuelve tal cual en vez de fallar.
+   * El plazo mínimo se valida en el servidor, nunca en el formulario.
+   */
+  http.post<{ id: string }>(`*${RESERVATIONS_ENDPOINT}/:id/cancelar`, async ({ request, params }) => {
+    await delay();
+    const user = authorize(request, 'EMPLEADO');
+    if (user instanceof Response) {
+      return user;
+    }
+    const db = readWellbeingDb();
+    const reservation = db.reservations.find(
+      (candidate) => candidate.id === params.id && candidate.employee.id === user.id,
+    );
+    const psychologist = db.psychologists.find(({ id }) => id === reservation?.psychologistId);
+    if (reservation === undefined || psychologist === undefined) {
+      return errorBody(404, 'Not Found', 'Esta cita ya no existe.');
+    }
+    if (reservation.status !== 'CONFIRMADA') {
+      // Ya cancelada (p. ej. desde otra pestaña): no es un error, se responde igual que la 1.ª vez.
+      return HttpResponse.json(toAppointment(reservation, psychologist, Date.now()));
+    }
+    if (Date.parse(reservation.startsAt) - Date.now() < CANCEL_WINDOW_MS) {
+      return errorBody(
+        409,
+        'Conflict',
+        'Ya no puedes cancelar esta cita: faltan menos de 24 horas para que empiece.',
+      );
+    }
+
+    reservation.status = 'CANCELADA';
+    const slot = db.slots.find(({ id }) => id === reservation.slotId);
+    if (slot !== undefined) {
+      slot.status = 'DISPONIBLE';
+    }
+    writeWellbeingDb(db);
+    if (slot !== undefined) {
+      publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA', slot });
+    }
+    return HttpResponse.json(toAppointment(reservation, psychologist, Date.now()));
   }),
 ];

@@ -57,6 +57,18 @@
   white-space: nowrap;
 }
 
+.status {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.cancel {
+  min-height: auto;
+  padding: 6px 16px;
+  font-size: var(--text-caption);
+}
+
 @media (max-width: 767px) {
   .row {
     grid-template-columns: minmax(0, 1fr) auto;

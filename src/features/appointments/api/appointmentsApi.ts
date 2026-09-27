@@ -14,3 +14,14 @@ export async function fetchMyAppointments(signal?: AbortSignal): Promise<Appoint
   }
   return payload;
 }
+
+/** Cancela una cita. El servidor decide si aun esta dentro del palozo de 24 horas si no da un error 409 libera esta cita*/
+export async function cancelAppointment(id: string): Promise<Appointment> {
+  const payload = await request(`${RESERVATIONS_ENDPOINT}/${encodeURIComponent(id)}/cancelar`, {
+    method: 'POST',
+  });
+  if (!isAppointment(payload)) {
+    throw new InvalidResponseError('cita cancelada');
+  }
+  return payload;
+}

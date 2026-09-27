@@ -1,10 +1,11 @@
-import { useId } from 'react';
-import { motion } from 'motion/react';
+import { useId, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { EMPLOYEE_PATHS } from '@/app/paths';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { useNow } from '@/shared/hooks/useNow';
 import { Button } from '@/shared/ui/Button/Button';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { AppointmentList } from '../components/AppointmentList';
 import type { AppointmentTab } from '../components/AppointmentTabs';
 import { AppointmentTabs } from '../components/AppointmentTabs';
@@ -12,9 +13,10 @@ import { NextAppointmentCard } from '../components/NextAppointmentCard';
 import { NoAppointments } from '../components/NoAppointments';
 import type { AppointmentView } from '../hooks/useAppointmentsView';
 import { APPOINTMENT_VIEWS, useAppointmentsView } from '../hooks/useAppointmentsView';
+import { useCancelAppointment } from '../hooks/useCancelAppointment';
 import { useMyAppointments } from '../hooks/useMyAppointments';
 import type { Appointment } from '../model/appointment';
-import { groupAppointments } from '../model/appointment';
+import { appointmentWhen, groupAppointments } from '../model/appointment';
 import styles from './AppointmentsPage.module.css';
 
 const TAB_LABELS: Record<AppointmentView, string> = {
@@ -35,10 +37,11 @@ interface ViewPanelProps {
   view: AppointmentView;
   appointments: readonly Appointment[];
   now: number;
+  onCancel: (appointment: Appointment) => void;
 }
 
 /** Contenido de una pestaña: en Próximas, la más cercana va destacada (Figma B9). */
-function ViewPanel({ view, appointments, now }: Readonly<ViewPanelProps>) {
+function ViewPanel({ view, appointments, now, onCancel }: Readonly<ViewPanelProps>) {
   const [next, ...later] = appointments;
   if (next === undefined) {
     return (
@@ -57,13 +60,24 @@ function ViewPanel({ view, appointments, now }: Readonly<ViewPanelProps>) {
   }
   return (
     <>
-      <NextAppointmentCard appointment={next} now={now} />
+      <NextAppointmentCard
+        appointment={next}
+        now={now}
+        onCancel={() => {
+          onCancel(next);
+        }}
+      />
       {later.length > 0 && (
         <section className={styles.later} aria-labelledby="siguientes-citas">
           <h2 id="siguientes-citas" className={styles.sectionTitle}>
             Siguientes citas
           </h2>
-          <AppointmentList appointments={later} now={now} label="Siguientes citas" />
+          <AppointmentList
+            appointments={later}
+            now={now}
+            label="Siguientes citas"
+            onCancel={onCancel}
+          />
         </section>
       )}
     </>
@@ -76,8 +90,19 @@ export function AppointmentsPage() {
   const now = useNow();
   const { status, appointments, reload } = useMyAppointments();
   const [view, setView] = useAppointmentsView();
+  const [announcement, setAnnouncement] = useState('');
   const panelId = useId();
   const tabPrefix = useId();
+
+  const cancellation = useCancelAppointment({
+    onCancelled: (cancelled) => {
+      setAnnouncement(`Cancelaste tu cita con ${cancelled.psychologist.fullName}.`);
+      //refleja el cambio al instante.
+      reload();
+    },
+  });
+  const target = cancellation.target;
+
   const groups = groupAppointments(appointments);
   const byView: Record<AppointmentView, Appointment[]> = {
     proximas: groups.upcoming,
@@ -108,6 +133,10 @@ export function AppointmentsPage() {
         </div>
         <LinkButton to={EMPLOYEE_PATHS.wellbeing}>Reservar sesión</LinkButton>
       </motion.header>
+
+      <p className={styles.announcement} role="status" aria-label="Avisos de tus citas">
+        {announcement}
+      </p>
 
       {status === 'error' && (
         <div className={styles.feedback} role="alert">
@@ -147,10 +176,34 @@ export function AppointmentsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
           >
-            <ViewPanel view={view} appointments={byView[view]} now={now} />
+            <ViewPanel
+              view={view}
+              appointments={byView[view]}
+              now={now}
+              onCancel={cancellation.request}
+            />
           </motion.div>
         </section>
       )}
+
+      <AnimatePresence>
+        {target !== null && (
+          <ConfirmDialog
+            key={target.id}
+            title="¿Cancelar esta cita?"
+            description={`Tu cita con ${target.psychologist.fullName} el ${appointmentWhen(target, now)} se cancelará y el bloque quedará libre para otras personas.`}
+            confirmLabel="Cancelar cita"
+            pendingLabel="Cancelando…"
+            cancelLabel="Volver"
+            isPending={cancellation.isPending}
+            error={cancellation.error}
+            onCancel={cancellation.cancel}
+            onConfirm={() => {
+              void cancellation.confirm(target);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
