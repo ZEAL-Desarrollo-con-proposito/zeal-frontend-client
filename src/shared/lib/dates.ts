@@ -18,6 +18,12 @@ function atMidnight(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Rango de días, ambos inclusive (p. ej. la semana visible). */
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
+
 /** Lunes de la semana de `date`, a las 00:00 locales. */
 export function startOfWeek(date: Date): Date {
   const monday = atMidnight(date);
@@ -74,6 +80,12 @@ export function formatTime(date: Date): string {
 export function formatWeekdayShort(date: Date): string {
   const weekday = weekdayShortFormatter.format(date).replace('.', '').toUpperCase();
   return `${weekday} ${date.getDate()}`;
+}
+
+/** "Lun 28": día corto para textos como "Próximo bloque: Lun 28 · 9:00". */
+export function formatDayShort(date: Date): string {
+  const weekday = weekdayShortFormatter.format(date).replace('.', '');
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${String(date.getDate())}`;
 }
 
 /** "Martes, 23 de septiembre". */

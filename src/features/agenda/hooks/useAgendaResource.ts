@@ -1,6 +1,5 @@
 import { isSlotEvent, SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
-import { useFetch } from '@/shared/hooks/useFetch';
-import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
+import { useLiveFetch } from '@/shared/realtime/useLiveFetch';
 
 /**
  * Datos de la agenda que se mantienen al día: se vuelven a pedir cuando una franja de este
@@ -11,18 +10,13 @@ export function useAgendaResource<T>(
   psychologistId: string,
   load: (signal: AbortSignal) => Promise<T>,
 ) {
-  const { recoveries } = useRealtimeStatus();
-  const resource = useFetch(`${key}/${String(recoveries)}`, load);
-
-  useRealtimeSubscription(SLOTS_TOPIC, (payload) => {
-    if (
+  return useLiveFetch({
+    key,
+    load,
+    topic: SLOTS_TOPIC,
+    isRelevant: (payload) =>
       isSlotEvent(payload) &&
       payload.type === 'ACTUALIZADA' &&
-      payload.slot.psychologistId === psychologistId
-    ) {
-      resource.reload();
-    }
+      payload.slot.psychologistId === psychologistId,
   });
-
-  return resource;
 }

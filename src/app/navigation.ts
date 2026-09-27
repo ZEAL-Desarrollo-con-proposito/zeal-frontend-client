@@ -12,7 +12,7 @@ import usersIcon from '@/assets/icons/users.svg';
 import videoIcon from '@/assets/icons/video.svg';
 import type { Role } from '@/features/auth/model/session';
 import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
-import { PSYCHOLOGIST_PATHS, ROLE_BASE_PATH, ROLE_HOME_PATH } from './paths';
+import { EMPLOYEE_PATHS, PSYCHOLOGIST_PATHS, ROLE_BASE_PATH, ROLE_HOME_PATH } from './paths';
 
 export interface NavItem {
   label: string;
@@ -37,13 +37,13 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Bienestar',
-      path: section('EMPLEADO', 'bienestar'),
+      path: EMPLOYEE_PATHS.wellbeing,
       icon: heartIcon,
       description: 'Encuentra psicólogos disponibles y reserva tu sesión.',
     },
     {
       label: 'Mis citas',
-      path: section('EMPLEADO', 'mis-citas'),
+      path: EMPLOYEE_PATHS.appointments,
       icon: calendarIcon,
       description: 'Consulta y cancela tus sesiones programadas.',
     },

@@ -1,0 +1,68 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink-700);
+  cursor: pointer;
+  transition:
+    color 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.chip:hover {
+  border-color: var(--color-teal-400);
+  color: var(--color-teal-800);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--color-teal-800);
+  color: var(--color-surface);
+}
+
+.indicator {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-pill);
+  background: var(--color-teal-800);
+}
+
+.label {
+  position: relative;
+}
+
+/* En pantallas táctiles el chip alcanza el área táctil mínima de 44 px. */
+@media (pointer: coarse) {
+  .chip {
+    min-height: var(--touch-target);
+  }
+}
+
+/* En móvil los temas van en una sola fila deslizable: la lista queda a la vista sin bajar tanto. */
+@media (max-width: 767px) {
+  .chips {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .chip {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+}

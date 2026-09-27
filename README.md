@@ -156,6 +156,29 @@ solo la compara con el reloj.
 reserva no admite ingreso. Cuando una franja cambia de estado (`ACTUALIZADA` en `/topic/franjas`) la
 agenda se vuelve a pedir.
 
+### Contrato del directorio (acordar con HU-BE-04)
+
+Rutas del rol `EMPLEADO`. Qué bloques se pueden reservar (disponibles y futuros) lo decide el
+servidor; el frontend solo lee `nextFreeSlot` para mostrar "Disponible hoy" o el próximo día.
+
+| Método y ruta                   | Respuesta                                                         |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `GET /api/wellbeing/psicologos` | `200` psicólogos, primero quien tiene el bloque libre más próximo |
+
+```json
+{
+  "id": "usr-psicologo-001",
+  "fullName": "Laura Martínez",
+  "title": "Psicóloga clínica",
+  "focusAreas": ["Ansiedad laboral", "Burnout"],
+  "nextFreeSlot": { "startsAt": "2026-09-23T15:00:00.000Z", "endsAt": "2026-09-23T15:50:00.000Z" }
+}
+```
+
+`nextFreeSlot` es `null` si el psicólogo no tiene bloques libres. Cualquier evento de
+`/topic/franjas` hace que el directorio se vuelva a pedir. La búsqueda (nombre, título o tema, sin
+importar tildes) y los filtros se aplican en el cliente y se guardan en la URL (`?q=&tema=&hoy=1`).
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
