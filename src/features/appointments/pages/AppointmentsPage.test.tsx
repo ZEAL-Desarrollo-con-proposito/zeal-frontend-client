@@ -31,7 +31,6 @@ function rows(label: string) {
     .map((row) => row.textContent);
 }
 
-/** Cambia el estado de las citas confirmadas de David en el servidor, salvo `keep`. */
 function cancelDavidAppointments(keep = 0) {
   const db = readWellbeingDb();
   let kept = 0;
@@ -119,7 +118,6 @@ describe('Mis citas (HU-FE-05)', () => {
 
     await user.keyboard('a');
     expect(screen.getByRole('tab', { name: /^Próximas/ })).toHaveFocus();
-    // Solo la pestaña activa entra en el orden de tabulación.
     expect(screen.getByRole('tab', { name: /^Historial/ })).toHaveAttribute('tabindex', '-1');
   });
 
@@ -203,7 +201,6 @@ describe('Mis citas (HU-FE-05)', () => {
         candidate.startsAt === new Date(2026, 8, 23, 13).toISOString(),
     );
 
-    // El mismo empleado agenda con Andrés desde otra pestaña: el servidor publica el cambio.
     await act(() =>
       fetch(new URL(RESERVATIONS_ENDPOINT, window.location.origin), {
         method: 'POST',
