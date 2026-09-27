@@ -16,10 +16,10 @@ interface NextAppointmentCardProps {
 
 /** Figma B9 · "Próxima cita": la cita más cercana, destacada en teal institucional. */
 export function NextAppointmentCard({
-                                      appointment,
-                                      now,
-                                      onCancel,
-                                    }: Readonly<NextAppointmentCardProps>) {
+  appointment,
+  now,
+  onCancel,
+}: Readonly<NextAppointmentCardProps>) {
   const { psychologist } = appointment;
 
   return (

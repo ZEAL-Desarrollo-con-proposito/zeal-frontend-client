@@ -238,6 +238,7 @@ Cualquier rol autenticado; cada persona solo ve y cambia las suyas.
 
 `link` es una ruta interna o `null`; el cliente rechaza cualquier otra cosa (p. ej. una URL
 externa). Marcar como leída es optimista: si el servidor falla, el cambio se deshace y se avisa.
+
 ### Contrato de disponibilidad (acordar con HU-BE-07)
 
 solo se puede cancelar una cita propia. El plazo mínimo para cancelar lo decide el
@@ -246,10 +247,9 @@ servidor (en el simulador: 24 horas antes del inicio); el frontend solo muestra 
 Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 403). Las reglas de
 negocio viven en el backend; el frontend muestra el `message` del error tal cual.
 
-| Método y ruta                                        | Respuesta                                                               |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `POST /api/wellbeing/reservas/{id}/cancelar | `200` cita cancelada · `409` fuera del plazo permitido · `404` no existe o es ajena|
-
+| Método y ruta                               | Respuesta                                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `POST /api/wellbeing/reservas/{id}/cancelar | `200` cita cancelada · `409` fuera del plazo permitido · `404` no existe o es ajena |
 
 ```json
 {
@@ -264,6 +264,7 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
   "status": "CANCELADA"
 }
 ```
+
 ```json
 {
   "status": 409,
@@ -271,6 +272,7 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
   "message": "Ya no puedes cancelar esta cita: faltan menos de 24 horas para que empiece."
 }
 ```
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
