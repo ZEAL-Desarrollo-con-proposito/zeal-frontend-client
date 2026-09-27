@@ -100,7 +100,10 @@ describe('Pantalla de inicio de sesión', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos');
     expect(passwordField()).toHaveValue('');
-    expect(passwordField()).toHaveFocus();
+    // El foco llega en el efecto posterior al render del error.
+    await waitFor(() => {
+      expect(passwordField()).toHaveFocus();
+    });
     expect(emailField()).toHaveValue(email);
     expect(router.state.location.pathname).toBe('/login');
   });
