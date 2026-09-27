@@ -190,7 +190,8 @@ export function seedWellbeingDb(now: Date): WellbeingDb {
         seedSlot(db, now, schedule.psychologistId, atHour(day, hour), {
           reserved: schedule.isReserved(weekIndex, hour),
           cancelled: false,
-          employee: cyclic(SEED_EMPLOYEES, db.sequence + 1),
+          // Nunca el empleado semilla: sus citas (con Laura) no deben cruzarse con estas.
+          employee: cyclic(SEED_EMPLOYEES, 1 + (db.sequence % (SEED_EMPLOYEES.length - 1))),
         });
       }
     }

@@ -14,7 +14,8 @@ const longDateFormatter = new Intl.DateTimeFormat('es-CO', {
   month: 'long',
 });
 
-function atMidnight(date: Date): Date {
+/** El mismo día a las 00:00 locales. */
+export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
@@ -26,7 +27,7 @@ export interface DateRange {
 
 /** Lunes de la semana de `date`, a las 00:00 locales. */
 export function startOfWeek(date: Date): Date {
-  const monday = atMidnight(date);
+  const monday = startOfDay(date);
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
   return monday;
 }
@@ -50,7 +51,7 @@ export function workweekEnd(weekStart: Date): Date {
 }
 
 export function isSameDay(a: Date, b: Date): boolean {
-  return atMidnight(a).getTime() === atMidnight(b).getTime();
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
 }
 
 /** "2026-09-23" en hora local (formato de los parámetros del API y de la URL). */

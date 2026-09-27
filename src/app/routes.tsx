@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { ROLES } from '@/features/auth/model/session';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { AgendaPage } from '@/features/agenda/pages/AgendaPage';
+import { AppointmentsPage } from '@/features/appointments/pages/AppointmentsPage';
 import { SessionRoomPage } from '@/features/agenda/pages/SessionRoomPage';
 import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
 import { DirectoryPage } from '@/features/directory/pages/DirectoryPage';
@@ -26,6 +27,7 @@ const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [PSYCHOLOGIST_PATHS.agenda]: <AgendaPage />,
   [PSYCHOLOGIST_PATHS.availability]: <AvailabilityPage />,
   [EMPLOYEE_PATHS.wellbeing]: <DirectoryPage />,
+  [EMPLOYEE_PATHS.appointments]: <AppointmentsPage />,
 };
 
 /** Pantallas de un rol que no están en el menú (se llega a ellas desde otra pantalla). */

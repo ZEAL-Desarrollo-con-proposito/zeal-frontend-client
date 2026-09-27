@@ -1,5 +1,6 @@
 import { delay, http, HttpResponse } from 'msw';
 import { RESERVATIONS_ENDPOINT } from '@/features/agenda/api/agendaApi';
+import { MY_APPOINTMENTS_ENDPOINT } from '@/features/appointments/api/appointmentsApi';
 import type { Appointment } from '@/features/appointments/model/appointment';
 import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
 import { authorize, errorBody } from '../mockAuth';
@@ -36,6 +37,25 @@ function overlaps(record: ReservationRecord, start: number, end: number): boolea
 }
 
 export const bookingHandlers = [
+  // Citas del empleado autenticado; las de un psicólogo que ya no está en el directorio no se listan.
+  http.get(`*${MY_APPOINTMENTS_ENDPOINT}`, async ({ request }) => {
+    await delay();
+    const user = authorize(request, 'EMPLEADO');
+    if (user instanceof Response) {
+      return user;
+    }
+    const db = readWellbeingDb();
+    const now = Date.now();
+    const appointments = db.reservations
+      .filter((reservation) => reservation.employee.id === user.id)
+      .flatMap((reservation) => {
+        const psychologist = db.psychologists.find(({ id }) => id === reservation.psychologistId);
+        return psychologist === undefined ? [] : [toAppointment(reservation, psychologist, now)];
+      })
+      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+    return HttpResponse.json(appointments);
+  }),
+
   /**
    * Reglas de negocio de la reserva (HU-BE-05). Se validan y se escriben sin pausas intermedias:
    * dos reservas del mismo bloque nunca se aceptan a la vez (la segunda recibe 409).

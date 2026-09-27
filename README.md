@@ -193,6 +193,7 @@ una sola operación, así que un bloque nunca queda con dos citas.
 | Método y ruta                                          | Respuesta                                                                                  |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `POST /api/wellbeing/reservas` con `{ "slotId": "…" }` | `201` cita · `409` otra persona lo tomó o se cruza con otra cita · `404` · `400` ya empezó |
+| `GET /api/wellbeing/reservas/mias`                     | `200` citas del empleado, por inicio                                                       |
 
 ```json
 {
@@ -209,6 +210,9 @@ una sola operación, así que un bloque nunca queda con dos citas.
 ```
 
 Al reservar, el servidor publica `ACTUALIZADA` en `/topic/franjas` con la franja ya `RESERVADA`.
+El estado de cada cita lo decide el servidor (una confirmada que ya terminó llega `FINALIZADA`);
+"Mis citas" las agrupa en Próximas, Historial y Canceladas (`?vista=`) y se vuelve a pedir con
+cada `ACTUALIZADA`, así que una cita agendada en otra pestaña aparece al instante.
 
 ## Tiempo real (RT-2)
 
