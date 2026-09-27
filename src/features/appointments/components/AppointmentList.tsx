@@ -16,11 +16,11 @@ interface AppointmentListProps {
 
 /** Figma B9 · filas de citas: profesional, día y hora, estado y, si aplica, cancelar. */
 export function AppointmentList({
-                                  appointments,
-                                  now,
-                                  label,
-                                  onCancel,
-                                }: Readonly<AppointmentListProps>) {
+  appointments,
+  now,
+  label,
+  onCancel,
+}: Readonly<AppointmentListProps>) {
   return (
     <ul className={styles.list} aria-label={label}>
       {appointments.map((appointment, index) => {

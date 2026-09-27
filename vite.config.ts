@@ -26,6 +26,9 @@ export default defineConfig({
     // Cada proceso carga su propio jsdom: con la mitad de los núcleos la suite tarda lo mismo y la
     // máquina sigue respondiendo (por defecto Vitest abre uno por núcleo y satura la CPU).
     maxWorkers: '50%',
+    isolate: true,
+    testTimeout: 15000,
+    hookTimeout: 15000,
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     coverage: {
@@ -35,6 +38,7 @@ export default defineConfig({
         'src/main.tsx',
         'src/mocks/browser.ts',
         'src/test/**',
+        'src/mocks/**',
         'src/**/*.test.{ts,tsx}',
         'src/**/*.d.ts',
       ],

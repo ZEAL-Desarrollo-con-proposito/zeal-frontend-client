@@ -30,8 +30,8 @@ export function useMyAppointments() {
   const appointments =
     patch !== null && patch.forData === resource.data
       ? loaded.map((appointment) =>
-        appointment.id === patch.appointment.id ? patch.appointment : appointment,
-      )
+          appointment.id === patch.appointment.id ? patch.appointment : appointment,
+        )
       : loaded;
 
   /** Aplica al instante una cita cancelada que ya confirmó el servidor. */
