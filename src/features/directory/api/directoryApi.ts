@@ -30,8 +30,11 @@ export async function fetchPsychologist(id: string, signal?: AbortSignal): Promi
   return payload;
 }
 
-/** Bloques que un empleado puede reservar con el psicólogo entre dos fechas (inclusive). */
-export async function fetchFreeSlots(
+/**
+ * Bloques próximos del psicólogo entre dos fechas (inclusive), libres u ocupados: el empleado ve
+ * qué horarios ya se tomaron (Figma B3) sin saber quién los tomó.
+ */
+export async function fetchUpcomingSlots(
   id: string,
   { from, to }: DateRange,
   signal?: AbortSignal,
@@ -41,7 +44,7 @@ export async function fetchFreeSlots(
     signal,
   });
   if (!Array.isArray(payload) || !payload.every(isSlot)) {
-    throw new InvalidResponseError('los bloques libres');
+    throw new InvalidResponseError('los bloques de la semana');
   }
   return payload;
 }

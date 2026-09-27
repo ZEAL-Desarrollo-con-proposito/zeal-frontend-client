@@ -7,21 +7,36 @@ import {
   isSameDay,
   toIsoDate,
 } from '@/shared/lib/dates';
-import styles from './FreeSlotsWeek.module.css';
+import { isBookable } from '../model/weekSlots';
+import styles from './WeekSlots.module.css';
 
-interface FreeSlotsWeekProps {
+interface WeekSlotsProps {
   days: readonly Date[];
-  /** Bloques reservables de la semana, en orden. */
+  /** Bloques de la semana que aún no empiezan, libres u ocupados, en orden. */
   slots: readonly Slot[];
   now: number;
   loading: boolean;
+  selectedId: string | null;
+  onSelect: (slot: Slot) => void;
+}
+
+function timeRange(slot: Slot): string {
+  return `${formatTime(new Date(slot.startsAt))} – ${formatTime(new Date(slot.endsAt))}`;
 }
 
 /**
- * Figma B13 · "Próximos bloques libres", extendido a la semana: una columna por día. Los bloques
- * aparecen y desaparecen con una transición corta cuando cambian en vivo.
+ * Figma B3 · bloques horarios de la semana, una columna por día: libre (se puede elegir),
+ * seleccionado u ocupado. Cuando alguien reserva un bloque en vivo, pasa a "Ocupado" con una
+ * transición corta que se nota sin distraer.
  */
-export function FreeSlotsWeek({ days, slots, now, loading }: Readonly<FreeSlotsWeekProps>) {
+export function WeekSlots({
+  days,
+  slots,
+  now,
+  loading,
+  selectedId,
+  onSelect,
+}: Readonly<WeekSlotsProps>) {
   const today = new Date(now);
 
   return (
@@ -39,19 +54,41 @@ export function FreeSlotsWeek({ days, slots, now, loading }: Readonly<FreeSlotsW
               <span className="visually-hidden">{label}</span>
               {isToday && <span className={styles.todayTag}>Hoy</span>}
             </h3>
-            <ul className={styles.slots} aria-label={`Bloques libres del ${label.toLowerCase()}`}>
+            <ul className={styles.slots} aria-label={`Bloques del ${label.toLowerCase()}`}>
               <AnimatePresence initial={false}>
                 {daySlots.map((slot) => (
                   <motion.li
                     key={slot.id}
                     layout
-                    className={styles.slot}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.85 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
                   >
-                    {formatTime(new Date(slot.startsAt))} – {formatTime(new Date(slot.endsAt))}
+                    {isBookable(slot) ? (
+                      <button
+                        type="button"
+                        className={styles.slot}
+                        aria-pressed={slot.id === selectedId}
+                        onClick={() => {
+                          onSelect(slot);
+                        }}
+                      >
+                        {timeRange(slot)}
+                      </button>
+                    ) : (
+                      <motion.span
+                        key="ocupado"
+                        className={styles.slot}
+                        data-status="ocupado"
+                        initial={{ scale: 0.92 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                      >
+                        {timeRange(slot)}
+                        <span className={styles.slotState}>Ocupado</span>
+                      </motion.span>
+                    )}
                   </motion.li>
                 ))}
               </AnimatePresence>

@@ -14,7 +14,7 @@ import { renderRoute } from '@/test/renderRoute';
 import { PSYCHOLOGISTS_ENDPOINT } from '../api/directoryApi';
 
 const LAURA = psychologistPath(SEED_PSYCHOLOGIST_ID);
-const WEDNESDAY = 'Bloques libres del miércoles, 23 de septiembre';
+const WEDNESDAY = 'Bloques del miércoles, 23 de septiembre';
 const wednesdayAt = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute);
 
 function openProfile(path = LAURA) {
@@ -22,18 +22,28 @@ function openProfile(path = LAURA) {
   return renderRoute(path);
 }
 
-/** Horarios de un día, una vez que la semana terminó de cargar. */
-async function blocksOf(dayLabel: string) {
+/** Lista de bloques de un día, una vez que la semana terminó de cargar. */
+async function dayList(dayLabel: string) {
   const day = await screen.findByRole('list', { name: dayLabel });
   await waitFor(() => {
-    expect(screen.getByRole('region', { name: 'Bloques libres' })).toHaveAttribute(
+    expect(screen.getByRole('region', { name: 'Bloques de la semana' })).toHaveAttribute(
       'aria-busy',
       'false',
     );
   });
-  return within(day)
-    .queryAllByRole('listitem')
-    .map((item) => item.textContent);
+  return within(day);
+}
+
+/** Bloques libres (se pueden elegir) de un día. */
+async function freeBlocks(dayLabel: string) {
+  return (await dayList(dayLabel)).queryAllByRole('button').map((button) => button.textContent);
+}
+
+/** Bloques ocupados de un día. */
+async function takenBlocks(dayLabel: string) {
+  return (await dayList(dayLabel))
+    .queryAllByText('Ocupado')
+    .map((label) => label.parentElement?.firstChild?.textContent);
 }
 
 function notices() {
@@ -66,7 +76,7 @@ function serverPublishes(event: SlotEvent) {
   });
 }
 
-describe('Perfil del psicólogo · bloques libres (HU-FE-04)', () => {
+describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   beforeEach(() => {
     freezeTime();
   });
@@ -101,24 +111,31 @@ describe('Perfil del psicólogo · bloques libres (HU-FE-04)', () => {
     ).toBeInTheDocument();
   });
 
-  it('muestra los bloques libres de la semana por día, sin los que ya pasaron', async () => {
+  it('muestra por día los bloques libres y los ocupados, sin los que ya pasaron', async () => {
     openProfile();
 
-    expect(await blocksOf(WEDNESDAY)).toEqual(['10:00 – 10:50', '14:00 – 14:50', '15:00 – 15:50']);
-    expect(await blocksOf('Bloques libres del jueves, 24 de septiembre')).toHaveLength(5);
-    expect(await blocksOf('Bloques libres del lunes, 21 de septiembre')).toEqual([]);
+    expect(await freeBlocks(WEDNESDAY)).toEqual([
+      '10:00 – 10:50',
+      '14:00 – 14:50',
+      '15:00 – 15:50',
+    ]);
+    expect(await takenBlocks(WEDNESDAY)).toEqual(['11:00 – 11:50', '16:00 – 16:50']);
+    expect(await freeBlocks('Bloques del jueves, 24 de septiembre')).toHaveLength(5);
+    expect(
+      (await dayList('Bloques del lunes, 21 de septiembre')).queryAllByRole('listitem'),
+    ).toEqual([]);
     expect(screen.getAllByText('Ya pasó')).toHaveLength(2);
     expect(screen.getByText('Hoy')).toBeInTheDocument();
   });
 
   it('navega entre semanas', async () => {
     const { router, user } = openProfile();
-    await blocksOf(WEDNESDAY);
+    await freeBlocks(WEDNESDAY);
 
     await user.click(screen.getByRole('button', { name: 'Semana siguiente' }));
 
     expect(router.state.location.search).toBe('?semana=2026-09-28');
-    expect(await blocksOf('Bloques libres del lunes, 28 de septiembre')).toEqual([
+    expect(await freeBlocks('Bloques del lunes, 28 de septiembre')).toEqual([
       '9:00 – 9:50',
       '10:00 – 10:50',
       '14:00 – 14:50',
@@ -130,12 +147,13 @@ describe('Perfil del psicólogo · bloques libres (HU-FE-04)', () => {
     const { user } = openProfile(psychologistPath('usr-psicologo-003'));
 
     expect(await screen.findByText('No hay bloques libres esta semana.')).toBeInTheDocument();
+    expect(await takenBlocks('Bloques del jueves, 24 de septiembre')).toHaveLength(3);
     expect(screen.getByText('Agenda llena')).toBeInTheDocument();
     expect(screen.getByText('Próximo bloque libre: Lun 28 · 9:00')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Ver semana siguiente' }));
 
-    expect(await blocksOf('Bloques libres del lunes, 28 de septiembre')).toEqual([
+    expect(await freeBlocks('Bloques del lunes, 28 de septiembre')).toEqual([
       '9:00 – 9:50',
       '11:00 – 11:50',
       '15:00 – 15:50',
@@ -146,7 +164,7 @@ describe('Perfil del psicólogo · bloques libres (HU-FE-04)', () => {
   it('retira un bloque que empieza mientras se mira la semana', async () => {
     controlClock(wednesdayAt(9, 55));
     openProfile();
-    expect(await blocksOf(WEDNESDAY)).toContain('10:00 – 10:50');
+    expect(await freeBlocks(WEDNESDAY)).toContain('10:00 – 10:50');
 
     jumpTo(wednesdayAt(10));
 
@@ -220,11 +238,11 @@ describe('Perfil del psicólogo · bloques libres (HU-FE-04)', () => {
     const { user } = openProfile();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('No pudimos cargar los bloques libres.');
+    expect(alert).toHaveTextContent('No pudimos cargar los bloques de la semana.');
 
     await user.click(within(alert).getByRole('button', { name: 'Reintentar' }));
 
-    expect(await blocksOf(WEDNESDAY)).toHaveLength(3);
+    expect(await freeBlocks(WEDNESDAY)).toHaveLength(3);
   });
 });
 
@@ -233,9 +251,9 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
     freezeTime();
   });
 
-  it('retira al instante un bloque que otra persona reservó, y lo avisa', async () => {
+  it('marca como ocupado al instante un bloque que otra persona reservó, y lo avisa', async () => {
     openProfile();
-    await blocksOf(WEDNESDAY);
+    await freeBlocks(WEDNESDAY);
     const slot = lauraSlotAt(wednesdayAt(14));
 
     serverPublishes({ type: 'ACTUALIZADA', slot: { ...slot, status: 'RESERVADA' } });
@@ -245,21 +263,20 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
         'Alguien acaba de reservar el bloque del miércoles, 23 de septiembre de 14:00 a 14:50.',
       );
     });
-    await waitFor(async () => {
-      expect(await blocksOf(WEDNESDAY)).toEqual(['10:00 – 10:50', '15:00 – 15:50']);
-    });
+    expect(await freeBlocks(WEDNESDAY)).toEqual(['10:00 – 10:50', '15:00 – 15:50']);
+    expect(await takenBlocks(WEDNESDAY)).toContain('14:00 – 14:50');
 
     serverPublishes({ type: 'ACTUALIZADA', slot });
 
     await waitFor(() => {
       expect(notices()).toHaveTextContent('Se liberó el bloque del miércoles, 23 de septiembre');
     });
-    expect(await blocksOf(WEDNESDAY)).toContain('14:00 – 14:50');
+    expect(await freeBlocks(WEDNESDAY)).toContain('14:00 – 14:50');
   });
 
   it('muestra un bloque nuevo y retira uno eliminado, con el perfil al día', async () => {
     openProfile();
-    await blocksOf(WEDNESDAY);
+    await freeBlocks(WEDNESDAY);
 
     serverPublishes({
       type: 'CREADA',
@@ -272,7 +289,7 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
       },
     });
     await waitFor(async () => {
-      expect(await blocksOf(WEDNESDAY)).toEqual([
+      expect(await freeBlocks(WEDNESDAY)).toEqual([
         '10:00 – 10:50',
         '12:00 – 12:50',
         '14:00 – 14:50',
@@ -286,13 +303,13 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
     await waitFor(() => {
       expect(screen.getByText('Próximo bloque libre: Hoy · 12:00')).toBeInTheDocument();
     });
-    expect(await blocksOf(WEDNESDAY)).not.toContain('10:00 – 10:50');
+    expect(await freeBlocks(WEDNESDAY)).not.toContain('10:00 – 10:50');
     expect(notices()).toHaveTextContent('Se retiró el bloque del miércoles, 23 de septiembre');
   });
 
   it('no avisa cambios de otros psicólogos ni de otras semanas', async () => {
     openProfile();
-    await blocksOf(WEDNESDAY);
+    await freeBlocks(WEDNESDAY);
     const nextWeek = lauraSlotAt(new Date(2026, 8, 28, 9));
 
     act(() => {
@@ -308,6 +325,6 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
     await waitFor(() => {
       expect(notices()).toHaveTextContent('Se liberó el bloque del miércoles');
     });
-    expect(await blocksOf(WEDNESDAY)).toContain('15:00 – 15:50');
+    expect(await freeBlocks(WEDNESDAY)).toContain('15:00 – 15:50');
   });
 });

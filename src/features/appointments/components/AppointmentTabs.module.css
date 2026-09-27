@@ -1,0 +1,42 @@
+.tabs {
+  display: flex;
+  gap: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab {
+  position: relative;
+  flex-shrink: 0;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-1);
+  border: none;
+  background: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-700);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 160ms ease-out;
+}
+
+.tab:hover {
+  color: var(--color-teal-800);
+}
+
+.tab[aria-selected='true'] {
+  font-weight: 600;
+  color: var(--color-teal-800);
+}
+
+/* Subrayado de la pestaña activa: se desliza entre pestañas. */
+.indicator {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-teal-800);
+}

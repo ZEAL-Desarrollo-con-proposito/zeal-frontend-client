@@ -8,7 +8,7 @@ import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
 import {
   fetchDirectory,
-  fetchFreeSlots,
+  fetchUpcomingSlots,
   fetchPsychologist,
   PSYCHOLOGISTS_ENDPOINT,
 } from './directoryApi';
@@ -102,7 +102,7 @@ describe('directoryApi.fetchPsychologist', () => {
   });
 });
 
-describe('directoryApi.fetchFreeSlots', () => {
+describe('directoryApi.fetchUpcomingSlots', () => {
   beforeEach(() => {
     freezeTime();
   });
@@ -111,14 +111,14 @@ describe('directoryApi.fetchFreeSlots', () => {
     configureHttpAuth(null);
   });
 
-  it('entrega solo los bloques libres y futuros del rango, en orden', async () => {
+  it('entrega los bloques del rango que aún no empiezan, libres u ocupados, en orden', async () => {
     authenticateAs('EMPLEADO');
 
-    const slots = await fetchFreeSlots('usr-psicologo-001', WEEK);
+    const slots = await fetchUpcomingSlots('usr-psicologo-001', WEEK);
 
-    // Miércoles desde las 9:20 (3) + jueves (5) + viernes (5); lunes y martes ya pasaron.
-    expect(slots).toHaveLength(13);
-    expect(slots.every(({ status }) => status === 'DISPONIBLE')).toBe(true);
+    // Miércoles desde las 9:20 (5) + jueves (7) + viernes (7); lunes y martes ya pasaron.
+    expect(slots).toHaveLength(19);
+    expect(slots.filter(({ status }) => status === 'DISPONIBLE')).toHaveLength(13);
     expect(slots[0]?.startsAt).toBe(new Date(2026, 8, 23, 10).toISOString());
     const starts = slots.map(({ startsAt }) => Date.parse(startsAt));
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
@@ -133,14 +133,14 @@ describe('directoryApi.fetchFreeSlots', () => {
       }),
     );
 
-    await expect(fetchFreeSlots('a/b', WEEK)).resolves.toEqual([]);
+    await expect(fetchUpcomingSlots('a/b', WEEK)).resolves.toEqual([]);
     expect(url.pathname).toBe(`${PSYCHOLOGISTS_ENDPOINT}/a%2Fb/franjas`);
     expect(url.search).toBe('?desde=2026-09-21&hasta=2026-09-25');
   });
 
   it('responde 404 para un psicólogo desconocido y 400 sin rango', async () => {
     authenticateAs('EMPLEADO');
-    await expect(fetchFreeSlots('nadie', WEEK)).rejects.toMatchObject({ status: 404 });
+    await expect(fetchUpcomingSlots('nadie', WEEK)).rejects.toMatchObject({ status: 404 });
 
     const response = await fetch(
       new URL(`${PSYCHOLOGISTS_ENDPOINT}/usr-psicologo-001/franjas`, window.location.origin),
@@ -150,12 +150,14 @@ describe('directoryApi.fetchFreeSlots', () => {
   });
 
   it('exige una sesión de empleado y valida la respuesta', async () => {
-    await expect(fetchFreeSlots('usr-psicologo-001', WEEK)).rejects.toMatchObject({ status: 401 });
+    await expect(fetchUpcomingSlots('usr-psicologo-001', WEEK)).rejects.toMatchObject({
+      status: 401,
+    });
 
     server.use(
       http.get(`*${PSYCHOLOGISTS_ENDPOINT}/:id/franjas`, () => HttpResponse.json([{ id: 1 }])),
     );
-    await expect(fetchFreeSlots('usr-psicologo-001', WEEK)).rejects.toBeInstanceOf(
+    await expect(fetchUpcomingSlots('usr-psicologo-001', WEEK)).rejects.toBeInstanceOf(
       InvalidResponseError,
     );
   });

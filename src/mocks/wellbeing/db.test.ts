@@ -79,6 +79,22 @@ describe('simulador del Wellbeing Service', () => {
     expect(readWellbeingDb().psychologists.length).toBeGreaterThan(0);
   });
 
+  it('nunca agenda dos citas confirmadas a la vez para el mismo empleado', () => {
+    const confirmed = seedWellbeingDb(NOW).reservations.filter(
+      ({ status }) => status === 'CONFIRMADA',
+    );
+
+    for (const reservation of confirmed) {
+      const overlapping = confirmed.filter(
+        (other) =>
+          other.employee.id === reservation.employee.id &&
+          Date.parse(other.startsAt) < Date.parse(reservation.endsAt) &&
+          Date.parse(reservation.startsAt) < Date.parse(other.endsAt),
+      );
+      expect(overlapping).toHaveLength(1);
+    }
+  });
+
   it('genera identificadores únicos y crecientes', () => {
     const db = seedWellbeingDb(NOW);
 

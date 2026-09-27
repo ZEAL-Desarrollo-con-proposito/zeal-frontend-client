@@ -56,7 +56,10 @@
 }
 
 .side {
+  display: flex;
   flex: 0 0 300px;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 /* Sin aviso, la región viva no ocupa espacio; al llegar uno se despliega con una transición. */

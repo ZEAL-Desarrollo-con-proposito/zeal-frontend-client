@@ -1,0 +1,85 @@
+.panel {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+
+.hint {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-ink-700);
+}
+
+/* Coral de atención (manual de identidad): el bloque elegido dejó de estar libre. */
+.alert {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-coral-strong);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.details div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.details dt {
+  font-size: var(--text-caption);
+  color: var(--color-ink-700);
+}
+
+.details dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Confirmación (Figma B14): el trazo del check se dibuja una vez, sin repetir. */
+.check {
+  width: 48px;
+  height: 48px;
+}
+
+.check circle {
+  fill: var(--color-sage-soft);
+}
+
+.check path {
+  fill: none;
+  stroke: var(--color-sage-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
