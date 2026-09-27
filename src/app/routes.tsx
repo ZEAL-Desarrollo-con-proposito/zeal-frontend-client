@@ -9,6 +9,7 @@ import { AgendaPage } from '@/features/agenda/pages/AgendaPage';
 import { SessionRoomPage } from '@/features/agenda/pages/SessionRoomPage';
 import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
 import { DirectoryPage } from '@/features/directory/pages/DirectoryPage';
+import { PsychologistPage } from '@/features/directory/pages/PsychologistPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
@@ -29,6 +30,13 @@ const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
 
 /** Pantallas de un rol que no están en el menú (se llega a ellas desde otra pantalla). */
 const ROLE_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+  EMPLEADO: [
+    {
+      path: EMPLOYEE_PATHS.psychologist,
+      handle: { title: 'Perfil del psicólogo' } satisfies PageHandle,
+      element: <PsychologistPage />,
+    },
+  ],
   PSICOLOGO: [
     {
       path: PSYCHOLOGIST_PATHS.sessionRoom,

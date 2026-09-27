@@ -1,6 +1,7 @@
 import { isRecord } from '@/features/auth/model/session';
 import { formatDayShort, formatTime, isSameDay } from '@/shared/lib/dates';
 import { normalizeForSearch } from '@/shared/lib/text';
+import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
 import type { BadgeTone } from '@/shared/ui/Badge/Badge';
 
 export interface TimeRange {
@@ -67,6 +68,17 @@ export function availabilityOf({ nextFreeSlot }: Psychologist, now: number): Ava
     badge: { label: 'Agenda llena', tone: 'mauve' },
     next: `${formatDayShort(start)} · ${formatTime(start)}`,
   };
+}
+
+const AVATAR_TONES: Record<0 | 1 | 2, AvatarTone> = { 0: 'sage', 1: 'teal', 2: 'mauve' };
+
+/** Color estable por persona: el mismo en su tarjeta y en su perfil, aunque se filtre o reordene. */
+export function avatarToneFor(id: string): AvatarTone {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) {
+    hash += id.charCodeAt(index);
+  }
+  return AVATAR_TONES[(hash % 3) as 0 | 1 | 2];
 }
 
 /** Temas del directorio (chips de filtro), sin repetir y en orden alfabético. */

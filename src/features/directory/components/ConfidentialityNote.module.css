@@ -1,0 +1,20 @@
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-teal-800);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--color-teal-200);
+}
+
+.title {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-surface);
+}

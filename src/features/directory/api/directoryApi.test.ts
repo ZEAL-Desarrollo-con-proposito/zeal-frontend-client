@@ -2,11 +2,18 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Role } from '@/features/auth/model/session';
 import { server } from '@/mocks/server';
-import { InvalidResponseError } from '@/shared/api/errors';
+import { ApiError, InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
-import { fetchDirectory, PSYCHOLOGISTS_ENDPOINT } from './directoryApi';
+import {
+  fetchDirectory,
+  fetchFreeSlots,
+  fetchPsychologist,
+  PSYCHOLOGISTS_ENDPOINT,
+} from './directoryApi';
+
+const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 
 function authenticateAs(role: Role) {
   configureHttpAuth({
@@ -52,5 +59,104 @@ describe('directoryApi.fetchDirectory', () => {
 
     server.use(http.get(`*${PSYCHOLOGISTS_ENDPOINT}`, () => HttpResponse.json({ items: [] })));
     await expect(fetchDirectory()).rejects.toBeInstanceOf(InvalidResponseError);
+  });
+});
+
+describe('directoryApi.fetchPsychologist', () => {
+  beforeEach(() => {
+    freezeTime();
+  });
+
+  afterEach(() => {
+    configureHttpAuth(null);
+  });
+
+  it('entrega el perfil con su próximo bloque libre', async () => {
+    authenticateAs('EMPLEADO');
+
+    await expect(fetchPsychologist('usr-psicologo-002')).resolves.toMatchObject({
+      fullName: 'Andrés Rojas',
+      title: 'Psicólogo organizacional',
+      nextFreeSlot: { startsAt: new Date(2026, 8, 23, 13).toISOString() },
+    });
+  });
+
+  it('responde 404 si el psicólogo no está en el directorio', async () => {
+    authenticateAs('EMPLEADO');
+
+    const error: unknown = await fetchPsychologist('nadie').catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 404,
+      serverMessage: 'No encontramos a este psicólogo en el directorio',
+    });
+  });
+
+  it('exige una sesión de empleado y valida la respuesta', async () => {
+    await expect(fetchPsychologist('usr-psicologo-001')).rejects.toMatchObject({ status: 401 });
+
+    authenticateAs('EMPLEADO');
+    server.use(http.get(`*${PSYCHOLOGISTS_ENDPOINT}/:id`, () => HttpResponse.json({ id: 'x' })));
+    await expect(fetchPsychologist('x')).rejects.toBeInstanceOf(InvalidResponseError);
+  });
+});
+
+describe('directoryApi.fetchFreeSlots', () => {
+  beforeEach(() => {
+    freezeTime();
+  });
+
+  afterEach(() => {
+    configureHttpAuth(null);
+  });
+
+  it('entrega solo los bloques libres y futuros del rango, en orden', async () => {
+    authenticateAs('EMPLEADO');
+
+    const slots = await fetchFreeSlots('usr-psicologo-001', WEEK);
+
+    // Miércoles desde las 9:20 (3) + jueves (5) + viernes (5); lunes y martes ya pasaron.
+    expect(slots).toHaveLength(13);
+    expect(slots.every(({ status }) => status === 'DISPONIBLE')).toBe(true);
+    expect(slots[0]?.startsAt).toBe(new Date(2026, 8, 23, 10).toISOString());
+    const starts = slots.map(({ startsAt }) => Date.parse(startsAt));
+    expect(starts).toEqual([...starts].sort((a, b) => a - b));
+  });
+
+  it('pide el rango como AAAA-MM-DD en la ruta del psicólogo, codificada', async () => {
+    let url = new URL('https://zeal.test');
+    server.use(
+      http.get(`*${PSYCHOLOGISTS_ENDPOINT}/:id/franjas`, ({ request }) => {
+        url = new URL(request.url);
+        return HttpResponse.json([]);
+      }),
+    );
+
+    await expect(fetchFreeSlots('a/b', WEEK)).resolves.toEqual([]);
+    expect(url.pathname).toBe(`${PSYCHOLOGISTS_ENDPOINT}/a%2Fb/franjas`);
+    expect(url.search).toBe('?desde=2026-09-21&hasta=2026-09-25');
+  });
+
+  it('responde 404 para un psicólogo desconocido y 400 sin rango', async () => {
+    authenticateAs('EMPLEADO');
+    await expect(fetchFreeSlots('nadie', WEEK)).rejects.toMatchObject({ status: 404 });
+
+    const response = await fetch(
+      new URL(`${PSYCHOLOGISTS_ENDPOINT}/usr-psicologo-001/franjas`, window.location.origin),
+      { headers: { Authorization: `Bearer ${buildSession('EMPLEADO').accessToken}` } },
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it('exige una sesión de empleado y valida la respuesta', async () => {
+    await expect(fetchFreeSlots('usr-psicologo-001', WEEK)).rejects.toMatchObject({ status: 401 });
+
+    server.use(
+      http.get(`*${PSYCHOLOGISTS_ENDPOINT}/:id/franjas`, () => HttpResponse.json([{ id: 1 }])),
+    );
+    await expect(fetchFreeSlots('usr-psicologo-001', WEEK)).rejects.toBeInstanceOf(
+      InvalidResponseError,
+    );
   });
 });

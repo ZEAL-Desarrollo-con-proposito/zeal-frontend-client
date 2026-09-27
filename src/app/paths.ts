@@ -44,6 +44,17 @@ export interface DirectoryReturnState {
   directorySearch: string;
 }
 
+/** Vuelta al directorio con los filtros que tenía; el estado de navegación se valida antes de usarse. */
+export function directoryReturnPath(navigationState: unknown): string {
+  const search =
+    isRecord(navigationState) &&
+    typeof navigationState.directorySearch === 'string' &&
+    navigationState.directorySearch.startsWith('?')
+      ? navigationState.directorySearch
+      : '';
+  return `${EMPLOYEE_PATHS.wellbeing}${search}`;
+}
+
 /** Sala de la sesión de una reserva. */
 export function sessionRoomPath(reservationId: string): string {
   return generatePath(PSYCHOLOGIST_PATHS.sessionRoom, { reservationId });

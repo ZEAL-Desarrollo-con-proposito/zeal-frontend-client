@@ -1,0 +1,119 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 1112px;
+}
+
+/* Figma B13 · Breadcrumb "Bienestar / Laura Martínez". */
+.breadcrumb {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+
+.backLink {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: var(--touch-target);
+  padding-right: var(--space-1);
+  font-weight: 500;
+  color: var(--color-teal-800);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.profileSkeleton {
+  height: 138px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.layout {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+.card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.side {
+  flex: 0 0 300px;
+}
+
+/* Sin aviso, la región viva no ocupa espacio; al llegar uno se despliega con una transición. */
+.noticeArea:empty {
+  margin-top: calc(-1 * var(--space-4));
+}
+
+.noticeFrame {
+  overflow: hidden;
+}
+
+.notice {
+  display: inline-flex;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-mauve-soft);
+  font-size: var(--text-caption);
+  color: var(--color-mauve-text);
+}
+
+.feedback,
+.emptyWeek {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  color: var(--color-ink-700);
+}
+
+.notFoundTitle {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  color: var(--color-ink-900);
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .side {
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: var(--space-4);
+  }
+}

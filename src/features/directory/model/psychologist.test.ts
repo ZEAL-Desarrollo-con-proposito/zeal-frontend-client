@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Psychologist } from './psychologist';
 import {
   availabilityOf,
+  avatarToneFor,
   filterDirectory,
   hasFilters,
   isPsychologist,
@@ -124,5 +125,16 @@ describe('filterDirectory', () => {
     expect(
       filterDirectory(directory, { query: 'laura', topic: 'Carrera', onlyToday: false }, NOW),
     ).toEqual([]);
+  });
+});
+
+describe('avatarToneFor', () => {
+  it('da siempre el mismo tono de la marca a la misma persona', () => {
+    const tones = ['usr-psicologo-001', 'usr-psicologo-002', 'usr-psicologo-003'].map(
+      avatarToneFor,
+    );
+
+    expect(new Set(tones)).toEqual(new Set(['sage', 'teal', 'mauve']));
+    expect(avatarToneFor('usr-psicologo-001')).toBe(tones[0]);
   });
 });

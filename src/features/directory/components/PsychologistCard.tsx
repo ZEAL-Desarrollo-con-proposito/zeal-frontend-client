@@ -3,25 +3,13 @@ import { useId } from 'react';
 import { motion } from 'motion/react';
 import type { DirectoryReturnState } from '@/app/paths';
 import { psychologistPath } from '@/app/paths';
-import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { Badge } from '@/shared/ui/Badge/Badge';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { ArrowRightIcon, ClockIcon } from '@/shared/ui/icons';
 import type { Psychologist } from '../model/psychologist';
-import { availabilityOf } from '../model/psychologist';
+import { availabilityOf, avatarToneFor } from '../model/psychologist';
 import styles from './PsychologistCard.module.css';
-
-const AVATAR_TONES: Record<0 | 1 | 2, AvatarTone> = { 0: 'sage', 1: 'teal', 2: 'mauve' };
-
-/** Color estable por persona: no cambia al filtrar ni al reordenar el directorio. */
-function toneFor(id: string): AvatarTone {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) {
-    hash += id.charCodeAt(index);
-  }
-  return AVATAR_TONES[(hash % 3) as 0 | 1 | 2];
-}
 
 interface PsychologistCardProps {
   psychologist: Psychologist;
@@ -61,7 +49,7 @@ export function PsychologistCard({
       transition={{ layout: { duration: 0.3, ease: 'easeOut' } }}
     >
       <div className={styles.person}>
-        <Avatar name={fullName} tone={toneFor(id)} size="lg" />
+        <Avatar name={fullName} tone={avatarToneFor(id)} size="lg" />
         <div className={styles.identity}>
           <h2 id={nameId} className={styles.name}>
             {fullName}

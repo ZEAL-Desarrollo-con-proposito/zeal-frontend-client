@@ -1,0 +1,93 @@
+.week {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 160px;
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.day[data-today='true'] {
+  border-color: var(--color-sage);
+  background: var(--color-surface);
+  box-shadow: inset 0 3px 0 var(--color-sage);
+}
+
+.day[data-past='true'] {
+  opacity: 0.6;
+}
+
+.dayName {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-badge);
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--color-ink-700);
+}
+
+.todayTag {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sage-soft);
+  color: var(--color-sage-text);
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+/* Bloque libre: salvia suave (manual de identidad, "bienestar"). */
+.slot {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-sage-soft);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-sage-text);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.none {
+  font-size: var(--text-caption);
+  color: var(--color-ink-500);
+}
+
+.placeholder {
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+@media (max-width: 1023px) {
+  .week {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .day {
+    min-height: 0;
+  }
+
+  .slots {
+    flex-flow: row wrap;
+  }
+}

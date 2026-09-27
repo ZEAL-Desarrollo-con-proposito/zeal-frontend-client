@@ -161,9 +161,11 @@ agenda se vuelve a pedir.
 Rutas del rol `EMPLEADO`. Qué bloques se pueden reservar (disponibles y futuros) lo decide el
 servidor; el frontend solo lee `nextFreeSlot` para mostrar "Disponible hoy" o el próximo día.
 
-| Método y ruta                   | Respuesta                                                         |
-| ------------------------------- | ----------------------------------------------------------------- |
-| `GET /api/wellbeing/psicologos` | `200` psicólogos, primero quien tiene el bloque libre más próximo |
+| Método y ruta                                                                  | Respuesta                                                            |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `GET /api/wellbeing/psicologos`                                                | `200` psicólogos, primero quien tiene el bloque libre más próximo    |
+| `GET /api/wellbeing/psicologos/{id}`                                           | `200` psicólogo · `404` no está en el directorio                     |
+| `GET /api/wellbeing/psicologos/{id}/franjas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` | `200` franjas libres y futuras, por inicio · `404` · `400` sin rango |
 
 ```json
 {
@@ -178,6 +180,9 @@ servidor; el frontend solo lee `nextFreeSlot` para mostrar "Disponible hoy" o el
 `nextFreeSlot` es `null` si el psicólogo no tiene bloques libres. Cualquier evento de
 `/topic/franjas` hace que el directorio se vuelva a pedir. La búsqueda (nombre, título o tema, sin
 importar tildes) y los filtros se aplican en el cliente y se guardan en la URL (`?q=&tema=&hoy=1`).
+En el perfil, los bloques de la semana se actualizan con los eventos de ese psicólogo (un bloque
+reservado desaparece al instante y se avisa) y el perfil se vuelve a pedir para refrescar su
+próximo bloque.
 
 ## Tiempo real (RT-2)
 
