@@ -32,6 +32,18 @@
   color: var(--color-ink-700);
 }
 
+.announcement {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-sage-soft);
+  font-size: 0.8125rem;
+  color: var(--color-sage-text);
+}
+
+.announcement:empty {
+  display: none;
+}
+
 .content {
   display: flex;
   flex-direction: column;

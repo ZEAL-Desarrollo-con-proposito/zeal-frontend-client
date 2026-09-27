@@ -67,6 +67,9 @@
   color: var(--color-surface);
 }
 
-.profile {
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   align-self: flex-start;
 }

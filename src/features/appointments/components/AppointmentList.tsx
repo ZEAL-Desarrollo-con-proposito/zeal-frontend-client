@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { avatarToneFor } from '@/features/directory/model/psychologist';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { Badge } from '@/shared/ui/Badge/Badge';
+import { Button } from '@/shared/ui/Button/Button';
 import type { Appointment } from '../model/appointment';
 import { appointmentBadge, appointmentWhen } from '../model/appointment';
 import styles from './AppointmentList.module.css';
@@ -10,10 +11,16 @@ interface AppointmentListProps {
   appointments: readonly Appointment[];
   now: number;
   label: string;
+  onCancel?: (appointment: Appointment) => void;
 }
 
-/** Figma B9 · filas de citas: profesional, día y hora, y estado. */
-export function AppointmentList({ appointments, now, label }: Readonly<AppointmentListProps>) {
+/** Figma B9 · filas de citas: profesional, día y hora, estado y, si aplica, cancelar. */
+export function AppointmentList({
+                                  appointments,
+                                  now,
+                                  label,
+                                  onCancel,
+                                }: Readonly<AppointmentListProps>) {
   return (
     <ul className={styles.list} aria-label={label}>
       {appointments.map((appointment, index) => {
@@ -36,7 +43,21 @@ export function AppointmentList({ appointments, now, label }: Readonly<Appointme
               </span>
             </span>
             <span className={styles.when}>{appointmentWhen(appointment, now)}</span>
-            <Badge tone={badge.tone}>{badge.label}</Badge>
+            <span className={styles.status}>
+              <Badge tone={badge.tone}>{badge.label}</Badge>
+              {appointment.status === 'CONFIRMADA' && onCancel !== undefined && (
+                <Button
+                  variant="outline"
+                  className={styles.cancel}
+                  onClick={() => {
+                    onCancel(appointment);
+                  }}
+                  aria-label={`Cancelar cita con ${psychologist.fullName}`}
+                >
+                  Cancelar
+                </Button>
+              )}
+            </span>
           </motion.li>
         );
       })}
