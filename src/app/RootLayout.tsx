@@ -3,14 +3,20 @@ import { Outlet } from 'react-router';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { RealtimeProvider } from '@/shared/realtime/RealtimeProvider';
+import { ToastProvider } from '@/shared/ui/Toast/ToastProvider';
 
-/** Raíz de la aplicación: la sesión y su conexión en tiempo real envuelven todas las rutas. */
+/**
+ * Raíz de la aplicación: la sesión, su conexión en tiempo real y los avisos emergentes envuelven
+ * todas las rutas.
+ */
 export function RootLayout() {
   return (
     <AuthProvider>
-      <SessionRealtime>
-        <Outlet />
-      </SessionRealtime>
+      <ToastProvider>
+        <SessionRealtime>
+          <Outlet />
+        </SessionRealtime>
+      </ToastProvider>
     </AuthProvider>
   );
 }
