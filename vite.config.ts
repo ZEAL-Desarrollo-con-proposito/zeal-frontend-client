@@ -23,7 +23,9 @@ export default defineConfig({
     environment: 'jsdom',
     // Procesos aislados: el tiempo real simulado (BroadcastChannel) no cruza archivos de prueba.
     pool: 'forks',
-    maxWorkers: 8,
+    // Cada proceso carga su propio jsdom: con la mitad de los núcleos la suite tarda lo mismo y la
+    // máquina sigue respondiendo (por defecto Vitest abre uno por núcleo y satura la CPU).
+    maxWorkers: '50%',
     isolate: true,
     testTimeout: 15000,
     hookTimeout: 15000,

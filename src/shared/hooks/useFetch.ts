@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useReducer, useRef, useState } from 'react';
+import { isForbidden } from '@/shared/api/errors';
 
 export type LoadStatus = 'loading' | 'ready' | 'error';
 
@@ -30,6 +31,8 @@ export function fetchReducer<T>(state: FetchState<T>, action: FetchAction<T>): F
 /**
  * Carga datos del servidor para una clave (p. ej. un rango de fechas). Al cambiar la clave
  * cancela la petición anterior; `reload` vuelve a pedirlos (reintento o aviso en tiempo real).
+ * Un 403 no se reintenta: se lanza para que la ruta muestre "Permiso denegado" en lugar de la
+ * pantalla, sin nada de su contenido.
  */
 export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<T>) {
   const [state, dispatch] = useReducer(fetchReducer<T>, {
@@ -59,6 +62,10 @@ export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<
       controller.abort();
     };
   }, [key, attempt]);
+
+  if (isForbidden(state.error)) {
+    throw state.error;
+  }
 
   function reload() {
     setAttempt((current) => current + 1);

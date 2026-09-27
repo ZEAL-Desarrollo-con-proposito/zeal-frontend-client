@@ -33,6 +33,11 @@
   color: var(--color-ink-900);
 }
 
+/* El título recibe el foco solo para anunciarse; no es un control, así que no lleva anillo. */
+.title:focus-visible {
+  outline: none;
+}
+
 .description {
   margin-bottom: var(--space-2);
   line-height: 1.55;
