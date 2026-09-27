@@ -19,7 +19,7 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SectionPage } from './pages/SectionPage';
 import { UnexpectedErrorPage } from './pages/UnexpectedErrorPage';
-import { EMPLOYEE_PATHS, PATHS, PSYCHOLOGIST_PATHS, ROLE_HOME_PATH } from './paths';
+import { EMPLOYEE_PATHS, PATHS, PSYCHOLOGIST_PATHS, ROLE_BASE_PATH, ROLE_HOME_PATH } from './paths';
 import { RootLayout } from './RootLayout';
 
 /** Secciones del menú que ya tienen su pantalla; el resto muestra su estado vacío. */
@@ -80,6 +80,9 @@ export const routes: RouteObject[] = [
               ...(ROLE_ROUTES[role] ?? []),
             ],
           },
+          // Toda dirección bajo el prefijo pasa por el control del rol: un enlace a una pantalla de
+          // otro rol (p. ej. el chat de un empleado) da "Permiso denegado" aunque no exista.
+          { path: `${ROLE_BASE_PATH[role]}/*`, element: <NotFoundPage /> },
         ],
       })),
       { path: '*', element: <NotFoundPage /> },

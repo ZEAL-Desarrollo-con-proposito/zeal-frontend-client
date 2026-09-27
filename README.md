@@ -264,7 +264,9 @@ externa). Marcar como leída es optimista: si el servidor falla, el cambio se de
 
 - **Rutas por rol:** cada rol vive bajo su prefijo (`/empleado`, `/psicologo`, `/admin`). Sin
   sesión, una ruta protegida manda al login; con la sesión de otro rol muestra "Permiso denegado"
-  (aislamiento entre roles). La autorización real la aplica siempre el backend.
+  (aislamiento entre roles), también ante direcciones que no existen bajo ese prefijo (p. ej. un
+  enlace al chat de un empleado abierto por el administrador). La autorización real la aplica
+  siempre el backend.
 - **Token:** se envía como `Authorization: Bearer <token>`. El frontend solo lee el claim `exp`
   para cerrar la sesión al vencer; la firma la valida el servidor.
 - **Almacenamiento:** sin "Recordarme" la sesión vive en `sessionStorage` (se borra al cerrar la
