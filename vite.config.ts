@@ -36,6 +36,7 @@ export default defineConfig({
         'src/main.tsx',
         'src/mocks/browser.ts',
         'src/test/**',
+        'src/mocks/**',
         'src/**/*.test.{ts,tsx}',
         'src/**/*.d.ts',
       ],

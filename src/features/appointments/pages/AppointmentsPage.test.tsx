@@ -31,6 +31,7 @@ function rows(label: string) {
     .map((row) => row.textContent);
 }
 
+/** Cambia el estado de las citas confirmadas de David en el servidor, salvo `keep`. */
 function cancelDavidAppointments(keep = 0) {
   const db = readWellbeingDb();
   let kept = 0;
@@ -43,6 +44,27 @@ function cancelDavidAppointments(keep = 0) {
       }
     }
   }
+  writeWellbeingDb(db);
+}
+
+/**
+ * Adelanta 3 días TODAS las citas confirmadas de David, conservando su orden relativo, para que
+ * la que hoy es "la próxima" siga siéndolo pero ahora sea cancelable (>24 h de plazo). Mover solo
+ * la más cercana no basta: las demás citas de hoy pasarían a ser la nueva "próxima" y seguirían
+ * estando a menos de 24 h.
+ */
+function moveNextAppointmentToFuture() {
+  const db = readWellbeingDb();
+  const shiftMs = 3 * 24 * 60 * 60 * 1000;
+  let moved = 0;
+  for (const reservation of db.reservations) {
+    if (reservation.employee.id === DAVID && reservation.status === 'CONFIRMADA') {
+      reservation.startsAt = new Date(Date.parse(reservation.startsAt) + shiftMs).toISOString();
+      reservation.endsAt = new Date(Date.parse(reservation.endsAt) + shiftMs).toISOString();
+      moved += 1;
+    }
+  }
+  if (moved === 0) throw new Error('No hay cita confirmada para mover');
   writeWellbeingDb(db);
 }
 
@@ -217,5 +239,106 @@ describe('Mis citas (HU-FE-05)', () => {
       expect(rows('Siguientes citas')[1]).toContain('Andrés Rojas');
     });
     expect(rows('Siguientes citas')[1]).toContain('Hoy · 13:00 – 13:50');
+  });
+
+  it('abre el diálogo de cancelar desde la tarjeta destacada', async () => {
+    const { user } = openAppointments();
+    await tab(/^Próximas · 10$/);
+
+    const next = within(screen.getByRole('region', { name: 'Próxima cita' }));
+    const cancelButton = next.getByRole('button', { name: /Cancelar cita con/i });
+
+    await user.click(cancelButton);
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      within(dialog).getByRole('heading', { name: '¿Cancelar esta cita?' }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Cancelar cita' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Volver' })).toBeInTheDocument();
+  });
+
+  it('abre el diálogo de cancelar desde una fila de Siguientes citas', async () => {
+    const { user } = openAppointments();
+    await tab(/^Próximas · 10$/);
+
+    const list = within(panel().getByRole('list', { name: 'Siguientes citas' }));
+    const items = list.getAllByRole('listitem');
+    const firstRow = items[0];
+    if (firstRow === undefined) throw new Error('No hay filas en Siguientes citas');
+    const row = within(firstRow);
+    const cancelButton = row.getByRole('button', { name: /Cancelar cita con/i });
+    const match = /Cancelar cita con (.+)/.exec(cancelButton.getAttribute('aria-label') ?? '');
+    const psychologistName = match?.[1];
+    expect(psychologistName).toBeDefined();
+
+    await user.click(cancelButton);
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      within(dialog).getByRole('heading', { name: '¿Cancelar esta cita?' }),
+    ).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(`Tu cita con ${psychologistName}`);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Volver' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('al cerrar el diálogo con "Volver" no cancela la cita', async () => {
+    const { user } = openAppointments();
+    await tab(/^Próximas · 10$/);
+
+    const next = within(screen.getByRole('region', { name: 'Próxima cita' }));
+    await user.click(next.getByRole('button', { name: /Cancelar cita con/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Volver' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('tab', { name: /^Canceladas · 0$/ })).toBeInTheDocument();
+  });
+
+  it('al confirmar una cita no cancelable, explica la regla y deja reintentar', async () => {
+    const { user } = openAppointments();
+    await tab(/^Próximas · 10$/);
+
+    // La cita "En curso" (hoy a las 9:00) no se puede cancelar: faltan <24 h.
+    const next = within(screen.getByRole('region', { name: 'Próxima cita' }));
+    await user.click(next.getByRole('button', { name: /Cancelar cita con/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar cita' }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).toHaveTextContent(/faltan menos de 24 horas/i);
+    });
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Canceladas · 0$/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Próximas · 10$/ })).toBeInTheDocument();
+  });
+
+  it('al confirmar una cita cancelable, avisa y la pasa a Canceladas', async () => {
+    moveNextAppointmentToFuture();
+
+    const { user } = openAppointments();
+    await tab(/^Próximas · 10$/);
+
+    const next = within(screen.getByRole('region', { name: 'Próxima cita' }));
+    await user.click(next.getByRole('button', { name: /Cancelar cita con/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar cita' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(await tab(/^Canceladas · 1$/)).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Avisos de tus citas' })).toHaveTextContent(
+      /Cancelaste tu cita con/,
+    );
   });
 });
