@@ -88,7 +88,7 @@ function ViewPanel({ view, appointments, now, onCancel }: Readonly<ViewPanelProp
 export function AppointmentsPage() {
   const user = useCurrentUser();
   const now = useNow();
-  const { status, appointments, reload } = useMyAppointments();
+  const { status, appointments, reload, applyCancellation } = useMyAppointments();
   const [view, setView] = useAppointmentsView();
   const [announcement, setAnnouncement] = useState('');
   const panelId = useId();
@@ -96,9 +96,8 @@ export function AppointmentsPage() {
 
   const cancellation = useCancelAppointment({
     onCancelled: (cancelled) => {
+      applyCancellation(cancelled);
       setAnnouncement(`Cancelaste tu cita con ${cancelled.psychologist.fullName}.`);
-      //refleja el cambio al instante.
-      reload();
     },
   });
   const target = cancellation.target;
