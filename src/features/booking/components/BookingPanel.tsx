@@ -7,6 +7,7 @@ import { Badge } from '@/shared/ui/Badge/Badge';
 import { Button } from '@/shared/ui/Button/Button';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import styles from './BookingPanel.module.css';
+import { PanelAlert } from './PanelAlert';
 
 interface BookingPanelProps {
   psychologistName: string;
@@ -14,6 +15,8 @@ interface BookingPanelProps {
   booked: Appointment | null;
   /** Aviso cuando el bloque elegido dejó de estar libre. */
   alert: string | null;
+  /** Hay un diálogo abierto: el aviso no le quita el foco. */
+  dialogOpen: boolean;
   onBook: (slot: Slot) => void;
   onClear: () => void;
   onDismissBooked: () => void;
@@ -39,6 +42,7 @@ export function BookingPanel({
   selected,
   booked,
   alert,
+  dialogOpen,
   onBook,
   onClear,
   onDismissBooked,
@@ -126,11 +130,7 @@ export function BookingPanel({
         {booked === null && selected === null && (
           <motion.div key="sin-bloque" className={styles.content} {...panelMotion}>
             <h2 className={styles.title}>Agenda tu sesión</h2>
-            {alert !== null && (
-              <p className={styles.alert} role="alert">
-                {alert}
-              </p>
-            )}
+            {alert !== null && <PanelAlert message={alert} takeFocus={!dialogOpen} />}
             <p className={styles.hint}>
               Elige un bloque libre de la semana para ver el resumen y confirmar tu cita.
             </p>

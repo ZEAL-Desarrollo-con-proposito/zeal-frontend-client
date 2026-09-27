@@ -8,6 +8,8 @@ import { useBookSlot } from './useBookSlot';
 interface BookingFlowOptions {
   /** Cita confirmada por el servidor: el bloque ya es de quien lo reservó. */
   onBooked: (slot: Slot) => void;
+  /** El servidor rechazó la reserva: los bloques en pantalla están desactualizados. */
+  onRejected: () => void;
 }
 
 /**
@@ -15,7 +17,7 @@ interface BookingFlowOptions {
  * Recuerda los bloques que reservó esta pestaña para no presentarlos como si los hubiera tomado
  * otra persona cuando llegue su evento en vivo.
  */
-export function useBookingFlow({ onBooked }: BookingFlowOptions) {
+export function useBookingFlow({ onBooked, onRejected }: BookingFlowOptions) {
   const [selected, setSelected] = useState<Slot | null>(null);
   const [booked, setBooked] = useState<Appointment | null>(null);
   /** Por qué se soltó la selección (el bloque dejó de estar libre en vivo). */
@@ -28,6 +30,11 @@ export function useBookingFlow({ onBooked }: BookingFlowOptions) {
       setSelected(null);
       setBooked(appointment);
       onBooked(slot);
+    },
+    onRejected: (message) => {
+      setSelected(null);
+      setAlert(message);
+      onRejected();
     },
   });
 

@@ -102,7 +102,12 @@ describe('Agendar cita · estado libre u ocupado en vivo (HU-FE-05)', () => {
     await user.click(choose);
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(await panel().findByRole('alert')).toHaveTextContent(TAKEN);
+    const alert = await panel().findByRole('alert');
+    expect(alert).toHaveTextContent(TAKEN);
+    // Al cerrar el diálogo, el foco pasa al aviso (el botón que lo abrió ya no existe).
+    await waitFor(() => {
+      expect(alert).toHaveFocus();
+    });
     expect(
       readWellbeingDb().reservations.filter(({ slotId }) => slotId === lauraSlotAt(14).id),
     ).toHaveLength(0);

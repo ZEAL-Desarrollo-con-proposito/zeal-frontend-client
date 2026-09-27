@@ -69,6 +69,8 @@ export function PsychologistPage() {
     onBooked: (slot) => {
       week.addSlot({ ...slot, status: 'RESERVADA' });
     },
+    // Un rechazo del servidor significa que la semana en pantalla cambió: se vuelve a pedir.
+    onRejected: week.retry,
   });
   const target = flow.booking.target;
 
@@ -188,6 +190,7 @@ export function PsychologistPage() {
                 selected={flow.selected}
                 booked={flow.booked}
                 alert={flow.alert}
+                dialogOpen={target !== null}
                 onBook={flow.booking.request}
                 onClear={flow.clear}
                 onDismissBooked={flow.dismissBooked}
