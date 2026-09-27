@@ -126,7 +126,9 @@ export const bookingHandlers = [
    * Cancela una cita propia (HU-BE-07). Idempotente: si ya estaba cancelada, se devuelve tal cual en vez de fallar.
    * El plazo mínimo se valida en el servidor, nunca en el formulario.
    */
-  http.post<{ id: string }>(`*${RESERVATIONS_ENDPOINT}/:id/cancelar`, async ({ request, params }) => {
+  http.post<{ id: string }>(
+    `*${RESERVATIONS_ENDPOINT}/:id/cancelar`,
+    async ({ request, params }) => {
     await delay();
     const user = authorize(request, 'EMPLEADO');
     if (user instanceof Response) {
@@ -161,6 +163,7 @@ export const bookingHandlers = [
     if (slot !== undefined) {
       publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA', slot });
     }
-    return HttpResponse.json(toAppointment(reservation, psychologist, Date.now()));
-  }),
+      return HttpResponse.json(toAppointment(reservation, psychologist, Date.now()));
+    },
+  ),
 ];
