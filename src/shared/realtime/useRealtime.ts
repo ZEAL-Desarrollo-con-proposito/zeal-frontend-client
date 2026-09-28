@@ -1,4 +1,4 @@
-import { use, useEffect, useEffectEvent, useSyncExternalStore } from 'react';
+import { use, useCallback, useEffect, useEffectEvent, useSyncExternalStore } from 'react';
 import type { RealtimeListener, RealtimeStatus } from './realtimeClient';
 import { RealtimeContext } from './RealtimeContext';
 
@@ -15,6 +15,17 @@ export function useRealtimeStatus(): { status: RealtimeStatus; recoveries: numbe
     client === null ? 0 : client.getRecoveries(),
   );
   return { status, recoveries };
+}
+
+/** Envía mensajes al servidor por la conexión de la sesión (sin sesión, no hace nada). */
+export function useRealtimePublish(): (destination: string, payload: unknown) => void {
+  const client = use(RealtimeContext);
+  return useCallback(
+    (destination: string, payload: unknown) => {
+      client?.publish(destination, payload);
+    },
+    [client],
+  );
 }
 
 /** Escucha un destino mientras el componente está montado (siempre con el callback más reciente). */

@@ -5,10 +5,10 @@ import { PSYCHOLOGIST_PATHS } from '@/app/paths';
 import { publishMockEvent } from '@/mocks/realtime';
 import { server } from '@/mocks/server';
 import { readWellbeingDb, writeWellbeingDb } from '@/mocks/wellbeing/db';
-import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
-import { createStatusStore } from '@/shared/realtime/realtimeClient';
 import { freezeTime } from '@/test/clock';
 import { buildSession, storeSession } from '@/test/credentials';
+import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
+import { controlledRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
 import { MY_SLOTS_ENDPOINT, SLOTS_ENDPOINT } from '../api/availabilityApi';
 import type { Slot } from '../model/slot';
@@ -145,19 +145,7 @@ describe('Mi disponibilidad · en tiempo real (RT-2)', () => {
   });
 
   it('muestra el estado de la conexión y recupera lo perdido al reconectar', async () => {
-    const store = createStatusStore();
-    const client: RealtimeClient = {
-      connect: () => {
-        store.set('connected');
-      },
-      disconnect: () => {
-        store.set('idle');
-      },
-      subscribe: () => () => undefined,
-      getStatus: store.getStatus,
-      getRecoveries: store.getRecoveries,
-      onChange: store.onChange,
-    };
+    const { client, store } = controlledRealtimeClient();
     const requests = vi.fn();
     server.events.on('request:start', ({ request }) => {
       if (request.url.includes(MY_SLOTS_ENDPOINT)) {

@@ -17,6 +17,39 @@ function connectedClient(accessToken?: string) {
   return received;
 }
 
+describe('Real-Time Gateway simulado · mensajes de los clientes', () => {
+  it('el servidor recibe quién envía, a qué destino y una copia del contenido', () => {
+    const onMessage = vi.fn();
+    const payload = { type: 'LISTO' };
+    const david = createMockRealtimeClient(buildSession('EMPLEADO').accessToken, onMessage);
+    const anonymous = createMockRealtimeClient(undefined, onMessage);
+
+    david.publish('/app/salas/r-1/senales', payload);
+    david.connect();
+    anonymous.connect();
+    clients.push(david, anonymous);
+    david.publish('/app/salas/r-1/senales', payload);
+    anonymous.publish('/app/salas/r-1/senales', payload);
+
+    expect(onMessage).toHaveBeenCalledExactlyOnceWith(
+      'usr-empleado-001',
+      '/app/salas/r-1/senales',
+      payload,
+    );
+    expect(onMessage.mock.calls[0]?.[2]).not.toBe(payload);
+  });
+
+  it('sin quien lo procese, lo que se envía se descarta', () => {
+    const client = createMockRealtimeClient(buildSession('EMPLEADO').accessToken);
+    client.connect();
+    clients.push(client);
+
+    expect(() => {
+      client.publish('/app/otro', {});
+    }).not.toThrow();
+  });
+});
+
 describe('Real-Time Gateway simulado · destinos de usuario', () => {
   afterEach(() => {
     clients.splice(0).forEach((client) => {

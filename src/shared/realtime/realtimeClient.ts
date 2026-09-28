@@ -12,6 +12,11 @@ export interface RealtimeClient {
   disconnect: () => void;
   /** Se suscribe a un destino; devuelve la función para cancelar la suscripción. */
   subscribe: (destination: string, listener: RealtimeListener) => () => void;
+  /**
+   * Envía un mensaje al servidor (STOMP SEND, p. ej. `/app/...`). Sin conexión se descarta:
+   * quien envía debe poder repetirlo al reconectarse.
+   */
+  publish: (destination: string, payload: unknown) => void;
   getStatus: () => RealtimeStatus;
   /** Veces que la conexión se recuperó después de caerse (para pedir de nuevo lo perdido). */
   getRecoveries: () => number;

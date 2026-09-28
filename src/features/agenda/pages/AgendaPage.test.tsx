@@ -6,10 +6,10 @@ import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
 import { publishMockEvent } from '@/mocks/realtime';
 import { server } from '@/mocks/server';
 import { readWellbeingDb } from '@/mocks/wellbeing/db';
-import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
-import { createStatusStore } from '@/shared/realtime/realtimeClient';
 import { freezeTime } from '@/test/clock';
 import { storeSession } from '@/test/credentials';
+import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
+import { controlledRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
 import { cancelReservationAt } from '@/test/wellbeing';
 import { AGENDA_ENDPOINT } from '../api/agendaApi';
@@ -202,19 +202,7 @@ describe('Mi agenda · en tiempo real (RT-2)', () => {
   });
 
   it('recupera los cambios perdidos al reconectarse', async () => {
-    const store = createStatusStore();
-    const client: RealtimeClient = {
-      connect: () => {
-        store.set('connected');
-      },
-      disconnect: () => {
-        store.set('idle');
-      },
-      subscribe: () => () => undefined,
-      getStatus: store.getStatus,
-      getRecoveries: store.getRecoveries,
-      onChange: store.onChange,
-    };
+    const { client, store } = controlledRealtimeClient();
     openAgenda('', () => client);
     await rowsOf(TODAY);
 
