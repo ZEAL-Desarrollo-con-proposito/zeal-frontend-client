@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Role } from '@/features/auth/model/session';
 import { sessionStore } from '@/features/auth/storage/sessionStore';
@@ -30,6 +30,14 @@ async function deniedHeading() {
   return screen.findByRole('heading', { name: DENIED_TITLE });
 }
 
+/** El foco pasa al título en un efecto: puede llegar un instante después de que aparece. */
+async function expectDeniedWithFocus() {
+  const heading = await deniedHeading();
+  await waitFor(() => {
+    expect(heading).toHaveFocus();
+  });
+}
+
 describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
   afterEach(() => {
     server.events.removeAllListeners();
@@ -57,7 +65,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
       storeSession('ADMIN');
       const { router, user } = renderRoute(path);
 
-      expect(await deniedHeading()).toHaveFocus();
+      await expectDeniedWithFocus();
       expect(
         screen.queryByRole('complementary', { name: 'Barra lateral' }),
       ).not.toBeInTheDocument();
@@ -72,7 +80,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     storeTamperedSession('EMPLEADO');
     const { router, user } = renderRoute(EMPLOYEE_PATHS.wellbeing);
 
-    expect(await deniedHeading()).toHaveFocus();
+    await expectDeniedWithFocus();
     expect(screen.queryByText(/Laura Martínez/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
 

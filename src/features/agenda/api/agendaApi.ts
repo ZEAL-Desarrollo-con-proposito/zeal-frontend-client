@@ -22,12 +22,3 @@ export async function fetchAgenda(
   }
   return payload;
 }
-
-/** Una reserva de la agenda (p. ej. para abrir su sala). */
-export async function fetchReservation(id: string, signal?: AbortSignal): Promise<Reservation> {
-  const payload = await request(`${RESERVATIONS_ENDPOINT}/${encodeURIComponent(id)}`, { signal });
-  if (!isReservation(payload)) {
-    throw new InvalidResponseError('la reserva');
-  }
-  return payload;
-}

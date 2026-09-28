@@ -5,10 +5,10 @@ import { ROLE_HOME_PATH } from '@/app/paths';
 import { notify } from '@/mocks/notifications/db';
 import { publishToUser } from '@/mocks/realtime';
 import { server } from '@/mocks/server';
-import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
-import { createStatusStore } from '@/shared/realtime/realtimeClient';
 import { freezeTime } from '@/test/clock';
 import { buildSession, storeSession } from '@/test/credentials';
+import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
+import { controlledRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
 import { MARK_ALL_READ_ENDPOINT, NOTIFICATIONS_ENDPOINT } from './api/notificationsApi';
 import type { Notification } from './model/notification';
@@ -162,19 +162,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
   });
 
   it('al reconectarse recupera lo que llegó sin conexión', async () => {
-    const store = createStatusStore();
-    const client: RealtimeClient = {
-      connect: () => {
-        store.set('connected');
-      },
-      disconnect: () => {
-        store.set('idle');
-      },
-      subscribe: () => () => undefined,
-      getStatus: store.getStatus,
-      getRecoveries: store.getRecoveries,
-      onChange: store.onChange,
-    };
+    const { client, store } = controlledRealtimeClient();
     openHome(() => client);
     await bellWithUnread(1);
 

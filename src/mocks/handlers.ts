@@ -6,6 +6,7 @@ import { notificationHandlers } from './notifications/handlers';
 import { findSeedUser } from './seedUsers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
 import { directoryHandlers } from './wellbeing/directoryHandlers';
+import { roomHandlers } from './wellbeing/roomHandlers';
 import { wellbeingHandlers } from './wellbeing/handlers';
 
 interface LoginRequestBody {
@@ -40,6 +41,7 @@ const authHandlers = [
 export const handlers = [
   ...authHandlers,
   ...bookingHandlers,
+  ...roomHandlers,
   ...wellbeingHandlers,
   ...directoryHandlers,
   ...notificationHandlers,

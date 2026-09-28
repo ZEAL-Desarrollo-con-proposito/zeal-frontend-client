@@ -18,6 +18,8 @@ export interface ReservationRecord {
   startsAt: string;
   endsAt: string;
   status: ReservationStatus;
+  /** Cuándo el psicólogo activó la sala de la sesión (HU-BE-12); sin activar, no existe. */
+  roomActivatedAt?: string;
 }
 
 /** Perfil público de un psicólogo en el directorio (HU-04). */

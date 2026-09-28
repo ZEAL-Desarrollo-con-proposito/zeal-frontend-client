@@ -1,9 +1,11 @@
 import { motion } from 'motion/react';
-import { psychologistPath } from '@/app/paths';
+import { employeeRoomPath, psychologistPath } from '@/app/paths';
 import { avatarToneFor } from '@/features/directory/model/psychologist';
+import { isSameDay } from '@/shared/lib/dates';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { Button } from '@/shared/ui/Button/Button';
 import { LinkButton } from '@/shared/ui/Button/LinkButton';
+import { ArrowRightIcon } from '@/shared/ui/icons';
 import type { Appointment } from '../model/appointment';
 import { appointmentWhen, timeUntil } from '../model/appointment';
 import styles from './NextAppointmentCard.module.css';
@@ -21,6 +23,8 @@ export function NextAppointmentCard({
   onCancel,
 }: Readonly<NextAppointmentCardProps>) {
   const { psychologist } = appointment;
+  // El día de la cita, su sala queda a un clic; cuándo abre lo dice la sala (lo fija el servidor).
+  const isToday = isSameDay(new Date(appointment.startsAt), new Date(now));
 
   return (
     <motion.section
@@ -45,6 +49,15 @@ export function NextAppointmentCard({
       </div>
       <p className={styles.when}>{appointmentWhen(appointment, now)}</p>
       <div className={styles.actions}>
+        {appointment.status === 'CONFIRMADA' && isToday && (
+          <LinkButton
+            to={employeeRoomPath(appointment.id)}
+            aria-label={`Ir a la sala con ${psychologist.fullName}`}
+          >
+            Ir a la sala
+            <ArrowRightIcon />
+          </LinkButton>
+        )}
         <LinkButton
           to={psychologistPath(psychologist.id)}
           variant="outline"

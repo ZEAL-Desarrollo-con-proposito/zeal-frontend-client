@@ -28,11 +28,15 @@ export const PSYCHOLOGIST_PATHS = {
   sessionRoom: `${ROLE_HOME_PATH.PSICOLOGO}/sala/:reservationId`,
 } as const;
 
-/** Rutas del empleado con pantalla propia. El perfil de un psicólogo cuelga de Bienestar. */
+/**
+ * Rutas del empleado con pantalla propia. El perfil de un psicólogo cuelga de Bienestar y la
+ * sala de una sesión, de Mis citas.
+ */
 export const EMPLOYEE_PATHS = {
   wellbeing: `${ROLE_BASE_PATH.EMPLEADO}/bienestar`,
   appointments: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas`,
   psychologist: `${ROLE_BASE_PATH.EMPLEADO}/bienestar/psicologos/:psychologistId`,
+  sessionRoom: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas/sala/:reservationId`,
 } as const;
 
 export function psychologistPath(psychologistId: string): string {
@@ -55,9 +59,14 @@ export function directoryReturnPath(navigationState: unknown): string {
   return `${EMPLOYEE_PATHS.wellbeing}${search}`;
 }
 
-/** Sala de la sesión de una reserva. */
+/** Sala de la sesión de una reserva, para el psicólogo. */
 export function sessionRoomPath(reservationId: string): string {
   return generatePath(PSYCHOLOGIST_PATHS.sessionRoom, { reservationId });
+}
+
+/** Sala de la sesión de una cita, para el empleado. */
+export function employeeRoomPath(reservationId: string): string {
+  return generatePath(EMPLOYEE_PATHS.sessionRoom, { reservationId });
 }
 
 /** Estado de navegación con el que una ruta protegida manda al login. */

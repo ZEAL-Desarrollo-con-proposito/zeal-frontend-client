@@ -88,6 +88,11 @@ export function createStompRealtimeClient(url: string, accessToken: string): Rea
         }
       };
     },
+    publish(destination, payload) {
+      if (client.connected) {
+        client.publish({ destination, body: JSON.stringify(payload) });
+      }
+    },
     getStatus: store.getStatus,
     getRecoveries: store.getRecoveries,
     onChange: store.onChange,

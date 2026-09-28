@@ -32,8 +32,22 @@ export function publishToUser(userId: string, destination: string, payload: unkn
   post({ destination, payload, userId });
 }
 
-/** Cliente simulado; con el token sabe a quién pertenece y recibe solo sus mensajes privados. */
-export function createMockRealtimeClient(accessToken?: string): RealtimeClient {
+/**
+ * Lo que hace el servidor con un mensaje que envía un cliente (como un `@MessageMapping` de
+ * Spring): recibe quién lo envía, a qué destino y con qué contenido.
+ */
+export type MockMessageHandler = (userId: string, destination: string, payload: unknown) => void;
+
+const ignoreMessage: MockMessageHandler = () => undefined;
+
+/**
+ * Cliente simulado; con el token sabe a quién pertenece y recibe solo sus mensajes privados.
+ * Lo que envía lo procesa `onMessage`, el servidor simulado.
+ */
+export function createMockRealtimeClient(
+  accessToken?: string,
+  onMessage: MockMessageHandler = ignoreMessage,
+): RealtimeClient {
   const subject = accessToken === undefined ? null : readMockTokenSubject(accessToken);
   const store = createStatusStore();
   const subscriptions = new Map<number, { destination: string; listener: RealtimeListener }>();
@@ -67,6 +81,12 @@ export function createMockRealtimeClient(accessToken?: string): RealtimeClient {
       return () => {
         subscriptions.delete(id);
       };
+    },
+    publish(destination, payload) {
+      if (channel !== null && subject !== null) {
+        // Como por la red: el servidor recibe una copia, nunca el objeto del cliente.
+        onMessage(subject, destination, structuredClone(payload));
+      }
     },
     getStatus: store.getStatus,
     getRecoveries: store.getRecoveries,

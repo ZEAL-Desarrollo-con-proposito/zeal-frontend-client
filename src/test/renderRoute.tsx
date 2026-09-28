@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { routes } from '@/app/routes';
 import { createMockRealtimeClient } from '@/mocks/realtime';
+import { handleRoomMessage } from '@/mocks/wellbeing/roomHandlers';
 import type { RealtimeClientFactory } from '@/shared/realtime/realtimeClient';
 import { RealtimeFactoryContext } from '@/shared/realtime/RealtimeContext';
 
@@ -10,7 +11,7 @@ import { RealtimeFactoryContext } from '@/shared/realtime/RealtimeContext';
 export function renderRoute(
   initialPath: string,
   realtimeClientFactory: RealtimeClientFactory = (accessToken) =>
-    createMockRealtimeClient(accessToken),
+    createMockRealtimeClient(accessToken, handleRoomMessage),
 ) {
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
   const user = userEvent.setup();

@@ -24,6 +24,7 @@ function controllableClient() {
       listeners.set(destination, listener);
       return () => listeners.delete(destination);
     }),
+    publish: vi.fn(),
     getStatus: store.getStatus,
     getRecoveries: store.getRecoveries,
     onChange: store.onChange,

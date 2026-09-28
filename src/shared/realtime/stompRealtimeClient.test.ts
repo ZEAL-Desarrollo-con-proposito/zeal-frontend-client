@@ -11,6 +11,7 @@ const stomp = vi.hoisted(() => {
     connected = false;
     readonly handlers = new Map<string, (message: IMessage) => void>();
     readonly unsubscribed: string[] = [];
+    readonly published: { destination: string; body: string }[] = [];
     readonly activate = vi.fn(() => {
       this.active = true;
     });
@@ -33,6 +34,10 @@ const stomp = vi.hoisted(() => {
           this.unsubscribed.push(destination);
         },
       };
+    }
+
+    publish(frame: { destination: string; body: string }) {
+      this.published.push(frame);
     }
 
     /** Simula que el broker aceptó la conexión (o la reconexión). */
@@ -145,6 +150,19 @@ describe('createStompRealtimeClient', () => {
     expect(client.getRecoveries()).toBe(1);
     expect(listener).toHaveBeenCalledWith(1);
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it('envía mensajes JSON al servidor solo con la conexión abierta', () => {
+    const client = createStompRealtimeClient('https://rt.zeal.test/ws', 't');
+    client.connect();
+
+    client.publish('/app/salas/r-1/senales', { type: 'SALIO' });
+    fake().open();
+    client.publish('/app/salas/r-1/senales', { type: 'LISTO' });
+
+    expect(fake().published).toEqual([
+      { destination: '/app/salas/r-1/senales', body: '{"type":"LISTO"}' },
+    ]);
   });
 
   it('al desconectarse queda inactivo y no reporta reconexión', () => {
