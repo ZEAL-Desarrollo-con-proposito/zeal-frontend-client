@@ -4,12 +4,12 @@ import { MY_APPOINTMENTS_ENDPOINT } from '@/features/appointments/api/appointmen
 import type { Appointment } from '@/features/appointments/model/appointment';
 import { describeSlot } from '@/features/availability/model/slot';
 import { SLOTS_TOPIC } from '@/features/availability/model/slotEvent';
-import { ROOMS_QUEUE } from '@/features/sessionRoom/model/roomEvent';
 import { authorize, errorBody } from '../mockAuth';
 import { notify } from '../notifications/db';
-import { publishMockEvent, publishToUser } from '../realtime';
+import { publishMockEvent } from '../realtime';
 import type { PsychologistRecord, ReservationRecord } from './db';
 import { nextId, readWellbeingDb, writeWellbeingDb } from './db';
+import { openFreedSlotOffer } from './freedSlotsDb';
 
 interface BookingBody {
   slotId?: unknown;
@@ -161,12 +161,9 @@ export const bookingHandlers = [
       writeWellbeingDb(db);
       if (slot !== undefined) {
         publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA', slot });
+        // Quien tenga una cita posterior ese mismo día recibe la alerta del cupo liberado (HU-BE-08).
+        openFreedSlotOffer(db, slot, user.id);
       }
-      // Si el psicólogo tiene abierta la sala de esta sesión, se entera al instante (HU-BE-12).
-      publishToUser(reservation.psychologistId, ROOMS_QUEUE, {
-        type: 'SALA_ACTUALIZADA',
-        reservationId: reservation.id,
-      });
       return HttpResponse.json(toAppointment(reservation, psychologist, Date.now()));
     },
   ),
