@@ -7,10 +7,10 @@ import { ROLES } from '@/features/auth/model/session';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { AgendaPage } from '@/features/agenda/pages/AgendaPage';
 import { AppointmentsPage } from '@/features/appointments/pages/AppointmentsPage';
-import { SessionRoomPage } from '@/features/agenda/pages/SessionRoomPage';
 import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
 import { DirectoryPage } from '@/features/directory/pages/DirectoryPage';
 import { PsychologistPage } from '@/features/directory/pages/PsychologistPage';
+import { SessionRoomPage } from '@/features/sessionRoom/pages/SessionRoomPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
@@ -40,11 +40,24 @@ const ROLE_ROUTES: Partial<Record<Role, RouteObject[]>> = {
       element: <PsychologistPage />,
     },
   ],
+};
+
+/** Pantallas de un rol a pantalla completa, sin barra lateral (la sala de la sesión, Figma C2). */
+const FULLSCREEN_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+  EMPLEADO: [
+    {
+      path: EMPLOYEE_PATHS.sessionRoom,
+      element: (
+        <SessionRoomPage exit={{ to: EMPLOYEE_PATHS.appointments, label: 'Volver a mis citas' }} />
+      ),
+    },
+  ],
   PSICOLOGO: [
     {
       path: PSYCHOLOGIST_PATHS.sessionRoom,
-      handle: { title: 'Sala de sesión' } satisfies PageHandle,
-      element: <SessionRoomPage />,
+      element: (
+        <SessionRoomPage exit={{ to: PSYCHOLOGIST_PATHS.agenda, label: 'Volver a mi agenda' }} />
+      ),
     },
   ],
 };
@@ -82,6 +95,7 @@ export const routes: RouteObject[] = [
               ...(ROLE_ROUTES[role] ?? []),
             ],
           },
+          ...(FULLSCREEN_ROUTES[role] ?? []),
           // Toda dirección bajo el prefijo pasa por el control del rol: un enlace a una pantalla de
           // otro rol (p. ej. el chat de un empleado) da "Permiso denegado" aunque no exista.
           { path: `${ROLE_BASE_PATH[role]}/*`, element: <NotFoundPage /> },

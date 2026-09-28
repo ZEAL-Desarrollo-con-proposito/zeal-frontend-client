@@ -138,10 +138,9 @@ Mismas reglas de autenticación y rol `PSICOLOGO`. La ventana para entrar a la s
 servidor (en el simulador: desde 10 minutos antes del inicio hasta el fin de la sesión); el frontend
 solo la compara con el reloj.
 
-| Método y ruta                                                          | Respuesta                                  |
-| ---------------------------------------------------------------------- | ------------------------------------------ |
-| `GET /api/wellbeing/reservas/agenda?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` | `200` reservas del psicólogo, por inicio   |
-| `GET /api/wellbeing/reservas/{id}`                                     | `200` reserva · `404` no existe o es ajena |
+| Método y ruta                                                          | Respuesta                                |
+| ---------------------------------------------------------------------- | ---------------------------------------- |
+| `GET /api/wellbeing/reservas/agenda?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` | `200` reservas del psicólogo, por inicio |
 
 ```json
 {
@@ -276,6 +275,34 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
 }
 ```
 
+### Contrato de la sala de la sesión (acordar con HU-BE-12)
+
+La sala es un sub-recurso de la reserva y la ven sus dos participantes (psicólogo y empleado); un rol
+empresarial recibe `403` (HU-BE-11) y cualquier otra persona `404`. Solo el psicólogo la activa, y
+solo dentro de la ventana de ingreso (en el simulador: desde 10 minutos antes hasta el fin).
+
+| Método y ruta                                    | Respuesta                                                                   |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `GET /api/wellbeing/reservas/{id}/sala`          | `200` sala · `403` rol empresarial · `404` no existe o no participa         |
+| `POST /api/wellbeing/reservas/{id}/sala/activar` | `200` sala `ACTIVA` (idempotente) · `409` aún no abre, ya cerró o cancelada |
+
+```json
+{
+  "reservationId": "reserva-16",
+  "status": "PROGRAMADA",
+  "startsAt": "2026-09-23T14:00:00.000Z",
+  "endsAt": "2026-09-23T14:50:00.000Z",
+  "opensAt": "2026-09-23T13:50:00.000Z",
+  "closesAt": "2026-09-23T14:50:00.000Z",
+  "participant": { "id": "usr-empleado-001", "fullName": "David Cajamarca" },
+  "iceServers": [{ "urls": "turn:turn.zeal.co:3478", "username": "…", "credential": "…" }]
+}
+```
+
+`status` ∈ `PROGRAMADA` (sin activar), `ACTIVA`, `CANCELADA`, `FINALIZADA`. `participant` es la otra
+persona de la sesión. `iceServers` son los STUN/TURN para el video, con credenciales temporales que
+entrega el servidor (el simulador envía `[]`: las dos pestañas están en el mismo equipo).
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
@@ -287,12 +314,25 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
   cuando llega una (se muestra un aviso emergente una sola vez y suma a la campana) o
   `{ "type": "LEIDAS", "ids": [...] }` cuando se marcan como leídas en otra pestaña o equipo. Lo
   que llega mientras carga la lista no se pierde, y al reconectar se vuelve a pedir.
+- **Cola privada `/user/queue/salas`:** `{ "type": "SALA_ACTUALIZADA", "reservationId": … }` cuando
+  la sala cambia (se activó o se canceló la sesión; el cliente la vuelve a pedir) y
+  `{ "type": "SENAL", "reservationId": …, "signal": <señal> }` con las señales de la otra persona.
+- **Señalización WebRTC (HU-FE-12):** cada participante envía (STOMP `SEND`) a
+  `/app/salas/{id}/senales` y el servidor reenvía a la otra persona, solo si ambos son participantes
+  y la sala está activa. Señales: `LISTO` (entré o me reconecté, con el estado de micrófono y
+  cámara), `OFERTA` y `RESPUESTA` (`id` de la negociación y `sdp`), `CANDIDATO` (`id` y candidato
+  ICE), `MEDIOS` (cambié micrófono o cámara) y `SALIO`. Solo el psicólogo ofrece, así nunca se cruzan
+  dos negociaciones; lo de una negociación anterior se descarta por su `id`. Si la conexión falla o
+  se recupera el tiempo real, se vuelve a negociar.
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
 - **Con el simulador:** el tiempo real se simula entre pestañas del mismo navegador. Para verlo,
   inicia sesión como psicóloga con "Recordarme", abre `/psicologo/disponibilidad` en dos pestañas y
-  abre o elimina una franja en una de ellas.
+  abre o elimina una franja en una de ellas. Para la videollamada, inicia sesión (sin "Recordarme")
+  como psicóloga en una pestaña y como empleado en otra durante una sesión en curso: la psicóloga
+  activa la sala desde su agenda y el empleado, que espera desde "Ir a la sala" en Mis citas, entra
+  en cuanto se activa.
 
 ## Sesión y seguridad
 

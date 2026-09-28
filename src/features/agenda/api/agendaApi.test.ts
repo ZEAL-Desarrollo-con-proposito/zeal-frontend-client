@@ -2,11 +2,11 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Role } from '@/features/auth/model/session';
 import { server } from '@/mocks/server';
-import { ApiError, InvalidResponseError } from '@/shared/api/errors';
+import { InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
-import { AGENDA_ENDPOINT, fetchAgenda, fetchReservation, RESERVATIONS_ENDPOINT } from './agendaApi';
+import { AGENDA_ENDPOINT, fetchAgenda } from './agendaApi';
 
 const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 
@@ -76,54 +76,5 @@ describe('agendaApi.fetchAgenda', () => {
 
     server.use(http.get(`*${AGENDA_ENDPOINT}`, () => HttpResponse.json({ items: [] })));
     await expect(fetchAgenda(WEEK)).rejects.toBeInstanceOf(InvalidResponseError);
-  });
-});
-
-describe('agendaApi.fetchReservation', () => {
-  beforeEach(() => {
-    freezeTime();
-  });
-
-  afterEach(() => {
-    configureHttpAuth(null);
-  });
-
-  it('devuelve una reserva propia', async () => {
-    authenticateAs('PSICOLOGO');
-
-    await expect(fetchReservation('reserva-16')).resolves.toMatchObject({
-      id: 'reserva-16',
-      employee: { fullName: 'David Cajamarca' },
-      status: 'CONFIRMADA',
-    });
-  });
-
-  it('responde 404 si la reserva no existe o no es del psicólogo', async () => {
-    authenticateAs('PSICOLOGO');
-
-    const error: unknown = await fetchReservation('reserva-999').catch((caught: unknown) => caught);
-
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({
-      status: 404,
-      serverMessage: 'Esta sesión no existe o no es tuya',
-    });
-  });
-
-  it('protege la reserva con autenticación y rol', async () => {
-    await expect(fetchReservation('reserva-16')).rejects.toMatchObject({ status: 401 });
-  });
-
-  it('codifica el id en la ruta y valida la respuesta', async () => {
-    let path = '';
-    server.use(
-      http.get(`*${RESERVATIONS_ENDPOINT}/:id`, ({ request }) => {
-        path = new URL(request.url).pathname;
-        return HttpResponse.json({ id: 'a/b' });
-      }),
-    );
-
-    await expect(fetchReservation('a/b')).rejects.toBeInstanceOf(InvalidResponseError);
-    expect(path).toBe(`${RESERVATIONS_ENDPOINT}/a%2Fb`);
   });
 });

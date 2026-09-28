@@ -1,0 +1,43 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-teal-700);
+  border-radius: var(--radius-pill);
+  background: var(--color-teal-800);
+}
+
+.toggle {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-teal-700);
+  color: var(--color-surface);
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.toggle:hover {
+  background: var(--color-teal-600);
+}
+
+/* Apagado: coral de atención, para que se note de un vistazo que no te oyen o no te ven. */
+.toggle[aria-pressed='true'] {
+  background: var(--color-coral-soft);
+  color: var(--color-coral-strong);
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.leave {
+  padding: 0 var(--space-6);
+}
