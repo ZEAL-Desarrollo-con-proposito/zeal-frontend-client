@@ -3,8 +3,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useMatches } from 'react-router';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
+import { FreedSlotAlerts } from '@/features/freedSlots/components/FreedSlotAlerts';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
-import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { RealtimeStatusBadge } from './RealtimeStatusBadge';
 import { CloseIcon, MenuIcon } from '@/shared/ui/icons';
@@ -15,6 +15,7 @@ import { Sidebar } from './Sidebar';
 import styles from './AppLayout.module.css';
 
 const MOBILE_MENU_ID = 'menu-movil';
+const DEFAULT_DOCUMENT_TITLE = 'ZEAL — Cuidado de la salud mental en el trabajo';
 
 /** Estructura de las pantallas con sesión: barra lateral por rol, barra superior y contenido. */
 export function AppLayout() {
@@ -46,7 +47,13 @@ export function AppLayout() {
     }
   }
 
-  useDocumentTitle(pageTitle);
+  // El título de la pestaña dice dónde está la persona (útil con varias pestañas y lectores de pantalla).
+  useEffect(() => {
+    document.title = `${pageTitle} · ZEAL`;
+    return () => {
+      document.title = DEFAULT_DOCUMENT_TITLE;
+    };
+  }, [pageTitle]);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -164,6 +171,8 @@ export function AppLayout() {
           </motion.div>
         </main>
       </div>
+
+      {user.role === 'EMPLEADO' && <FreedSlotAlerts />}
     </div>
   );
 }

@@ -59,7 +59,10 @@ export function groupAppointments(appointments: readonly Appointment[]): Appoint
 }
 
 /** "Hoy · 9:00 – 9:50", "Mañana · 14:00 – 14:50" o "Lun 28 · 8:00 – 8:50". */
-export function appointmentWhen({ startsAt, endsAt }: Appointment, now: number): string {
+export function appointmentWhen(
+  { startsAt, endsAt }: Pick<Appointment, 'startsAt' | 'endsAt'>,
+  now: number,
+): string {
   const start = new Date(startsAt);
   const today = new Date(now);
   let day = formatDayShort(start);

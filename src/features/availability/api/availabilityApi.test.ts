@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
+import { readWellbeingDb } from '@/mocks/wellbeing/db';
 import { server } from '@/mocks/server';
 import { ApiError, InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
@@ -111,6 +112,14 @@ describe('availabilityApi.fetchMySlots', () => {
     await expect(deleteSlot('franja-inexistente')).rejects.toEqual(
       new ApiError(404, 'La franja ya no existe'),
     );
-    await expect(deleteSlot('franja-2')).resolves.toBeUndefined();
+
+    // Cualquier franja disponible de la semilla sirve: no dependemos de un id fijo.
+    const db = readWellbeingDb();
+    const freeSlot = db.slots.find(
+      (slot) => slot.psychologistId === 'usr-psicologo-001' && slot.status === 'DISPONIBLE',
+    );
+    if (freeSlot === undefined) throw new Error('No hay franja libre para borrar');
+
+    await expect(deleteSlot(freeSlot.id)).resolves.toBeUndefined();
   });
 });
