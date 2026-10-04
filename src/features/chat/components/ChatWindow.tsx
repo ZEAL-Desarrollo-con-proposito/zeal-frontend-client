@@ -5,6 +5,7 @@ import { formatTime } from '@/shared/lib/dates';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import type { ChatMessage } from '../model/chatMessage';
 import { groupChatMessagesByDay } from '../model/chatMessageGroups';
+import { ChatComposer } from './ChatComposer';
 import styles from './ChatWindow.module.css';
 
 /** se revisa si es "hoy", "ayer" o "fecha" cada minuto*/
@@ -21,6 +22,7 @@ interface ChatWindowProps {
   peer: ChatPeer;
   currentUserId: string;
   messages: readonly ChatMessage[];
+  onSend: (text: string) => void;
 }
 
 /**
@@ -28,7 +30,8 @@ interface ChatWindowProps {
  * mensajes, agrupados por día y distinguiendo los propios de los suyos.(por ahora, solo lo que llegue en vivo con
  * `useChatClient`; Task 350 sumará el historial).
  */
-export function ChatWindow({ peer, currentUserId, messages }: Readonly<ChatWindowProps>) {
+
+export function ChatWindow({ peer, currentUserId, messages, onSend }: Readonly<ChatWindowProps>) {
   const listRef = useRef<HTMLDivElement>(null);
 
   // Cada mensaje nuevo lleva la conversación al fondo, como en cualquier chat.
@@ -90,6 +93,8 @@ export function ChatWindow({ peer, currentUserId, messages }: Readonly<ChatWindo
           ))}
         </div>
       )}
+
+      <ChatComposer onSend={onSend} />
     </section>
   );
 }

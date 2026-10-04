@@ -229,3 +229,18 @@ export function PhoneOffIcon() {
     </svg>
   );
 }
+
+//chats
+export function SendIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 12l16-7-7 16-2.5-6.5L4 12Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

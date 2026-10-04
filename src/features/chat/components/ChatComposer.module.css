@@ -1,0 +1,31 @@
+.composer {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-2);
+    align-items: flex-end;
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+.textarea {
+    flex: 1;
+    max-height: 120px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    resize: none;
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-ink-900);
+    background: var(--color-surface);
+}
+
+.textarea:focus-visible {
+    outline: 2px solid var(--color-teal-600);
+    outline-offset: 1px;
+}
+
+.textarea::placeholder {
+    color: var(--color-ink-500);
+}
