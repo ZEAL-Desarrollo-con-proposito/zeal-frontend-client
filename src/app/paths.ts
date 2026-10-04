@@ -14,33 +14,35 @@ export const ROLE_BASE_PATH: Record<Role, string> = {
   ADMIN: '/admin',
 };
 
-/** Pantalla de llegada de cada rol después de iniciar sesión (Figma B1, C1 y D1). */
+/** Pantalla de llegada de cada rol después de iniciar sesión. */
 export const ROLE_HOME_PATH: Record<Role, string> = {
   EMPLEADO: `${ROLE_BASE_PATH.EMPLEADO}/inicio`,
   PSICOLOGO: `${ROLE_BASE_PATH.PSICOLOGO}/agenda`,
   ADMIN: `${ROLE_BASE_PATH.ADMIN}/panel`,
 };
 
-/** Rutas del psicólogo con pantalla propia. La sala cuelga de la agenda, desde donde se entra. */
+/** Rutas del psicólogo. */
 export const PSYCHOLOGIST_PATHS = {
   agenda: ROLE_HOME_PATH.PSICOLOGO,
   availability: `${ROLE_BASE_PATH.PSICOLOGO}/disponibilidad`,
+  messages: `${ROLE_BASE_PATH.PSICOLOGO}/mensajes`,
   sessionRoom: `${ROLE_HOME_PATH.PSICOLOGO}/sala/:reservationId`,
 } as const;
 
-/**
- * Rutas del empleado con pantalla propia. El perfil de un psicólogo cuelga de Bienestar y la
- * sala de una sesión, de Mis citas.
- */
+/** Rutas del empleado. */
 export const EMPLOYEE_PATHS = {
   wellbeing: `${ROLE_BASE_PATH.EMPLEADO}/bienestar`,
   appointments: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas`,
+  messages: `${ROLE_BASE_PATH.EMPLEADO}/mensajes`,
   psychologist: `${ROLE_BASE_PATH.EMPLEADO}/bienestar/psicologos/:psychologistId`,
   sessionRoom: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas/sala/:reservationId`,
 } as const;
 
+/** Genera la ruta al perfil de un psicólogo. */
 export function psychologistPath(psychologistId: string): string {
-  return generatePath(EMPLOYEE_PATHS.psychologist, { psychologistId });
+  return generatePath(EMPLOYEE_PATHS.psychologist, {
+    psychologistId,
+  });
 }
 
 /** Estado con el que el directorio abre un perfil, para volver con los mismos filtros. */
@@ -48,7 +50,10 @@ export interface DirectoryReturnState {
   directorySearch: string;
 }
 
-/** Vuelta al directorio con los filtros que tenía; el estado de navegación se valida antes de usarse. */
+/**
+ * Vuelve al directorio conservando los filtros de búsqueda.
+ * El estado de navegación se valida antes de utilizarse.
+ */
 export function directoryReturnPath(navigationState: unknown): string {
   const search =
     isRecord(navigationState) &&
@@ -56,17 +61,22 @@ export function directoryReturnPath(navigationState: unknown): string {
     navigationState.directorySearch.startsWith('?')
       ? navigationState.directorySearch
       : '';
+
   return `${EMPLOYEE_PATHS.wellbeing}${search}`;
 }
 
-/** Sala de la sesión de una reserva, para el psicólogo. */
+/** Genera la ruta de la sala de una sesión para el psicólogo. */
 export function sessionRoomPath(reservationId: string): string {
-  return generatePath(PSYCHOLOGIST_PATHS.sessionRoom, { reservationId });
+  return generatePath(PSYCHOLOGIST_PATHS.sessionRoom, {
+    reservationId,
+  });
 }
 
-/** Sala de la sesión de una cita, para el empleado. */
+/** Genera la ruta de la sala de una cita para el empleado. */
 export function employeeRoomPath(reservationId: string): string {
-  return generatePath(EMPLOYEE_PATHS.sessionRoom, { reservationId });
+  return generatePath(EMPLOYEE_PATHS.sessionRoom, {
+    reservationId,
+  });
 }
 
 /** Estado de navegación con el que una ruta protegida manda al login. */
@@ -75,13 +85,19 @@ export interface LoginRedirectState {
 }
 
 /**
- * Destino después de iniciar sesión: la ruta que se pidió antes del login si pertenece al rol,
- * o la pantalla de llegada del rol. El estado de navegación se valida antes de usarse.
+ * Determina a dónde enviar al usuario después de iniciar sesión.
+ *
+ * Si existe una ruta anterior perteneciente al rol del usuario,
+ * se vuelve a ella. De lo contrario, se utiliza la pantalla
+ * principal correspondiente al rol.
  */
 export function resolvePostLoginPath(role: Role, navigationState: unknown): string {
   const from =
     isRecord(navigationState) && typeof navigationState.from === 'string'
       ? navigationState.from
       : '';
-  return from.startsWith(`${ROLE_BASE_PATH[role]}/`) ? from : ROLE_HOME_PATH[role];
+
+  const roleBasePath = ROLE_BASE_PATH[role];
+
+  return from === roleBasePath || from.startsWith(`${roleBasePath}/`) ? from : ROLE_HOME_PATH[role];
 }

@@ -40,6 +40,17 @@ export type MockMessageHandler = (userId: string, destination: string, payload: 
 
 const ignoreMessage: MockMessageHandler = () => undefined;
 
+/** Combina varios manejadores (cada uno solo actúa sobre los destinos que reconoce). */
+export function combineMockMessageHandlers(
+  ...handlers: readonly MockMessageHandler[]
+): MockMessageHandler {
+  return (userId, destination, payload) => {
+    handlers.forEach((handler) => {
+      handler(userId, destination, payload);
+    });
+  };
+}
+
 /**
  * Cliente simulado; con el token sabe a quién pertenece y recibe solo sus mensajes privados.
  * Lo que envía lo procesa `onMessage`, el servidor simulado.

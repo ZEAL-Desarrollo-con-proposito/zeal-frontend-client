@@ -65,9 +65,10 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
       icon: trendingIcon,
       description: 'Sigue tu plan de desarrollo profesional.',
     },
+
     {
       label: 'Mensajes',
-      path: section('EMPLEADO', 'mensajes'),
+      path: EMPLOYEE_PATHS.messages,
       icon: messageIcon,
       description: 'Conversa en tiempo real con tu psicólogo o psicóloga.',
     },
@@ -87,7 +88,7 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Mensajes',
-      path: section('PSICOLOGO', 'mensajes'),
+      path: PSYCHOLOGIST_PATHS.messages,
       icon: messageIcon,
       description: 'Conversa en tiempo real con tus pacientes.',
     },

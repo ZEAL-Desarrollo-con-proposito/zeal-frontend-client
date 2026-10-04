@@ -1,0 +1,41 @@
+.banner {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-align: center;
+}
+
+.banner::before {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  content: '';
+}
+
+.banner[data-status='reconnecting'],
+.banner[data-status='connecting'] {
+  background: var(--color-mauve-soft);
+  color: var(--color-mauve-text);
+}
+
+.banner[data-status='reconnecting']::before {
+  animation: blink 1s ease-in-out infinite;
+}
+
+.banner[data-status='idle'] {
+  background: var(--color-coral-soft);
+  color: var(--color-coral-strong);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}

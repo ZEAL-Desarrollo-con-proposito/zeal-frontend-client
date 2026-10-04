@@ -22,13 +22,17 @@ import { SectionPage } from './pages/SectionPage';
 import { UnexpectedErrorPage } from './pages/UnexpectedErrorPage';
 import { EMPLOYEE_PATHS, PATHS, PSYCHOLOGIST_PATHS, ROLE_BASE_PATH, ROLE_HOME_PATH } from './paths';
 import { RootLayout } from './RootLayout';
+import { EmployeeMessagesPage } from '@/features/chat/pages/EmployeeMessagesPage';
+import { PsychologistMessagesPage } from '@/features/chat/pages/PsychologistMessagesPage';
 
 /** Secciones del menú que ya tienen su pantalla; el resto muestra su estado vacío. */
 const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [PSYCHOLOGIST_PATHS.agenda]: <AgendaPage />,
   [PSYCHOLOGIST_PATHS.availability]: <AvailabilityPage />,
+  [PSYCHOLOGIST_PATHS.messages]: <PsychologistMessagesPage />,
   [EMPLOYEE_PATHS.wellbeing]: <DirectoryPage />,
   [EMPLOYEE_PATHS.appointments]: <AppointmentsPage />,
+  [EMPLOYEE_PATHS.messages]: <EmployeeMessagesPage />,
 };
 
 /** Pantallas de un rol que no están en el menú (se llega a ellas desde otra pantalla). */
