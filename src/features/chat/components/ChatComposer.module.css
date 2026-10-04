@@ -19,6 +19,27 @@
   line-height: 1.4;
   color: var(--color-ink-900);
   background: var(--color-surface);
+
+  /* Quita el resizer nativo de Chrome/Edge/Safari */
+  appearance: none;
+  overflow: hidden;
+  scrollbar-width: thin;
+}
+
+.textarea::-webkit-resizer {
+  display: none;
+  visibility: hidden;
+  width: 0;
+  height: 0;
+}
+
+.textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.textarea::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
 }
 
 .textarea:focus-visible {

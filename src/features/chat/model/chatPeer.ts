@@ -11,10 +11,8 @@ export interface ChatPeer {
 /** Margen para considerar "en curso" una cita que acaba de empezar. */
 const RECENT_WINDOW_MS = 60 * 60 * 1000;
 
+/** El más cercano a `now`: primero entre los que empiezan dentro del margen; si no hay, el más próximo en el tiempo. */
 function pickClosest<T>(items: readonly T[], getStart: (item: T) => number, now: number): T | null {
-  if (items.length === 0) {
-    return null;
-  }
   const relevant = items.filter((item) => getStart(item) >= now - RECENT_WINDOW_MS);
   const pool = relevant.length > 0 ? relevant : items;
   return (

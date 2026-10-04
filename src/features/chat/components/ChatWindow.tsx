@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { avatarToneFor } from '@/features/directory/model/psychologist';
 import type { LoadStatus } from '@/shared/hooks/useFetch';
 import { useNow } from '@/shared/hooks/useNow';
@@ -8,15 +8,13 @@ import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { Button } from '@/shared/ui/Button/Button';
 import type { ChatMessage } from '../model/chatMessage';
 import { groupChatMessagesByDay } from '../model/chatMessageGroups';
+import type { ChatPeer } from '../model/chatPeer';
 import { ChatComposer } from './ChatComposer';
 import { ChatConnectionBanner } from './ChatConnectionBanner';
 import styles from './ChatWindow.module.css';
 
 /** se revisa si es "hoy", "ayer" o "fecha" cada minuto*/
 const DAY_LABEL_REFRESH_MS = 60_000;
-
-/** La otra persona de la conversación: un psicólogo (con `title`) o un empleado (sin él). */
-import type { ChatPeer } from '../model/chatPeer';
 
 interface ChatWindowProps {
   peer: ChatPeer;
@@ -32,10 +30,8 @@ interface ChatWindowProps {
 
 /**
  * Ventana de chat 1:1 (HU-FE-09 · Task 348): encabezado con la otra persona y la lista de
- * mensajes, agrupados por día y distinguiendo los propios de los suyos.(por ahora, solo lo que llegue en vivo con
- * `useChatClient`; Task 350 sumará el historial).
+ * mensajes, agrupados por día y distinguiendo los propios de los suyos.
  */
-
 export function ChatWindow({
   peer,
   currentUserId,
@@ -47,13 +43,21 @@ export function ChatWindow({
 }: Readonly<ChatWindowProps>) {
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Cada mensaje nuevo lleva la conversación al fondo, como en cualquier chat.
-  useEffect(() => {
+  // Al abrir la conversación (o cuando llega un mensaje nuevo), baja al final.
+  useLayoutEffect(() => {
     const list = listRef.current;
-    if (list !== null) {
-      list.scrollTop = list.scrollHeight;
+    if (list === null) {
+      return;
     }
-  }, [messages.length]);
+    const scrollToBottom = () => {
+      list.scrollTop = list.scrollHeight;
+    };
+    scrollToBottom();
+    const raf = requestAnimationFrame(scrollToBottom);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [messages.length, historyStatus]);
 
   const now = useNow(DAY_LABEL_REFRESH_MS);
   const groups = groupChatMessagesByDay(messages, now);
