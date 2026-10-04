@@ -16,8 +16,8 @@ export const SEED_USERS: readonly AuthUser[] = [
   },
   {
     id: 'usr-empleado-002',
-    fullName: 'Sebastian Gonzalez',
-    email: 'sebastian.gonzalez@nexura.co',
+    fullName: 'Mariana Torres',
+    email: 'mariana.torres@nexura.co',
     role: 'EMPLEADO',
     organization: 'Nexura S.A.S.',
   },

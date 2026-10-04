@@ -5,10 +5,11 @@ import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
 import { notificationHandlers } from './notifications/handlers';
 import { findSeedUser } from './seedUsers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
-import { directoryHandlers } from './wellbeing/directoryHandlers';
-import { roomHandlers } from './wellbeing/roomHandlers';
-import { wellbeingHandlers } from './wellbeing/handlers';
 import { chatHistoryHandlers } from './wellbeing/chatHistoryHandlers';
+import { directoryHandlers } from './wellbeing/directoryHandlers';
+import { freedSlotHandlers } from './wellbeing/freedSlotHandlers';
+import { wellbeingHandlers } from './wellbeing/handlers';
+import { roomHandlers } from './wellbeing/roomHandlers';
 
 interface LoginRequestBody {
   email?: unknown;
@@ -42,6 +43,7 @@ const authHandlers = [
 export const handlers = [
   ...authHandlers,
   ...bookingHandlers,
+  ...freedSlotHandlers,
   ...roomHandlers,
   ...wellbeingHandlers,
   ...directoryHandlers,
