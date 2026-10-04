@@ -3,6 +3,7 @@ import type { ChatMessage } from '@/features/chat/model/chatMessage';
 import { conversationId, parseConversationId } from '@/features/chat/model/chatMessage';
 import { publishToUser } from '../realtime';
 import { readWellbeingDb } from './db';
+import { appendChatMessage } from './chatDb';
 
 const CHAT_SEND = /^\/app\/chats\/([^/]+)\/mensajes$/;
 
@@ -55,6 +56,9 @@ export function handleChatMessage(userId: string, destination: string, payload: 
     text: payload.text,
     sentAt: new Date().toISOString(),
   };
+  // Como el backend real: el mensaje queda en el historial antes de reenviarlo.
+  appendChatMessage(message);
   publishToUser(employeeId, CHATS_QUEUE, { type: 'NUEVO', message });
   publishToUser(psychologistId, CHATS_QUEUE, { type: 'NUEVO', message });
+  publishToUser(userId, CHATS_QUEUE, { type: 'NUEVO', message }); // eco al remitente
 }

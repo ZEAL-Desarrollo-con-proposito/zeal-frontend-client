@@ -103,5 +103,4 @@ export function createMockRealtimeClient(
     getRecoveries: store.getRecoveries,
     onChange: store.onChange,
   };
-
 }

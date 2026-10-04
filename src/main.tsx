@@ -25,7 +25,7 @@ async function createBackendAdapters(): Promise<RealtimeClientFactory> {
       { worker },
       { combineMockMessageHandlers, createMockRealtimeClient },
       { handleRoomMessage },
-      { handleChatMessage }
+      { handleChatMessage },
     ] = await Promise.all([
       import('./mocks/browser'),
       import('./mocks/realtime'),

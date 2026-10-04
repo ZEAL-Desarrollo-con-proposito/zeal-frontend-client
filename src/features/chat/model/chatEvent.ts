@@ -3,7 +3,9 @@ import type { ChatMessage } from './chatMessage';
 import { isChatMessage } from './chatMessage';
 
 /**
- * Cola privada en Real time por persona: mensajes nuevos de cualquiera de sus conversaciones
+ * Cola privada en Real time por persona: mensajes nuevos de cualquiera de sus conversaciones.
+ */
+export const CHATS_QUEUE = '/user/queue/chats';
 
 /** A dónde envía un mensaje cada participante; el servidor lo completa y lo reenvía a los dos. */
 export function chatSendDestination(conversationId: string): string {

@@ -57,3 +57,19 @@ export function parseConversationId(
   }
   return { employeeId, psychologistId };
 }
+
+/**
+ * Combina el historial (HTTP) con lo que llegó en vivo por la cola privada, sin duplicar —
+ * tras reconectar, el historial puede volver a traer algo que ya había llegado en vivo — y en
+ * orden cronológico.
+ */
+export function mergeChatMessages(
+  history: readonly ChatMessage[],
+  live: readonly ChatMessage[],
+): ChatMessage[] {
+  const byId = new Map<string, ChatMessage>();
+  for (const message of [...history, ...live]) {
+    byId.set(message.id, message);
+  }
+  return [...byId.values()].sort((a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt));
+}

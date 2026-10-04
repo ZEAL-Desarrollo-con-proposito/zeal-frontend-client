@@ -9,13 +9,15 @@ const MAX_TEXTAREA_HEIGHT = 120;
 
 interface ChatComposerProps {
   onSend: (text: string) => void;
+  /** Sin conexión en tiempo real un mensaje enviado se perdería en silencio (Task 351). */
+  disabled?: boolean;
 }
 
 /**
  * Caja de texto y botón "Enviar" del chat (HU-FE-09 · Task 349). Crece con el mensaje hasta un límite, se
  * vacía y vuelve a su tamaño al enviar, y no manda texto en blanco ni un mensaje repetido si se pulsa dos veces muy rápido.
  */
-export function ChatComposer({ onSend }: Readonly<ChatComposerProps>) {
+export function ChatComposer({ onSend, disabled = false }: Readonly<ChatComposerProps>) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fieldId = useId();
@@ -62,15 +64,16 @@ export function ChatComposer({ onSend }: Readonly<ChatComposerProps>) {
         ref={textareaRef}
         id={fieldId}
         className={styles.textarea}
-        placeholder="Escribe un mensaje…"
+        placeholder={disabled ? 'Esperando conexión…' : 'Escribe un mensaje…'}
         rows={1}
         value={text}
+        disabled={disabled}
         onChange={(event) => {
           setText(event.target.value);
         }}
         onKeyDown={handleKeyDown}
       />
-      <Button type="submit" aria-label="Enviar mensaje" disabled={text.trim() === ''}>
+      <Button type="submit" aria-label="Enviar mensaje" disabled={disabled || text.trim() === ''}>
         <SendIcon />
       </Button>
     </form>

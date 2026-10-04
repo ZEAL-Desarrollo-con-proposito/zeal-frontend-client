@@ -8,6 +8,7 @@ import { bookingHandlers } from './wellbeing/bookingHandlers';
 import { directoryHandlers } from './wellbeing/directoryHandlers';
 import { roomHandlers } from './wellbeing/roomHandlers';
 import { wellbeingHandlers } from './wellbeing/handlers';
+import { chatHistoryHandlers } from './wellbeing/chatHistoryHandlers';
 
 interface LoginRequestBody {
   email?: unknown;
@@ -45,4 +46,5 @@ export const handlers = [
   ...wellbeingHandlers,
   ...directoryHandlers,
   ...notificationHandlers,
+  ...chatHistoryHandlers,
 ];
