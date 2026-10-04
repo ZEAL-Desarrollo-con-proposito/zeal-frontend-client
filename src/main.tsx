@@ -21,13 +21,20 @@ const isApiMockingEnabled = import.meta.env.DEV && import.meta.env.VITE_API_MOCK
  */
 async function createBackendAdapters(): Promise<RealtimeClientFactory> {
   if (isApiMockingEnabled) {
-    const [{ worker }, { createMockRealtimeClient }, { handleRoomMessage }] = await Promise.all([
+    const [
+      { worker },
+      { combineMockMessageHandlers, createMockRealtimeClient },
+      { handleRoomMessage },
+      { handleChatMessage }
+    ] = await Promise.all([
       import('./mocks/browser'),
       import('./mocks/realtime'),
       import('./mocks/wellbeing/roomHandlers'),
+      import('./mocks/wellbeing/chatHandlers'),
     ]);
     await worker.start({ onUnhandledRequest: 'bypass' });
-    return (accessToken) => createMockRealtimeClient(accessToken, handleRoomMessage);
+    const onMessage = combineMockMessageHandlers(handleRoomMessage, handleChatMessage);
+    return (accessToken) => createMockRealtimeClient(accessToken, onMessage);
   }
   const realtimeUrl = resolveRealtimeUrl(import.meta.env.VITE_REALTIME_URL);
   return (accessToken) => createStompRealtimeClient(realtimeUrl, accessToken);
