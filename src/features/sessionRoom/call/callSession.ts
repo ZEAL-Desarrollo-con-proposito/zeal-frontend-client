@@ -11,12 +11,18 @@ export interface CallSnapshot {
   remoteStream: MediaStream | null;
   /** Micrófono y cámara de la otra persona, según su última señal. */
   remoteMedia: MediaState;
+  /**
+   * La otra persona estuvo en la sala y se fue (señal `SALIO`). Distingue "se fue" de "aún no
+   * llega", que comparten el estado `waiting`. Vuelve a `false` cuando ella regresa.
+   */
+  remoteLeft: boolean;
 }
 
 export const INITIAL_CALL: CallSnapshot = {
   status: 'waiting',
   remoteStream: null,
   remoteMedia: { audio: true, video: true },
+  remoteLeft: false,
 };
 
 export interface PeerEvents {
@@ -143,7 +149,7 @@ export function createCallSession({
       peer.connection.addTrack(track, localStream);
     }
     current = peer;
-    update({ status: 'connecting' });
+    update({ status: 'connecting', remoteLeft: false });
     return peer;
   }
 
@@ -217,7 +223,8 @@ export function createCallSession({
     }
     switch (signal.type) {
       case 'LISTO':
-        update({ remoteMedia: signal.media });
+        // Si volvió a la sala, el aviso de que se fue deja de aplicar.
+        update({ remoteMedia: signal.media, remoteLeft: false });
         if (role === 'caller') {
           void offer();
         } else {
@@ -243,7 +250,7 @@ export function createCallSession({
         break;
       case 'SALIO':
         closePeer();
-        update({ status: 'waiting', remoteStream: null });
+        update({ status: 'waiting', remoteStream: null, remoteLeft: true });
         break;
     }
   }

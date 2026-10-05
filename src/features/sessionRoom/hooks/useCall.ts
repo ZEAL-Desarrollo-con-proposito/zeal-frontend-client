@@ -67,6 +67,28 @@ export function useCall({ reservationId, role, iceServers }: CallOptions) {
 
   useEffect(() => hangUp, [hangUp]);
 
+  // Cerrar la pestaña o recargar no desmonta React: sin esto la otra persona no se enteraría de
+  // que saliste. El envío es de mejor esfuerzo; si no alcanza a salir, el servidor lo detecta
+  // por la caída de la conexión (HU-BE-13).
+  useEffect(() => {
+    function onPageHide() {
+      hangUp();
+    }
+    // Si el navegador restaura la página desde su caché, la llamada ya no existe: vuelve al inicio.
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        setPhase({ kind: 'idle' });
+        setCall(INITIAL_CALL);
+      }
+    }
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [hangUp]);
+
   useEffect(() => {
     session.current?.start();
   }, [recoveries]);
