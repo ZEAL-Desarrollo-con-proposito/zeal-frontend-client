@@ -52,8 +52,8 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
     expect(guardia.getByText('Quedan 2 de 4 cupos')).toBeInTheDocument();
     expect(guardia.getByText('Cierra en 5 días')).toBeInTheDocument();
     expect(
-      guardia.getByRole('link', { name: 'Postularme a Data Platform · Turno de guardia' }),
-    ).toHaveAttribute('href', projectPath(GUARDIA));
+      guardia.getByRole('button', { name: 'Postularme a Data Platform · Turno de guardia' }),
+    ).toBeEnabled();
     expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(4);
   });
 
@@ -64,7 +64,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
 
     expect(full.getByText('Sin cupos · 3 de 3 ocupados')).toBeInTheDocument();
     expect(full.getByRole('button', { name: 'Cupos agotados' })).toBeDisabled();
-    expect(full.queryByRole('link', { name: /Postularme/ })).not.toBeInTheDocument();
+    expect(full.queryByRole('button', { name: /Postularme/ })).not.toBeInTheDocument();
     expect(
       full.getByRole('link', { name: 'Ver detalle de Squad de Observabilidad' }),
     ).toHaveAttribute('href', projectPath('proyecto-observabilidad'));
@@ -90,7 +90,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
       updateOccupiedSpots(GUARDIA, 3);
     });
     expect(
-      await guardia.findByRole('link', { name: 'Postularme a Data Platform · Turno de guardia' }),
+      await guardia.findByRole('button', { name: 'Postularme a Data Platform · Turno de guardia' }),
     ).toBeInTheDocument();
   });
 
@@ -181,7 +181,9 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
       ),
     ).toHaveLength(2);
     expect(
-      within(screen.getByRole('region', { name: 'Cupos' })).getByText('Quedan 2 de 4 cupos'),
+      within(screen.getByRole('region', { name: 'Tu postulación' })).getByText(
+        'Quedan 2 de 4 cupos',
+      ),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: 'Convocatorias internas' }));
@@ -190,7 +192,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
 
   it('sus cupos también cambian en vivo hasta agotarse', async () => {
     openAsEmployee(projectPath(GUARDIA));
-    const spots = within(await screen.findByRole('region', { name: 'Cupos' }));
+    const spots = within(await screen.findByRole('region', { name: 'Tu postulación' }));
 
     act(() => {
       updateOccupiedSpots(GUARDIA, 4);
@@ -209,7 +211,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
     writeProjectsDb(db);
     openAsEmployee(projectPath(GUARDIA));
 
-    const spots = within(await screen.findByRole('region', { name: 'Cupos' }));
+    const spots = within(await screen.findByRole('region', { name: 'Tu postulación' }));
 
     expect(spots.getByRole('button', { name: 'Convocatoria cerrada' })).toBeDisabled();
     expect(screen.getByText('Cerrada')).toBeInTheDocument();

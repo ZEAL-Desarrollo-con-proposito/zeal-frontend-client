@@ -330,6 +330,32 @@ servidor; el catálogo solo lista las abiertas, ordenadas por fecha de cierre.
 `version` crece con cada cambio de cupos: el cliente se queda siempre con la más nueva entre lo que
 cargó y lo que llegó en vivo. Al llegar a cero, "Postularme" pasa a "Cupos agotados".
 
+### Contrato de postulaciones (acordar con HU-BE-17)
+
+Rutas del rol `EMPLEADO`. Revisar el cupo y asignarlo es una sola operación atómica en el servidor:
+dos personas nunca reciben el mismo cupo; quien llega cuando ya no queda entra a la lista de espera
+con su puesto. Postularse dos veces a la misma convocatoria devuelve la misma postulación.
+
+| Método y ruta                            | Respuesta                                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| `POST /api/proyectos/{id}/postulaciones` | `201` postulación nueva · `200` la que ya existía · `409` convocatoria cerrada · `404` |
+| `GET /api/postulaciones/mias`            | `200` postulaciones de la persona, las más recientes primero                           |
+
+```json
+{
+  "id": "postulacion-12",
+  "projectId": "proyecto-guardia-datos",
+  "projectTitle": "Data Platform · Turno de guardia",
+  "status": "EN_ESPERA",
+  "waitlistPosition": 2,
+  "createdAt": "2026-09-23T14:20:00.000Z",
+  "version": 1
+}
+```
+
+`status` ∈ `ACEPTADA` (`waitlistPosition: null`), `EN_ESPERA`. Al aceptar, el servidor sube la
+`version` de los cupos y la avisa por el canal de la convocatoria.
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
@@ -355,6 +381,10 @@ cargó y lo que llegó en vivo. Al llegar a cero, "Postularme" pasa a "Cupos ago
   `{ "type": "CUPOS", "projectId": …, "capacity": …, "occupied": …, "version": … }` cuando el
   servidor asigna, libera o amplía cupos. Un aviso con versión menor o igual a la conocida se
   descarta; al reconectar se vuelve a pedir el catálogo.
+- **Cola privada `/user/queue/postulaciones` (HU-FE-17):**
+  `{ "type": "POSTULACION", "application": <postulación> }` cuando se crea o cambia una postulación
+  de la persona (otra pestaña, otro equipo o el paso de la lista de espera a aceptada). Se queda la
+  versión más nueva; al reconectar se vuelve a pedir la lista.
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
