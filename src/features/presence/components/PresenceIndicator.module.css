@@ -1,0 +1,22 @@
+.indicator {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 6px;
+  align-items: center;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-ink-500);
+}
+
+.indicator::before {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  content: '';
+}
+
+.indicator[data-status='online'] {
+  color: var(--color-sage-text);
+}

@@ -29,3 +29,34 @@ export interface ChatEvent {
 export function isChatEvent(value: unknown): value is ChatEvent {
   return isRecord(value) && value.type === 'NUEVO' && isChatMessage(value.message);
 }
+
+/** A dónde se avisa que se está escribiendo (Task 355); el servidor reenvía a la otra persona. */
+export function chatTypingDestination(conversationId: string): string {
+  return `/app/chats/${encodeURIComponent(conversationId)}/escribiendo`;
+}
+
+export interface ChatTypingOutgoing {
+  typing: boolean;
+}
+
+export function isChatTypingOutgoing(value: unknown): value is ChatTypingOutgoing {
+  return isRecord(value) && typeof value.typing === 'boolean';
+}
+
+/** `ESCRIBIENDO`: la otra persona empezó o dejó de escribir en esta conversación. */
+export interface ChatTypingEvent {
+  type: 'ESCRIBIENDO';
+  conversationId: string;
+  userId: string;
+  typing: boolean;
+}
+
+export function isChatTypingEvent(value: unknown): value is ChatTypingEvent {
+  return (
+    isRecord(value) &&
+    value.type === 'ESCRIBIENDO' &&
+    typeof value.conversationId === 'string' &&
+    typeof value.userId === 'string' &&
+    typeof value.typing === 'boolean'
+  );
+}
