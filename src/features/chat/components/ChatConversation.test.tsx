@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createMockRealtimeClient } from '@/mocks/realtime';
+import { createMockRealtimeClient, publishToUser } from '@/mocks/realtime';
 import { appendChatMessage } from '@/mocks/wellbeing/chatDb';
 import { handleChatMessage } from '@/mocks/wellbeing/chatHandlers';
 import { configureHttpAuth } from '@/shared/api/httpClient';
@@ -10,6 +10,7 @@ import { RealtimeProvider } from '@/shared/realtime/RealtimeProvider';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
 import type { ChatPeer } from '../model/chatPeer';
+import { CHATS_QUEUE } from '../model/chatEvent';
 import { conversationId } from '../model/chatMessage';
 import { ChatConversation } from './ChatConversation';
 
@@ -85,5 +86,28 @@ describe('ChatConversation', () => {
     expect(
       await screen.findByText('Aún no tienes mensajes con Laura Martínez'),
     ).toBeInTheDocument();
+  });
+
+  it('dice si la otra persona está conectada', async () => {
+    abrirConversacion();
+
+    expect(await screen.findByText('Desconectado')).toBeInTheDocument();
+  });
+
+  it('avisa en cuanto la otra persona empieza a escribir', async () => {
+    abrirConversacion();
+    await screen.findByText('Aún no tienes mensajes con Laura Martínez');
+
+    await act(async () => {
+      publishToUser(EMPLOYEE, CHATS_QUEUE, {
+        type: 'ESCRIBIENDO',
+        conversationId: CONVERSATION,
+        userId: 'usr-psicologo-001',
+        typing: true,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+
+    expect(await screen.findByText(/Laura Martínez está escribiendo/)).toBeInTheDocument();
   });
 });

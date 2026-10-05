@@ -1,6 +1,8 @@
+import { presenceTopic } from '@/features/presence/model/presenceEvent';
 import type { RealtimeClient, RealtimeListener } from '@/shared/realtime/realtimeClient';
 import { createStatusStore } from '@/shared/realtime/realtimeClient';
 import { readMockTokenSubject } from './mockToken';
+import { setPresence } from './presenceDb';
 
 /**
  * Real-Time Gateway simulado. Los handlers de MSW publican en un BroadcastChannel y cada pestaña
@@ -65,6 +67,24 @@ export function createMockRealtimeClient(
   let channel: BroadcastChannel | null = null;
   let nextId = 0;
 
+  /**
+   * Como lo haría el Real-Time Gateway real (HU-BE-10): registra y avisa que esta persona se
+   * conectó o se desconectó, para quien esté viendo su presencia en otra pestaña.
+   */
+  function announcePresence(status: 'online' | 'offline') {
+    if (subject === null) {
+      return;
+    }
+    setPresence(subject, status);
+    post({ destination: presenceTopic(subject), payload: { type: 'PRESENCIA', status } });
+  }
+
+  // Si la pestaña se cierra sin pasar por disconnect() (p. ej. sin cerrar sesión primero), igual
+  // se avisa que esta persona quedó desconectada — como un backend real detectaría que el socket se cayó.
+  function handlePageHide() {
+    announcePresence('offline');
+  }
+
   return {
     connect() {
       channel = new BroadcastChannel(MOCK_REALTIME_CHANNEL);
@@ -79,8 +99,12 @@ export function createMockRealtimeClient(
         });
       };
       store.set('connected');
+      announcePresence('online');
+      window.addEventListener('pagehide', handlePageHide);
     },
     disconnect() {
+      window.removeEventListener('pagehide', handlePageHide);
+      announcePresence('offline');
       channel?.close();
       channel = null;
       store.set('idle');

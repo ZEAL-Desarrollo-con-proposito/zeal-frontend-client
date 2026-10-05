@@ -3,6 +3,7 @@ import { LOGIN_ENDPOINT } from '@/features/auth/api/authApi';
 import { errorBody } from './mockAuth';
 import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
 import { notificationHandlers } from './notifications/handlers';
+import { presenceHandlers } from './presenceHandlers';
 import { findSeedUser } from './seedUsers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
 import { chatHistoryHandlers } from './wellbeing/chatHistoryHandlers';
@@ -39,7 +40,6 @@ const authHandlers = [
   }),
 ];
 
-// Las rutas fijas de reservas (p. ej. /reservas/mias) van antes que /reservas/:id del psicólogo.
 export const handlers = [
   ...authHandlers,
   ...bookingHandlers,
@@ -49,4 +49,5 @@ export const handlers = [
   ...directoryHandlers,
   ...notificationHandlers,
   ...chatHistoryHandlers,
+  ...presenceHandlers,
 ];

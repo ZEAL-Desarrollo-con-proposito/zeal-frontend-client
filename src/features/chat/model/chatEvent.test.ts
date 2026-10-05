@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatMessage } from './chatMessage';
-import { CHATS_QUEUE, chatSendDestination, isChatEvent, isChatOutgoing } from './chatEvent';
+import {
+  CHATS_QUEUE,
+  chatSendDestination,
+  chatTypingDestination,
+  isChatEvent,
+  isChatOutgoing,
+  isChatTypingEvent,
+  isChatTypingOutgoing,
+} from './chatEvent';
 
 const MENSAJE: ChatMessage = {
   id: 'mensaje-1',
@@ -52,5 +60,57 @@ describe('isChatEvent', () => {
     ['el mensaje está incompleto', { type: 'NUEVO', message: { id: 'mensaje-1' } }],
   ])('rechaza %s', (_caso, valor) => {
     expect(isChatEvent(valor)).toBe(false);
+  });
+});
+
+describe('chatTypingDestination', () => {
+  it('codifica la conversación en el destino del aviso de escritura', () => {
+    expect(chatTypingDestination(MENSAJE.conversationId)).toBe(
+      '/app/chats/usr-empleado-001%3Ausr-psicologo-001/escribiendo',
+    );
+  });
+});
+
+describe('isChatTypingOutgoing', () => {
+  it('acepta que empezó o dejó de escribir', () => {
+    expect(isChatTypingOutgoing({ typing: true })).toBe(true);
+    expect(isChatTypingOutgoing({ typing: false })).toBe(true);
+  });
+
+  it.each<[string, unknown]>([
+    ['no es un objeto', true],
+    ['no trae estado', {}],
+    ['el estado no es un interruptor', { typing: 'sí' }],
+  ])('rechaza %s', (_caso, valor) => {
+    expect(isChatTypingOutgoing(valor)).toBe(false);
+  });
+});
+
+describe('isChatTypingEvent', () => {
+  it('acepta el aviso de escritura de la cola privada', () => {
+    expect(
+      isChatTypingEvent({
+        type: 'ESCRIBIENDO',
+        conversationId: MENSAJE.conversationId,
+        userId: MENSAJE.senderId,
+        typing: true,
+      }),
+    ).toBe(true);
+  });
+
+  it.each<[string, unknown]>([
+    ['no es un objeto', 'ESCRIBIENDO'],
+    ['es de otro tipo', { type: 'NUEVO', typing: true }],
+    ['no trae conversación', { type: 'ESCRIBIENDO', userId: 'x', typing: true }],
+    ['la conversación no es texto', { type: 'ESCRIBIENDO', conversationId: 7, typing: true }],
+    ['no trae quién escribe', { type: 'ESCRIBIENDO', conversationId: 'a:b', typing: true }],
+    ['quien escribe no es texto', { type: 'ESCRIBIENDO', conversationId: 'a:b', userId: 1 }],
+    ['no trae el estado', { type: 'ESCRIBIENDO', conversationId: 'a:b', userId: 'x' }],
+    [
+      'el estado no es un interruptor',
+      { type: 'ESCRIBIENDO', conversationId: 'a:b', userId: 'x', typing: 'sí' },
+    ],
+  ])('rechaza %s', (_caso, valor) => {
+    expect(isChatTypingEvent(valor)).toBe(false);
   });
 });

@@ -149,4 +149,33 @@ describe('ChatWindow', () => {
 
     expect(props.onSend).toHaveBeenCalledExactlyOnceWith('hola');
   });
+
+  it('dice si la otra persona está en línea o desconectada', () => {
+    const { rerender, props } = renderWindow({ peerStatus: 'online' });
+
+    expect(screen.getByText('En línea')).toBeInTheDocument();
+
+    rerender(<ChatWindow {...props} peerStatus="offline" />);
+
+    expect(screen.getByText('Desconectado')).toBeInTheDocument();
+  });
+
+  it('mientras no se sabe la presencia no dice nada de ella', () => {
+    renderWindow();
+
+    expect(screen.queryByText('En línea')).not.toBeInTheDocument();
+    expect(screen.queryByText('Desconectado')).not.toBeInTheDocument();
+  });
+
+  it('avisa que la otra persona está escribiendo y sigue suTecleo', async () => {
+    const onTyping = vi.fn();
+    renderWindow({ peerTyping: true, onTyping });
+    const user = userEvent.setup();
+
+    expect(screen.getByText(/Laura Martínez está escribiendo/)).toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: 'Escribe un mensaje' }), 'hola');
+
+    expect(onTyping).toHaveBeenLastCalledWith(true);
+  });
 });

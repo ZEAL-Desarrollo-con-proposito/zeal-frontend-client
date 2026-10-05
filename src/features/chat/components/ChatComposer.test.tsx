@@ -13,10 +13,16 @@ function altoDe(px: number | ((value: string) => number)) {
   });
 }
 
-function renderComposer(disabled?: boolean) {
+function renderComposer(disabled?: boolean, onTyping?: (typing: boolean) => void) {
   const onSend = vi.fn();
   const user = userEvent.setup();
-  render(<ChatComposer onSend={onSend} {...(disabled === undefined ? {} : { disabled })} />);
+  render(
+    <ChatComposer
+      onSend={onSend}
+      {...(disabled === undefined ? {} : { disabled })}
+      {...(onTyping === undefined ? {} : { onTyping })}
+    />,
+  );
   return { onSend, user, caja: screen.getByRole('textbox', { name: 'Escribe un mensaje' }) };
 }
 
@@ -97,5 +103,29 @@ describe('ChatComposer', () => {
     expect(caja).toBeDisabled();
     expect(caja).toHaveAttribute('placeholder', 'Esperando conexión…');
     expect(screen.getByRole('button', { name: 'Enviar mensaje' })).toBeDisabled();
+  });
+
+  it('avisa que empezó a escribir, y que dejó al vaciar la caja o al enviar', async () => {
+    const onTyping = vi.fn();
+    const { user, caja } = renderComposer(undefined, onTyping);
+
+    await user.type(caja, 'hola');
+    expect(onTyping).toHaveBeenLastCalledWith(true);
+
+    await user.clear(caja);
+    expect(onTyping).toHaveBeenLastCalledWith(false);
+
+    await user.type(caja, 'otra vez');
+    await user.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
+    expect(onTyping).toHaveBeenLastCalledWith(false);
+  });
+
+  it('con solo espacios en la caja no dice que se está escribiendo', async () => {
+    const onTyping = vi.fn();
+    const { user, caja } = renderComposer(undefined, onTyping);
+
+    await user.type(caja, '   ');
+
+    expect(onTyping).toHaveBeenLastCalledWith(false);
   });
 });

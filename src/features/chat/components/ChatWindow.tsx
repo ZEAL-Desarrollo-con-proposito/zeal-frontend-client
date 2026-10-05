@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { avatarToneFor } from '@/features/directory/model/psychologist';
+import { PresenceIndicator } from '@/features/presence/components/PresenceIndicator';
+import type { PresenceState } from '@/features/presence/model/presence';
 import type { LoadStatus } from '@/shared/hooks/useFetch';
 import { useNow } from '@/shared/hooks/useNow';
 import { formatTime } from '@/shared/lib/dates';
@@ -12,9 +14,12 @@ import type { ChatPeer } from '../model/chatPeer';
 import { ChatComposer } from './ChatComposer';
 import { ChatConnectionBanner } from './ChatConnectionBanner';
 import styles from './ChatWindow.module.css';
+import { TypingIndicator } from './TypingIndicator';
 
 /** se revisa si es "hoy", "ayer" o "fecha" cada minuto*/
 const DAY_LABEL_REFRESH_MS = 60_000;
+
+const noop = () => undefined;
 
 interface ChatWindowProps {
   peer: ChatPeer;
@@ -26,11 +31,18 @@ interface ChatWindowProps {
   onRetryHistory: () => void;
   /** Estado de la conexión en tiempo real (Task 351): sin ella, un mensaje se perdería en silencio. */
   connectionStatus: RealtimeStatus;
+  /** Presencia de la otra persona (Task 353); `null` o sin especificar: no se muestra nada. */
+  peerStatus?: PresenceState | null;
+  /** Si la otra persona está escribiendo ahora (Task 354). */
+  peerTyping?: boolean;
+  /** Avisa que esta persona empezó o dejó de escribir (Task 355). */
+  onTyping?: (typing: boolean) => void;
 }
 
 /**
- * Ventana de chat 1:1 (HU-FE-09 · Task 348): encabezado con la otra persona y la lista de
- * mensajes, agrupados por día y distinguiendo los propios de los suyos.
+ * Ventana de chat 1:1 (HU-FE-09): encabezado con la otra persona (su presencia incluida), la
+ * lista de mensajes agrupados por día distinguiendo los propios de los suyos, el aviso de
+ * "escribiendo…" y la caja para escribir y enviar.
  */
 export function ChatWindow({
   peer,
@@ -40,6 +52,9 @@ export function ChatWindow({
   historyStatus,
   onRetryHistory,
   connectionStatus,
+  peerStatus = null,
+  peerTyping = false,
+  onTyping = noop,
 }: Readonly<ChatWindowProps>) {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -141,13 +156,16 @@ export function ChatWindow({
           <p className={styles.name}>{peer.fullName}</p>
           {peer.title !== undefined && <p className={styles.role}>{peer.title}</p>}
         </div>
+        <PresenceIndicator status={peerStatus} />
       </header>
 
       <ChatConnectionBanner status={connectionStatus} />
 
       {renderBody()}
 
-      <ChatComposer onSend={onSend} disabled={!canSend} />
+      {peerTyping && <TypingIndicator peerName={peer.fullName} />}
+
+      <ChatComposer onSend={onSend} disabled={!canSend} onTyping={onTyping} />
     </section>
   );
 }
