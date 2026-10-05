@@ -1,0 +1,268 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 1112px;
+}
+
+/* Figma B11 · "Convocatorias internas / Squad de Observabilidad". */
+.breadcrumb {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+
+.backLink {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: var(--touch-target);
+  padding-right: var(--space-1);
+  font-weight: 500;
+  color: var(--color-teal-800);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  font-size: 0.875rem;
+  color: var(--color-ink-700);
+}
+
+.skeleton {
+  height: 320px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.head {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-badge);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-ink-700);
+}
+
+.title {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-ink-900);
+}
+
+.layout {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.sectionTitle {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+
+.sectionTitle:not(:first-child) {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.paragraph {
+  max-width: 70ch;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-ink-900);
+}
+
+.requirements {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: var(--color-ink-900);
+}
+
+.requirements li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.requirements svg {
+  flex-shrink: 0;
+  color: var(--color-sage-strong);
+}
+
+/* Figma B11 · "Qué suma a tu ZEAL Path": chips sobre fondo teal suave. */
+.path {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-teal-300);
+  border-radius: var(--radius-lg);
+  background: var(--color-teal-100);
+}
+
+.pathTitle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-teal-800);
+}
+
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.skills li {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-teal-800);
+}
+
+.side {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panel button {
+  width: 100%;
+}
+
+.panelTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-badge);
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--color-ink-700);
+}
+
+/* Figma B11 · "El cupo se asigna una sola vez": coral suave, la regla que protege a todos. */
+.atomic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-coral);
+  border-radius: var(--radius-lg);
+  background: var(--color-coral-soft);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-coral-strong);
+}
+
+.atomicTitle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  max-width: 480px;
+  color: var(--color-ink-700);
+}
+
+.notFoundTitle {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  color: var(--color-ink-900);
+}
+
+@media (width <= 1023px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .side {
+    flex-basis: auto;
+    width: 100%;
+  }
+}

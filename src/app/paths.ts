@@ -36,7 +36,14 @@ export const EMPLOYEE_PATHS = {
   messages: `${ROLE_BASE_PATH.EMPLEADO}/mensajes`,
   psychologist: `${ROLE_BASE_PATH.EMPLEADO}/bienestar/psicologos/:psychologistId`,
   sessionRoom: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas/sala/:reservationId`,
+  projects: `${ROLE_BASE_PATH.EMPLEADO}/proyectos`,
+  project: `${ROLE_BASE_PATH.EMPLEADO}/proyectos/:projectId`,
 } as const;
+
+/** Genera la ruta al detalle de una convocatoria interna. */
+export function projectPath(projectId: string): string {
+  return generatePath(EMPLOYEE_PATHS.project, { projectId });
+}
 
 /** Genera la ruta al perfil de un psicólogo. */
 export function psychologistPath(psychologistId: string): string {

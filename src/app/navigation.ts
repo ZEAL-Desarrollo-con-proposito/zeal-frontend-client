@@ -55,7 +55,7 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Proyectos',
-      path: section('EMPLEADO', 'proyectos'),
+      path: EMPLOYEE_PATHS.projects,
       icon: briefcaseIcon,
       description: 'Postúlate a convocatorias internas y gana experiencia.',
     },
