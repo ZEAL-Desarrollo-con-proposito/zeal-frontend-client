@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
+import { cx } from '@/shared/lib/cx';
 import type { CallSnapshot, CallStatus } from '../call/callSession';
 import type { MediaState } from '../model/roomEvent';
 import { CallControls } from './CallControls';
@@ -17,10 +18,12 @@ interface CallViewProps {
   onLeave: () => void;
 }
 
-function statusText(status: CallStatus, participant: string): string {
+function statusText(status: CallStatus, participant: string, remoteLeft: boolean): string {
   switch (status) {
     case 'waiting':
-      return `Esperando a que ${participant} entre a la sala…`;
+      return remoteLeft
+        ? `${participant} salió de la sala. Puedes esperar a que vuelva o salir tú también.`
+        : `Esperando a que ${participant} entre a la sala…`;
     case 'connecting':
       return 'Conectando el video…';
     case 'reconnecting':
@@ -42,6 +45,8 @@ export function CallView({
   onLeave,
 }: Readonly<CallViewProps>) {
   const connected = call.status === 'connected';
+  // La otra persona se fue: el aviso se distingue del "aún no llega" y de los estados de conexión.
+  const left = call.status === 'waiting' && call.remoteLeft;
 
   return (
     <motion.section
@@ -74,18 +79,22 @@ export function CallView({
             self
           />
         </motion.div>
-        {/* Región viva estable: anuncia cuando la otra persona entra, se conecta o se pierde. */}
+        {/* Región viva estable: anuncia cuando la otra persona entra, se conecta, se pierde o sale. */}
         <div className={styles.status} role="status">
           <AnimatePresence mode="wait">
             <motion.p
-              key={call.status}
-              className={connected ? 'visually-hidden' : styles.statusText}
+              key={left ? 'left' : call.status}
+              className={cx(
+                connected && 'visually-hidden',
+                !connected && styles.statusText,
+                left && styles.statusLeft,
+              )}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {statusText(call.status, participant)}
+              {statusText(call.status, participant, call.remoteLeft)}
             </motion.p>
           </AnimatePresence>
         </div>

@@ -221,10 +221,14 @@ describe('Cupo liberado · el temporizador (HU-FE-08)', () => {
     release(offer());
     expect(await alerts().findByText('5:00')).toBeInTheDocument();
 
+    // El contador se refresca con el intervalo que `useNow` registra en un efecto: si el efecto
+    // sigue en la cola cuando avanza el reloj, el tick se registra después y la cuenta no baja.
+    await act(() => Promise.resolve());
+
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
-    expect(alerts().getByText('4:00')).toBeInTheDocument();
+    expect(await alerts().findByText('4:00')).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(4 * 60_000);

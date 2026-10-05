@@ -90,6 +90,11 @@ function videoOf(name: string): HTMLVideoElement {
   return video;
 }
 
+/** `pageshow` como lo entrega el navegador: `persisted` solo es `true` al restaurar desde caché. */
+function pageShow(persisted: boolean): Event {
+  return Object.assign(new Event('pageshow'), { persisted });
+}
+
 async function joinAsPsychologist() {
   const camera = installCamera();
   const peers = installPeerConnection();
@@ -185,7 +190,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     ).toBeInTheDocument();
   });
 
-  it('si el paciente sale, vuelve a esperarlo', async () => {
+  it('si el paciente sale, le avisa al instante y vuelve a esperarlo', async () => {
     const { david } = await joinAsPsychologist();
     await david.next('LISTO');
     david.send({ type: 'LISTO', media: { audio: true, video: true } });
@@ -194,7 +199,9 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     david.send({ type: 'SALIO' });
 
     expect(
-      await screen.findByText('Esperando a que David Cajamarca entre a la sala…'),
+      await screen.findByText(
+        'David Cajamarca salió de la sala. Puedes esperar a que vuelva o salir tú también.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -206,6 +213,41 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     expect(router.state.location.pathname).toBe(PSYCHOLOGIST_PATHS.agenda);
     expect(local.getTracks().map((track) => track.readyState)).toEqual(['ended', 'ended']);
     expect(await david.next('SALIO')).toEqual({ type: 'SALIO' });
+  });
+
+  it('si cierra la pestaña, avisa que salió y apaga la cámara', async () => {
+    const { david, local } = await joinAsPsychologist();
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    expect(await david.next('SALIO')).toEqual({ type: 'SALIO' });
+    expect(local.getTracks().map((track) => track.readyState)).toEqual(['ended', 'ended']);
+  });
+
+  it('si el navegador restaura la página desde su caché, vuelve al vestíbulo', async () => {
+    installCamera();
+    installPeerConnection();
+    await activateAsPsychologist();
+    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
+    await screen.findByRole('region', { name: 'Videollamada' });
+
+    act(() => {
+      window.dispatchEvent(pageShow(false));
+    });
+    expect(callRegion().getByRole('figure', { name: /^Tú/ })).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(pageShow(true));
+    });
+
+    expect(
+      await lobby().findByRole('heading', { name: 'La sala está activa' }),
+    ).toBeInTheDocument();
+    expect(await lobby().findByRole('button', { name: 'Entrar a la llamada' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Videollamada' })).not.toBeInTheDocument();
   });
 
   it('al recuperar la conexión con ZEAL vuelve a saludar para renegociar el video', async () => {
