@@ -7,9 +7,37 @@
 
 .head {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headText {
+  display: flex;
   flex-direction: column;
   gap: 6px;
   max-width: 70ch;
+}
+
+/* Figma B8 · botón "Mis postulaciones": lleva al panel de la derecha (o de abajo en móvil). */
+.myApplications {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-teal-800);
+  text-decoration: none;
+  transition: border-color 160ms ease;
+}
+
+.myApplications:hover {
+  border-color: var(--color-teal-400);
 }
 
 .title {
@@ -73,10 +101,16 @@
   color: var(--color-ink-900);
 }
 
+.side {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 /* Figma B8 · "Sin sobreasignación": nota de confianza al costado. */
 .note {
   display: flex;
-  flex: 0 0 300px;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-5);
@@ -99,10 +133,10 @@
 
 @media (width <= 1023px) {
   .layout {
-    flex-direction: column-reverse;
+    flex-direction: column;
   }
 
-  .note {
+  .side {
     flex-basis: auto;
     width: 100%;
   }

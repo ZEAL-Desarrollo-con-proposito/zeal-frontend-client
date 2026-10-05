@@ -10,13 +10,14 @@ import { ApplyButton } from '../components/ApplyButton';
 import { ClosingChip } from '../components/ClosingChip';
 import { ProjectMark } from '../components/ProjectMark';
 import { SpotsMeter } from '../components/SpotsMeter';
+import { useApplications } from '../hooks/useApplications';
 import { useLiveSpots } from '../hooks/useLiveSpots';
 import { useProject } from '../hooks/useProjects';
 import type { ProjectDetail } from '../model/project';
 import { closingOf } from '../model/project';
 import styles from './ProjectDetailPage.module.css';
 
-/** Figma B11 · Detalle de una convocatoria, con sus cupos al día (HU-FE-16). */
+/** Figma B11 · Detalle de una convocatoria, con sus cupos al día y la postulación (HU-FE-16 y 17). */
 export function ProjectDetailPage() {
   const { projectId = '' } = useParams();
   const now = useNow();
@@ -70,6 +71,7 @@ interface ProjectViewProps {
 function ProjectView({ project, now }: Readonly<ProjectViewProps>) {
   const spots = useLiveSpots(project.id, project);
   const closing = closingOf(project.closesAt, now);
+  const applications = useApplications();
 
   return (
     <motion.div
@@ -129,10 +131,17 @@ function ProjectView({ project, now }: Readonly<ProjectViewProps>) {
         <aside className={styles.side}>
           <section className={styles.panel} aria-labelledby="cupos-de-la-convocatoria">
             <h2 id="cupos-de-la-convocatoria" className={styles.panelTitle}>
-              Cupos
+              Tu postulación
             </h2>
             <SpotsMeter spots={spots} />
-            <ApplyButton title={project.title} spots={spots} closed={closing.closed} />
+            <ApplyButton
+              title={project.title}
+              spots={spots}
+              closed={closing.closed}
+              application={applications.applicationFor(project.id)}
+              sending={applications.isSending(project.id)}
+              onApply={() => void applications.apply(project.id)}
+            />
           </section>
           <section className={styles.atomic} aria-labelledby="asignacion-unica">
             <h2 id="asignacion-unica" className={styles.atomicTitle}>

@@ -1,0 +1,31 @@
+.slot {
+  display: inline-flex;
+}
+
+/* Mientras envía no se deshabilita (perdería el foco): se ve ocupado y no admite otro clic. */
+.apply[aria-busy='true'] {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 40%);
+  border-top-color: var(--color-surface);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.result {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  border-radius: var(--radius-pill);
+}

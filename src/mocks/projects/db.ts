@@ -1,15 +1,30 @@
+import type { ApplicationStatus } from '@/features/projects/model/application';
 import type { ProjectDetail } from '@/features/projects/model/project';
 import type { SpotsEvent } from '@/features/projects/model/spotsEvent';
 import { projectTopic } from '@/features/projects/model/spotsEvent';
 import { addDays } from '@/shared/lib/dates';
 import { publishMockEvent } from '../realtime';
 
+/** Postulación guardada: de quién es y qué resultado le asignó el servidor (HU-BE-17). */
+export interface ApplicationRecord {
+  id: string;
+  projectId: string;
+  userId: string;
+  status: ApplicationStatus;
+  waitlistPosition: number | null;
+  createdAt: string;
+  version: number;
+}
+
 /**
- * "Base de datos" de convocatorias internas simulada (HU-BE-16), en localStorage para que varias
- * pestañas compartan los mismos cupos, como con el backend real.
+ * "Base de datos" de convocatorias internas simulada (HU-BE-16 y 17), en localStorage para que
+ * varias pestañas compartan los mismos cupos y postulaciones, como con el backend real. Cupos y
+ * postulaciones se guardan juntos: asignar un cupo es una sola escritura.
  */
 export interface ProjectsDb {
   projects: ProjectDetail[];
+  applications: ApplicationRecord[];
+  sequence: number;
 }
 
 export const PROJECTS_DB_KEY = 'zeal.mock.proyectos';
@@ -18,6 +33,8 @@ export const PROJECTS_DB_KEY = 'zeal.mock.proyectos';
 export function seedProjectsDb(now: Date): ProjectsDb {
   const closesIn = (days: number) => addDays(now, days).toISOString();
   return {
+    applications: [],
+    sequence: 0,
     projects: [
       {
         id: 'proyecto-observabilidad',
@@ -102,7 +119,11 @@ function isProjectsDb(value: unknown): value is ProjectsDb {
     typeof value === 'object' &&
     value !== null &&
     'projects' in value &&
-    Array.isArray(value.projects)
+    Array.isArray(value.projects) &&
+    'applications' in value &&
+    Array.isArray(value.applications) &&
+    'sequence' in value &&
+    typeof value.sequence === 'number'
   );
 }
 
@@ -124,9 +145,22 @@ export function writeProjectsDb(db: ProjectsDb): void {
   localStorage.setItem(PROJECTS_DB_KEY, JSON.stringify(db));
 }
 
+/** Avisa por el canal de la convocatoria sus cupos actuales. */
+export function publishSpots(project: ProjectDetail): SpotsEvent {
+  const event: SpotsEvent = {
+    type: 'CUPOS',
+    projectId: project.id,
+    capacity: project.capacity,
+    occupied: project.occupied,
+    version: project.version,
+  };
+  publishMockEvent(projectTopic(project.id), event);
+  return event;
+}
+
 /**
  * Cambia los cupos ocupados de una convocatoria y lo avisa por su canal, como el servidor cuando
- * asigna o libera un cupo. Cada cambio sube la versión.
+ * otra persona toma o libera un cupo. Cada cambio sube la versión.
  */
 export function updateOccupiedSpots(projectId: string, occupied: number): SpotsEvent {
   const db = readProjectsDb();
@@ -137,13 +171,5 @@ export function updateOccupiedSpots(projectId: string, occupied: number): SpotsE
   project.occupied = Math.min(Math.max(occupied, 0), project.capacity);
   project.version += 1;
   writeProjectsDb(db);
-  const event: SpotsEvent = {
-    type: 'CUPOS',
-    projectId,
-    capacity: project.capacity,
-    occupied: project.occupied,
-    version: project.version,
-  };
-  publishMockEvent(projectTopic(projectId), event);
-  return event;
+  return publishSpots(project);
 }

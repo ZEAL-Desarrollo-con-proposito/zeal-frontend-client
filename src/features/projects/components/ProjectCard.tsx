@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { projectPath } from '@/app/paths';
 import { useLiveSpots } from '../hooks/useLiveSpots';
+import type { Application } from '../model/application';
 import type { Project } from '../model/project';
 import { closingOf } from '../model/project';
 import { ApplyButton } from './ApplyButton';
@@ -16,10 +17,20 @@ interface ProjectCardProps {
   now: number;
   /** Posición en la lista: escalona la entrada de las tarjetas. */
   index: number;
+  application: Application | null;
+  sending: boolean;
+  onApply: (projectId: string) => void;
 }
 
 /** Figma B8 · tarjeta de una convocatoria, con sus cupos al día. */
-export function ProjectCard({ project, now, index }: Readonly<ProjectCardProps>) {
+export function ProjectCard({
+  project,
+  now,
+  index,
+  application,
+  sending,
+  onApply,
+}: Readonly<ProjectCardProps>) {
   const spots = useLiveSpots(project.id, project);
   const closing = closingOf(project.closesAt, now);
   const titleId = useId();
@@ -52,7 +63,16 @@ export function ProjectCard({ project, now, index }: Readonly<ProjectCardProps>)
         <SpotsMeter spots={spots} />
       </div>
       <div className={styles.actions}>
-        <ApplyButton title={project.title} spots={spots} closed={closing.closed} to={detail} />
+        <ApplyButton
+          title={project.title}
+          spots={spots}
+          closed={closing.closed}
+          application={application}
+          sending={sending}
+          onApply={() => {
+            onApply(project.id);
+          }}
+        />
         <Link to={detail} className={styles.detail} aria-label={`Ver detalle de ${project.title}`}>
           Ver detalle
         </Link>
