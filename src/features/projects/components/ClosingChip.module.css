@@ -1,0 +1,16 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sage-soft);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--color-sage-text);
+}
+
+.chip[data-urgent='true'] {
+  background: var(--color-coral-soft);
+  color: var(--color-coral-strong);
+}

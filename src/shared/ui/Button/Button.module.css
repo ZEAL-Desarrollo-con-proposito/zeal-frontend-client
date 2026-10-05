@@ -40,6 +40,21 @@
   color: var(--color-ink-500);
 }
 
+/* Acción de carrera (postularse a una convocatoria, Figma B8): teal institucional. */
+.teal {
+  background: var(--color-teal-800);
+  color: var(--color-surface);
+}
+
+.teal:hover:not(:disabled) {
+  background: var(--color-teal-700);
+}
+
+.teal:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-ink-500);
+}
+
 /* Acción destructiva (eliminar): coral de urgencia, oscurecido para contraste AA con blanco. */
 .danger {
   background: var(--color-coral-strong);

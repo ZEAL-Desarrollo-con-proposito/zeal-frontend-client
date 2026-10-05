@@ -303,6 +303,33 @@ solo dentro de la ventana de ingreso (en el simulador: desde 10 minutos antes ha
 persona de la sesión. `iceServers` son los STUN/TURN para el video, con credenciales temporales que
 entrega el servidor (el simulador envía `[]`: las dos pestañas están en el mismo equipo).
 
+### Contrato de convocatorias internas (acordar con HU-BE-16)
+
+Rutas del rol `EMPLEADO`. Qué convocatorias están abiertas y cuántos cupos quedan lo decide el
+servidor; el catálogo solo lista las abiertas, ordenadas por fecha de cierre.
+
+| Método y ruta             | Respuesta                                                          |
+| ------------------------- | ------------------------------------------------------------------ |
+| `GET /api/proyectos`      | `200` convocatorias abiertas (sin descripción ni requisitos)       |
+| `GET /api/proyectos/{id}` | `200` detalle con `description`, `requirements` y `skills` · `404` |
+
+```json
+{
+  "id": "proyecto-guardia-datos",
+  "title": "Data Platform · Turno de guardia",
+  "area": "Datos",
+  "cohort": "Rotación trimestral",
+  "summary": "Acompañar el oncall con un mentor durante 6 semanas.",
+  "capacity": 4,
+  "occupied": 2,
+  "version": 7,
+  "closesAt": "2026-09-28T14:20:00.000Z"
+}
+```
+
+`version` crece con cada cambio de cupos: el cliente se queda siempre con la más nueva entre lo que
+cargó y lo que llegó en vivo. Al llegar a cero, "Postularme" pasa a "Cupos agotados".
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
@@ -324,6 +351,10 @@ entrega el servidor (el simulador envía `[]`: las dos pestañas están en el mi
   ICE), `MEDIOS` (cambié micrófono o cámara) y `SALIO`. Solo el psicólogo ofrece, así nunca se cruzan
   dos negociaciones; lo de una negociación anterior se descarta por su `id`. Si la conexión falla o
   se recupera el tiempo real, se vuelve a negociar.
+- **Canal de cada convocatoria `/topic/proyectos/{id}/cupos` (HU-FE-16):**
+  `{ "type": "CUPOS", "projectId": …, "capacity": …, "occupied": …, "version": … }` cuando el
+  servidor asigna, libera o amplía cupos. Un aviso con versión menor o igual a la conocida se
+  descarta; al reconectar se vuelve a pedir el catálogo.
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.

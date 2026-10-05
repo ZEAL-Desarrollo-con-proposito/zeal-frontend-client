@@ -1,0 +1,43 @@
+.meter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.track {
+  position: relative;
+  width: 140px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+}
+
+/* Se escala desde la izquierda (transform): animarla no mueve el resto de la tarjeta. */
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-sage);
+  transform-origin: left center;
+}
+
+.meter[data-full='true'] .fill {
+  background: var(--color-coral);
+}
+
+.label {
+  display: inline-flex;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+
+.text {
+  display: inline-block;
+}
+
+.meter[data-full='true'] .label {
+  color: var(--color-coral-strong);
+}

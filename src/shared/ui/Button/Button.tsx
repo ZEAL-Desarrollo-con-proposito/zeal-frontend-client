@@ -5,7 +5,7 @@ import { cx } from '@/shared/lib/cx';
 import { pressFeedback } from './pressFeedback';
 import styles from './Button.module.css';
 
-export type ButtonVariant = 'primary' | 'outline' | 'danger';
+export type ButtonVariant = 'primary' | 'teal' | 'outline' | 'danger';
 
 interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: ButtonVariant;
