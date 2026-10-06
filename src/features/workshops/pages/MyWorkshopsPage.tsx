@@ -10,7 +10,7 @@ import { HexMark } from '@/shared/ui/HexMark/HexMark';
 import { ArrowLeftIcon, ClockIcon } from '@/shared/ui/icons';
 import { useEnrollments } from '../hooks/useEnrollments';
 import type { Enrollment } from '../model/enrollment';
-import { startBadge, workshopDuration, workshopWhen } from '../model/workshop';
+import { startBadge, workshopWhen } from '../model/workshop';
 import styles from './MyWorkshopsPage.module.css';
 
 /** Sin chip de inicio (falta más de una hora), se confirma que el cupo es de la persona. */
@@ -36,8 +36,7 @@ function EnrollmentItem({ enrollment, now }: Readonly<{ enrollment: Enrollment; 
         </h2>
         <p className={styles.when}>
           <ClockIcon />
-          {workshopWhen(enrollment.startsAt, now)} · {workshopDuration(enrollment)} ·{' '}
-          {enrollment.facilitator}
+          {workshopWhen(enrollment, now)}
         </p>
       </div>
       <Badge tone={badge.tone}>{badge.label}</Badge>

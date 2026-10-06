@@ -1,7 +1,8 @@
 import { act, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { EMPLOYEE_PATHS, ROLE_HOME_PATH } from '@/app/paths';
+import { EMPLOYEE_PATHS, ROLE_HOME_PATH, workshopPath } from '@/app/paths';
+import { SEED_ORGANIZATION } from '@/mocks/seedUsers';
 import { server } from '@/mocks/server';
 import { updateWorkshopOccupied } from '@/mocks/workshops/db';
 import { controlClock, freezeTime, jumpTo } from '@/test/clock';
@@ -10,7 +11,7 @@ import { scriptedRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
 import { WORKSHOPS_ENDPOINT } from './api/workshopsApi';
 import type { Workshop } from './model/workshop';
-import { workshopTopic } from './model/workshopEvent';
+import { organizationWorkshopsTopic, workshopTopic } from './model/workshopEvent';
 
 const IMPOSTOR = 'taller-impostor';
 const IMPOSTOR_TITLE = 'Síndrome del impostor en tu primer empleo';
@@ -39,13 +40,13 @@ function workshop(overrides: Partial<Workshop> = {}): Workshop {
   return {
     id: 'taller-unico',
     title: 'Respiración para días intensos',
-    summary: 'Técnicas breves para bajar el ritmo entre reuniones.',
-    facilitator: 'Valeria Castro',
+    description: 'Técnicas breves para bajar el ritmo entre reuniones.',
     capacity: 10,
     occupied: 4,
     version: 1,
     startsAt: new Date(2026, 8, 25, 9).toISOString(),
-    endsAt: new Date(2026, 8, 25, 10).toISOString(),
+    durationMinutes: 60,
+    publishedAt: new Date(2026, 8, 23, 9).toISOString(),
     ...overrides,
   };
 }
@@ -72,19 +73,19 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
     const hero = await featured();
     expect(hero.getByText('Empieza en 45 min')).toBeInTheDocument();
     expect(hero.getByText('Hoy · 10:05 · 50 min')).toBeInTheDocument();
-    expect(hero.getByText(/Facilita Gabriela Muñoz\./)).toBeInTheDocument();
+    expect(hero.getByText(/Facilita Gabriela Muñoz/)).toBeInTheDocument();
     expect(hero.getByText('12 / 30 cupos')).toBeInTheDocument();
     expect(hero.getByRole('button', { name: `Inscribirme a ${MALESTAR_TITLE}` })).toBeEnabled();
 
     const impostor = await cardOf(IMPOSTOR_TITLE);
     expect(impostor.getByText('Últimos cupos')).toBeInTheDocument();
-    expect(impostor.getByText('Mañana · 12:30 · Andrés Rojas')).toBeInTheDocument();
+    expect(impostor.getByText('Mañana · 12:30 · 60 min')).toBeInTheDocument();
     expect(impostor.getByText('29 / 30 cupos')).toBeInTheDocument();
     expect(impostor.getByText('97%')).toBeInTheDocument();
     expect(impostor.getByRole('button', { name: `Inscribirme a ${IMPOSTOR_TITLE}` })).toBeEnabled();
-    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(6);
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(7);
     // Ni los que ya empezaron ni los de otra empresa.
-    expect(screen.queryByText('Pausas activas para el cuerpo y la mente')).not.toBeInTheDocument();
+    expect(screen.queryByText('Yoga de escritorio')).not.toBeInTheDocument();
     expect(screen.queryByText('Taller de otra empresa')).not.toBeInTheDocument();
   });
 
@@ -147,6 +148,33 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
     });
 
     expect(await impostor.findByText('30 / 30 cupos')).toBeInTheDocument();
+  });
+
+  it('un taller que publica el administrador aparece al instante, sin repetirse', async () => {
+    const { realtime } = openAsEmployee(true);
+    await cardOf(IMPOSTOR_TITLE);
+    const published = workshop({ id: 'taller-en-vivo', title: 'Taller recién publicado' });
+    const topic = organizationWorkshopsTopic(SEED_ORGANIZATION);
+
+    act(() => {
+      realtime.deliver(topic, { type: 'PUBLICADO', workshop: published });
+      realtime.deliver(topic, { type: 'PUBLICADO', workshop: published });
+      realtime.deliver(topic, { type: 'PUBLICADO', workshop: {} });
+    });
+
+    const card = await cardOf('Taller recién publicado');
+    expect(card.getByText('Vie 25 · 9:00 · 60 min')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(8);
+  });
+
+  it('el enlace a un taller lo destaca (p. ej. desde el aviso de uno recién publicado)', async () => {
+    storeSession('EMPLEADO');
+    renderRoute(workshopPath('taller-descanso-real'));
+
+    const hero = await featured('Descanso real: dormir en semana de release');
+
+    expect(hero.getByText('8 / 25 cupos')).toBeInTheDocument();
+    expect(await cardOf(MALESTAR_TITLE)).toBeTruthy();
   });
 
   it('si el taller empieza con la página abierta, se cierran sus inscripciones', async () => {

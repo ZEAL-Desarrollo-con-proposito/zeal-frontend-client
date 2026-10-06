@@ -8,6 +8,7 @@ import { adminProjectHandlers } from './projects/adminHandlers';
 import { applicationHandlers } from './projects/applicationHandlers';
 import { projectHandlers } from './projects/handlers';
 import { findSeedUser } from './seedUsers';
+import { adminWorkshopHandlers } from './workshops/adminHandlers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
 import { chatHistoryHandlers } from './wellbeing/chatHistoryHandlers';
 import { directoryHandlers } from './wellbeing/directoryHandlers';
@@ -57,5 +58,6 @@ export const handlers = [
   ...applicationHandlers,
   ...projectHandlers,
   ...adminProjectHandlers,
+  ...adminWorkshopHandlers,
   ...workshopHandlers,
 ];

@@ -61,6 +61,7 @@ describe('workshopsApi (contrato con HU-BE-18)', () => {
       'taller-descanso-real',
       'taller-conversaciones-dificiles',
       'taller-mentoria-inversa',
+      'taller-pausas-activas',
       'taller-primeros-auxilios',
     ]);
     expect(workshops[0]).not.toHaveProperty('organization');
@@ -75,7 +76,7 @@ describe('workshopsApi (contrato con HU-BE-18)', () => {
     expect(enrollment).toMatchObject({
       workshopId: IMPOSTOR,
       workshopTitle: 'Síndrome del impostor en tu primer empleo',
-      facilitator: 'Andrés Rojas',
+      durationMinutes: 60,
       version: 1,
     });
     expect(readWorkshopsDb().workshops.find(({ id }) => id === IMPOSTOR)).toMatchObject({
@@ -106,7 +107,7 @@ describe('workshopsApi (contrato con HU-BE-18)', () => {
   it('rechaza talleres que ya empezaron, que no existen o de otra empresa', async () => {
     authenticateAs('EMPLEADO');
 
-    await expect(failure(enrollInWorkshop('taller-en-curso'))).resolves.toMatchObject({
+    await expect(failure(enrollInWorkshop('taller-yoga-escritorio'))).resolves.toMatchObject({
       status: 409,
       serverMessage: 'Este taller ya empezó.',
     });
@@ -122,14 +123,14 @@ describe('workshopsApi (contrato con HU-BE-18)', () => {
     const db = readWorkshopsDb();
     db.enrollments.push({
       id: 'inscripcion-vieja',
-      workshopId: 'taller-en-curso',
+      workshopId: 'taller-yoga-escritorio',
       userId: 'usr-empleado-001',
       createdAt: new Date(2026, 8, 20).toISOString(),
       version: 1,
     });
-    const started = db.workshops.find(({ id }) => id === 'taller-en-curso');
+    const started = db.workshops.find(({ id }) => id === 'taller-yoga-escritorio');
     if (started !== undefined) {
-      started.endsAt = new Date(2026, 8, 23, 9).toISOString();
+      started.durationMinutes = 15; // Empezó hace 20 minutos: ya terminó.
     }
     writeWorkshopsDb(db);
 

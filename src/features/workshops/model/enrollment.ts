@@ -8,9 +8,8 @@ export interface Enrollment {
   id: string;
   workshopId: string;
   workshopTitle: string;
-  facilitator: string;
   startsAt: string;
-  endsAt: string;
+  durationMinutes: number;
   createdAt: string;
   version: number;
 }
@@ -29,9 +28,9 @@ export function isEnrollment(value: unknown): value is Enrollment {
     typeof value.id === 'string' &&
     typeof value.workshopId === 'string' &&
     typeof value.workshopTitle === 'string' &&
-    typeof value.facilitator === 'string' &&
     isIsoDateTime(value.startsAt) &&
-    isIsoDateTime(value.endsAt) &&
+    typeof value.durationMinutes === 'number' &&
+    Number.isInteger(value.durationMinutes) &&
     isIsoDateTime(value.createdAt) &&
     typeof value.version === 'number' &&
     Number.isInteger(value.version)
@@ -47,6 +46,6 @@ export function enrollmentToast(enrollment: Enrollment, now: number): ToastInput
   return {
     tone: 'success',
     title: `¡Tienes tu cupo en ${enrollment.workshopTitle}!`,
-    message: `${workshopWhen(enrollment.startsAt, now)} con ${enrollment.facilitator}. Lo encuentras en Mis talleres.`,
+    message: `${workshopWhen(enrollment, now)}. Lo encuentras en Mis talleres.`,
   };
 }

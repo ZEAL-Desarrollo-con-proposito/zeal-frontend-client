@@ -84,9 +84,8 @@ const LIVE_ENROLLMENT: Enrollment = {
   id: 'inscripcion-77',
   workshopId: 'taller-conversaciones-dificiles',
   workshopTitle: 'Conversaciones difíciles con tu líder',
-  facilitator: 'Laura Martínez',
   startsAt: new Date(2026, 8, 29, 16).toISOString(),
-  endsAt: new Date(2026, 8, 29, 17).toISOString(),
+  durationMinutes: 60,
   createdAt: new Date(2026, 8, 23, 9, 10).toISOString(),
   version: 1,
 };
@@ -106,7 +105,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
       `¿Inscribirte en ${IMPOSTOR_TITLE}?`,
     );
     expect(screen.getByRole('alertdialog')).toHaveAccessibleDescription(
-      'Mañana · 12:30 · 60 min con Andrés Rojas. El cupo es tuyo en cuanto lo confirmemos.',
+      'Mañana · 12:30 · 60 min. El cupo es tuyo en cuanto lo confirmemos.',
     );
     expect(dialog().getByRole('button', { name: 'Cancelar' })).toHaveFocus();
 
@@ -116,7 +115,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(await toasts().findByText(`¡Tienes tu cupo en ${IMPOSTOR_TITLE}!`)).toBeInTheDocument();
     expect(
-      toasts().getByText('Mañana · 12:30 con Andrés Rojas. Lo encuentras en Mis talleres.'),
+      toasts().getByText('Mañana · 12:30 · 60 min. Lo encuentras en Mis talleres.'),
     ).toBeInTheDocument();
     expect(await impostor.findByText('30 / 30 cupos')).toBeInTheDocument();
     await waitFor(() => {
@@ -255,10 +254,10 @@ describe('Mis talleres (HU-FE-18)', () => {
 
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveAccessibleName(MALESTAR_TITLE);
-    expect(items[0]).toHaveTextContent('Hoy · 10:05 · 50 min · Gabriela Muñoz');
+    expect(items[0]).toHaveTextContent('Hoy · 10:05 · 50 min');
     expect(items[0]).toHaveTextContent('Empieza en 45 min');
     expect(items[1]).toHaveAccessibleName(IMPOSTOR_TITLE);
-    expect(items[1]).toHaveTextContent('Mañana · 12:30 · 60 min · Andrés Rojas');
+    expect(items[1]).toHaveTextContent('Mañana · 12:30 · 60 min');
     expect(items[1]).toHaveTextContent('Tienes tu cupo');
   });
 
@@ -276,7 +275,7 @@ describe('Mis talleres (HU-FE-18)', () => {
 
     expect(
       await myWorkshops().findByRole('listitem', { name: 'Conversaciones difíciles con tu líder' }),
-    ).toHaveTextContent('Mar 29 · 16:00 · 60 min · Laura Martínez');
+    ).toHaveTextContent('Mar 29 · 16:00 · 60 min');
   });
 
   it('un taller que ya empezó se marca en curso', async () => {
@@ -286,7 +285,6 @@ describe('Mis talleres (HU-FE-18)', () => {
           {
             ...LIVE_ENROLLMENT,
             startsAt: new Date(2026, 8, 23, 9).toISOString(),
-            endsAt: new Date(2026, 8, 23, 10).toISOString(),
           },
         ]),
       ),

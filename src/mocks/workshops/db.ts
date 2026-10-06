@@ -1,16 +1,18 @@
+import { isRecord } from '@/features/auth/model/session';
 import type { Workshop } from '@/features/workshops/model/workshop';
+import { isWorkshop } from '@/features/workshops/model/workshop';
 import type { WorkshopSpotsEvent } from '@/features/workshops/model/workshopEvent';
 import { workshopTopic } from '@/features/workshops/model/workshopEvent';
 import { addDays, startOfDay } from '@/shared/lib/dates';
 import { publishMockEvent } from '../realtime';
 import { OTHER_ORGANIZATION, SEED_ORGANIZATION } from '../seedUsers';
 
-/** Taller guardado: de qué empresa es (HU-BE-18). */
+/** Taller guardado: de qué empresa es (HU-BE-15). */
 export interface WorkshopRecord extends Workshop {
   organization: string;
 }
 
-/** Inscripción guardada: de quién es y a qué taller. */
+/** Inscripción guardada: de quién es y a qué taller (HU-BE-18). */
 export interface EnrollmentRecord {
   id: string;
   workshopId: string;
@@ -20,9 +22,9 @@ export interface EnrollmentRecord {
 }
 
 /**
- * "Base de datos" de talleres simulada (HU-BE-18), en localStorage para que varias pestañas
- * compartan los mismos cupos e inscripciones, como con el backend real. Cupos e inscripciones se
- * guardan juntos: tomar un cupo es una sola escritura.
+ * "Base de datos" de talleres simulada (HU-BE-15 y 18), en localStorage para que varias pestañas
+ * compartan los mismos talleres, cupos e inscripciones, como con el backend real. Cupos e
+ * inscripciones se guardan juntos: tomar un cupo es una sola escritura.
  */
 export interface WorkshopsDb {
   workshops: WorkshopRecord[];
@@ -35,29 +37,10 @@ export const WORKSHOPS_DB_KEY = 'zeal.mock.talleres';
 const MINUTE_MS = 60_000;
 const HALF_HOUR_MS = 30 * MINUTE_MS;
 
-interface SeedWorkshop {
-  id: string;
-  title: string;
-  summary: string;
-  facilitator: string;
-  capacity: number;
-  occupied: number;
-  startsAt: Date;
-  minutes: number;
-  organization?: string;
-}
-
-function toRecord({ startsAt, minutes, organization, ...workshop }: SeedWorkshop): WorkshopRecord {
-  return {
-    ...workshop,
-    organization: organization ?? SEED_ORGANIZATION,
-    version: 1,
-    startsAt: startsAt.toISOString(),
-    endsAt: new Date(startsAt.getTime() + minutes * MINUTE_MS).toISOString(),
-  };
-}
-
-/** Talleres del Figma B6, con horarios relativos a `now`: el destacado empieza en 45 minutos. */
+/**
+ * El taller del administrador semilla (el más reciente) y los del Figma B6, con fechas relativas
+ * a `now`: el próximo empieza en 45 minutos, uno ya está lleno y otro ya empezó.
+ */
 export function seedWorkshopsDb(now: Date): WorkshopsDb {
   const inMinutes = (minutes: number) => new Date(now.getTime() + minutes * MINUTE_MS);
   const laterToday = new Date(Math.ceil(inMinutes(180).getTime() / HALF_HOUR_MS) * HALF_HOUR_MS);
@@ -66,113 +49,161 @@ export function seedWorkshopsDb(now: Date): WorkshopsDb {
     day.setHours(hours, minutes);
     return day;
   };
-  const seeds: SeedWorkshop[] = [
-    {
-      id: 'taller-malestar-agil',
-      title: 'Gestión del malestar en equipos ágiles',
-      summary: 'Cómo nombrar la sobrecarga sin quedar como “el que no aguanta”.',
-      facilitator: 'Gabriela Muñoz',
-      capacity: 30,
-      occupied: 12,
-      startsAt: inMinutes(45),
-      minutes: 50,
-    },
-    {
-      id: 'taller-limites-sanos',
-      title: 'Límites sanos y desconexión digital',
-      summary: 'Acuerdos de equipo para dejar de responder mensajes a medianoche.',
-      facilitator: 'Diego Guzmán',
-      capacity: 30,
-      occupied: 30,
-      startsAt: laterToday,
-      minutes: 60,
-    },
-    {
-      id: 'taller-impostor',
-      title: 'Síndrome del impostor en tu primer empleo',
-      summary: 'Herramientas para separar lo que sientes de lo que de verdad aportas.',
-      facilitator: 'Andrés Rojas',
-      capacity: 30,
-      occupied: 29,
-      startsAt: dayAt(1, 12, 30),
-      minutes: 60,
-    },
-    {
-      id: 'taller-descanso-real',
-      title: 'Descanso real: dormir en semana de release',
-      summary: 'Higiene del sueño para las semanas de entrega más exigentes.',
-      facilitator: 'Julián Mora',
-      capacity: 25,
-      occupied: 8,
-      startsAt: dayAt(5, 7),
-      minutes: 45,
-    },
-    {
-      id: 'taller-conversaciones-dificiles',
-      title: 'Conversaciones difíciles con tu líder',
-      summary: 'Cómo pedir ayuda, poner límites o dar una mala noticia sin romper la confianza.',
-      facilitator: 'Laura Martínez',
-      capacity: 30,
-      occupied: 17,
-      startsAt: dayAt(6, 16),
-      minutes: 60,
-    },
-    {
-      id: 'taller-mentoria-inversa',
-      title: 'Mentoría inversa: enseñarle a tu jefe',
-      summary: 'Compartir tus herramientas con quien lleva más años sin sentir que lo corriges.',
-      facilitator: 'Sara Peña',
-      capacity: 25,
-      occupied: 22,
-      startsAt: dayAt(7, 11),
-      minutes: 50,
-    },
-    {
-      id: 'taller-primeros-auxilios',
-      title: 'Primeros auxilios psicológicos para equipos',
-      summary: 'Qué hacer, y qué no, cuando alguien de tu equipo está pasando un mal momento.',
-      facilitator: 'Valeria Castro',
-      capacity: 20,
-      occupied: 5,
-      startsAt: dayAt(8, 15),
-      minutes: 90,
-    },
-    {
-      id: 'taller-en-curso',
-      title: 'Pausas activas para el cuerpo y la mente',
-      summary: 'Ya empezó: no se lista ni recibe inscripciones.',
-      facilitator: 'Gabriela Muñoz',
-      capacity: 20,
-      occupied: 9,
-      startsAt: inMinutes(-20),
-      minutes: 60,
-    },
-    {
-      id: 'taller-otra-empresa',
-      title: 'Taller de otra empresa',
-      summary: 'Pertenece a otra organización y nunca debe verse aquí.',
-      facilitator: 'Diego Guzmán',
-      capacity: 10,
-      occupied: 0,
-      startsAt: dayAt(2, 10),
-      minutes: 60,
-      organization: OTHER_ORGANIZATION,
-    },
-  ];
-  return { enrollments: [], sequence: 0, workshops: seeds.map(toRecord) };
+  const publishedAgo = (days: number) => addDays(now, -days).toISOString();
+  const workshop = (
+    fields: Omit<WorkshopRecord, 'organization' | 'startsAt' | 'version'>,
+    startsAt: Date,
+    organization = SEED_ORGANIZATION,
+  ): WorkshopRecord => ({ ...fields, organization, startsAt: startsAt.toISOString(), version: 1 });
+
+  return {
+    enrollments: [],
+    sequence: 0,
+    workshops: [
+      workshop(
+        {
+          id: 'taller-pausas-activas',
+          publishedAt: publishedAgo(2),
+          title: 'Pausas activas y respiración',
+          description: 'Aprende técnicas breves de respiración y pausas activas para tu jornada.',
+          durationMinutes: 60,
+          capacity: 30,
+          occupied: 12,
+        },
+        dayAt(7, 15),
+      ),
+      workshop(
+        {
+          id: 'taller-malestar-agil',
+          publishedAt: publishedAgo(3),
+          title: 'Gestión del malestar en equipos ágiles',
+          description:
+            'Cómo nombrar la sobrecarga sin quedar como “el que no aguanta”. Facilita Gabriela Muñoz, psicóloga organizacional.',
+          durationMinutes: 50,
+          capacity: 30,
+          occupied: 12,
+        },
+        inMinutes(45),
+      ),
+      workshop(
+        {
+          id: 'taller-limites-sanos',
+          publishedAt: publishedAgo(4),
+          title: 'Límites sanos y desconexión digital',
+          description: 'Acuerdos de equipo para dejar de responder mensajes a medianoche.',
+          durationMinutes: 60,
+          capacity: 30,
+          occupied: 30,
+        },
+        laterToday,
+      ),
+      workshop(
+        {
+          id: 'taller-impostor',
+          publishedAt: publishedAgo(5),
+          title: 'Síndrome del impostor en tu primer empleo',
+          description: 'Herramientas para separar lo que sientes de lo que de verdad aportas.',
+          durationMinutes: 60,
+          capacity: 30,
+          occupied: 29,
+        },
+        dayAt(1, 12, 30),
+      ),
+      workshop(
+        {
+          id: 'taller-descanso-real',
+          publishedAt: publishedAgo(6),
+          title: 'Descanso real: dormir en semana de release',
+          description: 'Higiene del sueño para las semanas de entrega más exigentes.',
+          durationMinutes: 45,
+          capacity: 25,
+          occupied: 8,
+        },
+        dayAt(5, 7),
+      ),
+      workshop(
+        {
+          id: 'taller-conversaciones-dificiles',
+          publishedAt: publishedAgo(7),
+          title: 'Conversaciones difíciles con tu líder',
+          description:
+            'Cómo pedir ayuda, poner límites o dar una mala noticia sin romper la confianza.',
+          durationMinutes: 60,
+          capacity: 30,
+          occupied: 17,
+        },
+        dayAt(6, 16),
+      ),
+      workshop(
+        {
+          id: 'taller-mentoria-inversa',
+          publishedAt: publishedAgo(8),
+          title: 'Mentoría inversa: enseñarle a tu jefe',
+          description:
+            'Compartir tus herramientas con quien lleva más años sin sentir que lo corriges.',
+          durationMinutes: 50,
+          capacity: 25,
+          occupied: 22,
+        },
+        dayAt(7, 11),
+      ),
+      workshop(
+        {
+          id: 'taller-primeros-auxilios',
+          publishedAt: publishedAgo(9),
+          title: 'Primeros auxilios psicológicos para equipos',
+          description:
+            'Qué hacer, y qué no, cuando alguien de tu equipo está pasando un mal momento.',
+          durationMinutes: 90,
+          capacity: 20,
+          occupied: 5,
+        },
+        dayAt(8, 15),
+      ),
+      workshop(
+        {
+          id: 'taller-yoga-escritorio',
+          publishedAt: publishedAgo(10),
+          title: 'Yoga de escritorio',
+          description: 'Estiramientos para hacer sin levantarte de tu puesto de trabajo.',
+          durationMinutes: 60,
+          capacity: 20,
+          occupied: 9,
+        },
+        inMinutes(-20),
+      ),
+      workshop(
+        {
+          id: 'taller-otra-empresa',
+          publishedAt: publishedAgo(1),
+          title: 'Taller de otra empresa',
+          description: 'Pertenece a otra organización y nunca debe verse aquí.',
+          durationMinutes: 60,
+          capacity: 10,
+          occupied: 0,
+        },
+        dayAt(2, 10),
+        OTHER_ORGANIZATION,
+      ),
+    ],
+  };
 }
 
 function isWorkshopsDb(value: unknown): value is WorkshopsDb {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'workshops' in value &&
-    Array.isArray(value.workshops) &&
-    'enrollments' in value &&
+    isRecord(value) &&
+    typeof value.sequence === 'number' &&
     Array.isArray(value.enrollments) &&
-    'sequence' in value &&
-    typeof value.sequence === 'number'
+    Array.isArray(value.workshops) &&
+    value.workshops.every(
+      (workshop) =>
+        isWorkshop(workshop) && isRecord(workshop) && typeof workshop.organization === 'string',
+    )
   );
+}
+
+export function writeWorkshopsDb(db: WorkshopsDb): void {
+  localStorage.setItem(WORKSHOPS_DB_KEY, JSON.stringify(db));
 }
 
 export function readWorkshopsDb(): WorkshopsDb {
@@ -189,8 +220,30 @@ export function readWorkshopsDb(): WorkshopsDb {
   return seeded;
 }
 
-export function writeWorkshopsDb(db: WorkshopsDb): void {
-  localStorage.setItem(WORKSHOPS_DB_KEY, JSON.stringify(db));
+/** Lo que viaja al cliente: el taller sin la empresa a la que pertenece. */
+export function toWorkshop(record: WorkshopRecord): Workshop {
+  const {
+    id,
+    title,
+    description,
+    startsAt,
+    durationMinutes,
+    capacity,
+    occupied,
+    version,
+    publishedAt,
+  } = record;
+  return {
+    id,
+    title,
+    description,
+    startsAt,
+    durationMinutes,
+    capacity,
+    occupied,
+    version,
+    publishedAt,
+  };
 }
 
 /** Avisa por el canal del taller sus cupos actuales. */

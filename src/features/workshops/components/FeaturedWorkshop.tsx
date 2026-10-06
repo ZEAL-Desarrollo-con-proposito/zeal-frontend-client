@@ -3,13 +3,13 @@ import { motion } from 'motion/react';
 import { Badge } from '@/shared/ui/Badge/Badge';
 import { HexMark } from '@/shared/ui/HexMark/HexMark';
 import { useWorkshopSpots } from '../hooks/useWorkshopSpots';
-import { hasStarted, startBadge, workshopDuration, workshopWhen } from '../model/workshop';
+import { hasStarted, startBadge, workshopWhen } from '../model/workshop';
 import type { WorkshopItemProps } from './WorkshopCard';
 import { EnrollAction } from './EnrollAction';
 import { WorkshopSpots } from './WorkshopSpots';
 import styles from './FeaturedWorkshop.module.css';
 
-/** Figma B6 · el próximo taller, destacado sobre teal: cuándo empieza, quién lo dirige y sus cupos. */
+/** Figma B6 · el taller destacado sobre teal: cuándo empieza, de qué se trata y sus cupos. */
 export function FeaturedWorkshop({
   workshop,
   now,
@@ -33,16 +33,12 @@ export function FeaturedWorkshop({
       <div className={styles.body}>
         <p className={styles.meta}>
           {start !== null && <Badge tone={start.tone}>{start.label}</Badge>}
-          <span>
-            {workshopWhen(workshop.startsAt, now)} · {workshopDuration(workshop)}
-          </span>
+          <span>{workshopWhen(workshop, now)}</span>
         </p>
         <h2 id={titleId} className={styles.title}>
           {workshop.title}
         </h2>
-        <p className={styles.summary}>
-          {workshop.summary} Facilita {workshop.facilitator}.
-        </p>
+        <p className={styles.summary}>{workshop.description}</p>
       </div>
       <div className={styles.side}>
         <WorkshopSpots spots={spots} size="hero" />

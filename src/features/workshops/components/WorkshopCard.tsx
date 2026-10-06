@@ -64,7 +64,7 @@ export function WorkshopCard({
       </h2>
       <p className={styles.when}>
         <ClockIcon />
-        {workshopWhen(workshop.startsAt, now)} · {workshop.facilitator}
+        {workshopWhen(workshop, now)}
       </p>
       <div className={styles.bottom}>
         <WorkshopSpots spots={spots} />

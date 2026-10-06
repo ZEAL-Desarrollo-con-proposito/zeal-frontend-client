@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { EMPLOYEE_PATHS } from '@/app/paths';
 import { useNow } from '@/shared/hooks/useNow';
 import { Button } from '@/shared/ui/Button/Button';
@@ -14,17 +14,24 @@ import styles from './WorkshopsPage.module.css';
 
 const PLACEHOLDERS = ['uno', 'dos', 'tres'] as const;
 
+/** Taller del enlace (`?taller=`, p. ej. el aviso de un taller recién publicado). */
+const LINKED_WORKSHOP_PARAM = 'taller';
+
 /**
- * Figma B6 · Talleres comunitarios (HU-FE-18): el próximo taller destacado y el resto en grilla,
- * con cupos que cambian en vivo. Inscribirse pide confirmación y el servidor asigna el cupo de
- * forma atómica: si se agotó, el motivo se muestra y no hay sobreasignación.
+ * Figma B6 · Talleres comunitarios (HU-FE-18): un taller destacado (el del enlace o, si no, el
+ * próximo) y el resto en grilla, con cupos que cambian en vivo. Inscribirse pide confirmación y
+ * el servidor asigna el cupo de forma atómica: si se agotó, el motivo se muestra y no hay
+ * sobreasignación.
  */
 export function WorkshopsPage() {
   const now = useNow();
-  const { status, data, reload } = useWorkshops();
+  const { status, workshops, reload } = useWorkshops();
   const enrollments = useEnrollments();
   const [selected, setSelected] = useState<Workshop | null>(null);
-  const [featured, ...rest] = data ?? [];
+  const [searchParams] = useSearchParams();
+  const linkedId = searchParams.get(LINKED_WORKSHOP_PARAM);
+  const featured = workshops.find(({ id }) => id === linkedId) ?? workshops[0];
+  const rest = workshops.filter((workshop) => workshop !== featured);
 
   function itemProps(workshop: Workshop) {
     return {
@@ -82,7 +89,7 @@ export function WorkshopsPage() {
             <p>Cuando tu empresa programe un taller, aparecerá aquí con sus cupos.</p>
           </div>
         )}
-        {featured !== undefined && <FeaturedWorkshop {...itemProps(featured)} />}
+        {featured !== undefined && <FeaturedWorkshop key={featured.id} {...itemProps(featured)} />}
         {rest.length > 0 && (
           <ul className={styles.grid}>
             {rest.map((workshop, index) => (

@@ -6,28 +6,17 @@ import type { Workshop } from '@/features/workshops/model/workshop';
 import { bySoonest } from '@/features/workshops/model/workshop';
 import { authorize, errorBody } from '../mockAuth';
 import { publishToUser } from '../realtime';
-import type { EnrollmentRecord, WorkshopRecord } from './db';
-import { publishWorkshopSpots, readWorkshopsDb, writeWorkshopsDb } from './db';
+import type { EnrollmentRecord } from './db';
+import { publishWorkshopSpots, readWorkshopsDb, toWorkshop, writeWorkshopsDb } from './db';
 
-/** Lo que ve el cliente: el taller sin su empresa dueña. */
-function toWorkshop(record: WorkshopRecord): Workshop {
-  const { id, title, summary, facilitator, capacity, occupied, version, startsAt, endsAt } = record;
-  return { id, title, summary, facilitator, capacity, occupied, version, startsAt, endsAt };
+function hasEnded({ startsAt, durationMinutes }: Workshop, now: number): boolean {
+  return Date.parse(startsAt) + durationMinutes * 60_000 <= now;
 }
 
 function toEnrollment(record: EnrollmentRecord, workshop: Workshop): Enrollment {
   const { id, workshopId, createdAt, version } = record;
-  const { title, facilitator, startsAt, endsAt } = workshop;
-  return {
-    id,
-    workshopId,
-    workshopTitle: title,
-    facilitator,
-    startsAt,
-    endsAt,
-    createdAt,
-    version,
-  };
+  const { title, startsAt, durationMinutes } = workshop;
+  return { id, workshopId, workshopTitle: title, startsAt, durationMinutes, createdAt, version };
 }
 
 /**
@@ -114,7 +103,7 @@ export const workshopHandlers = [
       .filter(({ userId }) => userId === user.id)
       .flatMap((record) => {
         const workshop = db.workshops.find(({ id }) => id === record.workshopId);
-        return workshop === undefined || Date.parse(workshop.endsAt) <= now
+        return workshop === undefined || hasEnded(workshop, now)
           ? []
           : [toEnrollment(record, workshop)];
       })

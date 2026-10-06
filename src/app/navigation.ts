@@ -138,7 +138,7 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Talleres',
-      path: section('ADMIN', 'talleres'),
+      path: ADMIN_PATHS.workshops,
       icon: starIcon,
       description: 'Programa talleres con capacidad máxima.',
     },

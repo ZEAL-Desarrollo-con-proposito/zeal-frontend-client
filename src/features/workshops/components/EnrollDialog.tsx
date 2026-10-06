@@ -3,7 +3,7 @@ import { describeMutationError } from '@/shared/api/describeError';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog/ConfirmDialog';
 import { useWorkshopSpots } from '../hooks/useWorkshopSpots';
 import type { Workshop } from '../model/workshop';
-import { availabilityOf, workshopDuration, workshopWhen } from '../model/workshop';
+import { availabilityOf, workshopWhen } from '../model/workshop';
 
 interface EnrollDialogProps {
   workshop: Workshop;
@@ -44,7 +44,7 @@ export function EnrollDialog({
   return (
     <ConfirmDialog
       title={`¿Inscribirte en ${workshop.title}?`}
-      description={`${workshopWhen(workshop.startsAt, now)} · ${workshopDuration(workshop)} con ${workshop.facilitator}. El cupo es tuyo en cuanto lo confirmemos.`}
+      description={`${workshopWhen(workshop, now)}. El cupo es tuyo en cuanto lo confirmemos.`}
       confirmLabel="Sí, inscribirme"
       pendingLabel="Inscribiendo…"
       isPending={pending}

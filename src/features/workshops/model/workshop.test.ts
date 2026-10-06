@@ -3,74 +3,143 @@ import type { Workshop } from './workshop';
 import {
   availabilityOf,
   bySoonest,
+  capacityLabel,
+  compareByNewest,
+  describeSchedule,
   hasStarted,
   isWorkshop,
   occupancy,
   spotsCount,
   startBadge,
-  workshopDuration,
   workshopWhen,
 } from './workshop';
 
-const NOW = new Date(2026, 8, 23, 9, 20).getTime();
-
 const WORKSHOP: Workshop = {
-  id: 'taller-impostor',
-  title: 'Síndrome del impostor en tu primer empleo',
-  summary: 'Herramientas para separar lo que sientes de lo que aportas.',
-  facilitator: 'Andrés Rojas',
+  id: 'taller-pausas-activas',
+  title: 'Pausas activas y respiración',
+  description: 'Aprende técnicas breves de respiración y pausas activas para tu jornada.',
+  startsAt: new Date(2026, 9, 6, 15).toISOString(),
+  durationMinutes: 60,
+  publishedAt: new Date(2026, 8, 21, 11).toISOString(),
   capacity: 30,
-  occupied: 29,
-  version: 4,
-  startsAt: new Date(2026, 8, 24, 12, 30).toISOString(),
-  endsAt: new Date(2026, 8, 24, 13, 30).toISOString(),
+  occupied: 12,
+  version: 1,
 };
 
-function at(hours: number, minutes: number, day = 23): string {
-  return new Date(2026, 8, day, hours, minutes).toISOString();
-}
-
-describe('taller', () => {
-  it('reconoce un taller del contrato y descarta lo incompleto', () => {
+describe('contrato de talleres', () => {
+  it('acepta un taller con sus cupos', () => {
     expect(isWorkshop(WORKSHOP)).toBe(true);
-    expect(isWorkshop({ ...WORKSHOP, capacity: 0, occupied: 0 })).toBe(false);
-    expect(isWorkshop({ ...WORKSHOP, startsAt: 'pronto' })).toBe(false);
-    expect(isWorkshop({ ...WORKSHOP, facilitator: undefined })).toBe(false);
-    expect(isWorkshop(null)).toBe(false);
   });
+
+  it.each<[string, unknown]>([
+    ['un valor que no es objeto', 'taller'],
+    ['sin cupos válidos', { ...WORKSHOP, capacity: -1 }],
+    ['sin capacidad', { ...WORKSHOP, capacity: 0, occupied: 0 }],
+    ['con versión fraccional', { ...WORKSHOP, version: 1.5 }],
+    ['sin id de texto', { ...WORKSHOP, id: 7 }],
+    ['sin título de texto', { ...WORKSHOP, title: undefined }],
+    ['sin descripción de texto', { ...WORKSHOP, description: {} }],
+    ['con inicio que no es fecha', { ...WORKSHOP, startsAt: 'pronto' }],
+    ['con duración que no es número', { ...WORKSHOP, durationMinutes: '60' }],
+    ['con duración fraccional', { ...WORKSHOP, durationMinutes: 2.5 }],
+    ['con duración cero', { ...WORKSHOP, durationMinutes: 0 }],
+    ['con publicación que no es fecha', { ...WORKSHOP, publishedAt: 'ayer' }],
+  ])('rechaza %s', (_case, value) => {
+    expect(isWorkshop(value)).toBe(false);
+  });
+});
+
+describe('compareByNewest', () => {
+  it('ordena por publicación reciente y, a igual instante, por id mayor', () => {
+    const oldest: Workshop = { ...WORKSHOP, id: 'taller-1', publishedAt: '2026-09-01T08:00:00Z' };
+    const newest: Workshop = {
+      ...WORKSHOP,
+      id: 'taller-2',
+      publishedAt: '2026-09-02T08:00:00Z',
+    };
+    const tieLow: Workshop = { ...WORKSHOP, id: 'taller-9', publishedAt: '2026-09-03T08:00:00Z' };
+    const tieHigh: Workshop = {
+      ...WORKSHOP,
+      id: 'taller-10',
+      publishedAt: '2026-09-03T08:00:00Z',
+    };
+
+    const sorted = [oldest, tieLow, newest, tieHigh].sort(compareByNewest);
+
+    expect(sorted.map(({ id }) => id)).toEqual(['taller-10', 'taller-9', 'taller-2', 'taller-1']);
+  });
+});
+
+describe('hasStarted', () => {
+  const now = new Date(2026, 8, 23, 9, 20).getTime();
+
+  it('es true cuando el inicio ya pasó o coincide con el reloj', () => {
+    expect(hasStarted({ startsAt: new Date(2026, 8, 23, 8).toISOString() }, now)).toBe(true);
+    expect(hasStarted({ startsAt: new Date(now).toISOString() }, now)).toBe(true);
+    expect(hasStarted({ startsAt: new Date(2026, 8, 23, 10).toISOString() }, now)).toBe(false);
+  });
+});
+
+describe('describeSchedule', () => {
+  it('describe día, inicio y fin en el horario local', () => {
+    expect(
+      describeSchedule({ startsAt: new Date(2026, 9, 6, 15).toISOString(), durationMinutes: 90 }),
+    ).toBe('Martes, 6 de octubre · 15:00 – 16:30');
+    expect(
+      describeSchedule({ startsAt: new Date(2026, 9, 6, 9, 5).toISOString(), durationMinutes: 60 }),
+    ).toBe('Martes, 6 de octubre · 9:05 – 10:05');
+  });
+});
+
+describe('capacityLabel', () => {
+  it('habla de una persona en singular y del resto en plural', () => {
+    expect(capacityLabel(1)).toBe('Capacidad para 1 persona');
+    expect(capacityLabel(30)).toBe('Capacidad para 30 personas');
+  });
+});
+
+describe('catálogo del empleado (Figma B6)', () => {
+  const now = new Date(2026, 8, 23, 9, 20).getTime();
+
+  function at(hours: number, minutes: number, day = 23): string {
+    return new Date(2026, 8, day, hours, minutes).toISOString();
+  }
 
   it.each([
     [12, { label: 'Con cupo', tone: 'sage', full: false }],
     [26, { label: 'Últimos cupos', tone: 'mauve', full: false }],
     [29, { label: 'Últimos cupos', tone: 'mauve', full: false }],
     [30, { label: 'Cupos agotados', tone: 'coral', full: true }],
-  ])('con %i de 30 ocupados la disponibilidad es la del Figma B6', (occupied, availability) => {
+  ])('con %i de 30 ocupados muestra su disponibilidad', (occupied, availability) => {
     expect(availabilityOf({ capacity: 30, occupied, version: 1 })).toEqual(availability);
   });
 
   it('cuenta cupos y ocupación sin pasarse de la capacidad', () => {
-    expect(spotsCount(WORKSHOP)).toBe('29 / 30 cupos');
-    expect(occupancy(WORKSHOP)).toBe(97);
+    expect(spotsCount({ capacity: 30, occupied: 29, version: 1 })).toBe('29 / 30 cupos');
+    expect(occupancy({ capacity: 30, occupied: 29, version: 1 })).toBe(97);
     expect(spotsCount({ capacity: 3, occupied: 5, version: 1 })).toBe('3 / 3 cupos');
     expect(occupancy({ capacity: 3, occupied: 5, version: 1 })).toBe(100);
   });
 
   it('dice cuándo es y cuánto dura', () => {
-    expect(workshopWhen(at(16, 0), NOW)).toBe('Hoy · 16:00');
-    expect(workshopWhen(WORKSHOP.startsAt, NOW)).toBe('Mañana · 12:30');
-    expect(workshopWhen(at(7, 0, 28), NOW)).toBe('Lun 28 · 7:00');
-    expect(workshopDuration(WORKSHOP)).toBe('60 min');
+    expect(workshopWhen({ startsAt: at(16, 0), durationMinutes: 50 }, now)).toBe(
+      'Hoy · 16:00 · 50 min',
+    );
+    expect(workshopWhen({ startsAt: at(12, 30, 24), durationMinutes: 60 }, now)).toBe(
+      'Mañana · 12:30 · 60 min',
+    );
+    expect(workshopWhen({ startsAt: at(7, 0, 28), durationMinutes: 90 }, now)).toBe(
+      'Lun 28 · 7:00 · 90 min',
+    );
   });
 
   it('marca cuándo empieza pronto y cuándo ya empezó', () => {
-    expect(startBadge({ startsAt: at(10, 5) }, NOW)).toEqual({
+    expect(startBadge({ startsAt: at(10, 5) }, now)).toEqual({
       label: 'Empieza en 45 min',
       tone: 'coral',
     });
-    expect(startBadge({ startsAt: at(9, 20) }, NOW)).toEqual({ label: 'En curso', tone: 'sage' });
-    expect(startBadge({ startsAt: at(10, 20) }, NOW)).toBeNull();
-    expect(hasStarted({ startsAt: at(9, 20) }, NOW)).toBe(true);
-    expect(hasStarted(WORKSHOP, NOW)).toBe(false);
+    expect(startBadge({ startsAt: at(9, 20) }, now)).toEqual({ label: 'En curso', tone: 'sage' });
+    expect(startBadge({ startsAt: at(10, 20) }, now)).toBeNull();
   });
 
   it('ordena del más próximo al más lejano', () => {
