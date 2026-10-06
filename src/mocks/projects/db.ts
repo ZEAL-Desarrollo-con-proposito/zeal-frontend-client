@@ -4,6 +4,7 @@ import type { SpotsEvent } from '@/features/projects/model/spotsEvent';
 import { projectTopic } from '@/features/projects/model/spotsEvent';
 import { addDays } from '@/shared/lib/dates';
 import { publishMockEvent } from '../realtime';
+import { OTHER_ORGANIZATION, SEED_ORGANIZATION } from '../seedUsers';
 
 /** Postulación guardada: de quién es y qué resultado le asignó el servidor (HU-BE-17). */
 export interface ApplicationRecord {
@@ -21,9 +22,6 @@ export interface ProjectRecord extends ProjectDetail {
   organization: string;
   publishedAt: string;
 }
-
-export const SEED_ORGANIZATION = 'Nexura S.A.S.';
-export const OTHER_ORGANIZATION = 'Órbita Labs S.A.S.';
 
 /**
  * "Base de datos" de convocatorias internas simulada (HU-BE-16 y 17), en localStorage para que

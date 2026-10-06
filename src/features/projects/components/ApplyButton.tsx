@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useFocusResult } from '@/shared/hooks/useFocusResult';
 import { Badge } from '@/shared/ui/Badge/Badge';
 import { Button } from '@/shared/ui/Button/Button';
 import type { Application } from '../model/application';
@@ -40,24 +40,7 @@ function applyState({ closed, spots, application }: ApplyButtonProps): ApplyStat
 export function ApplyButton(props: Readonly<ApplyButtonProps>) {
   const { title, application, sending, onApply } = props;
   const state = applyState(props);
-  const wasSending = useRef(false);
-  const focusResult = useRef(false);
-
-  // El botón que se pulsó desaparece con el resultado: el foco pasa al resultado, no se pierde.
-  useEffect(() => {
-    if (state === 'applied' && wasSending.current) {
-      focusResult.current = true;
-    }
-    wasSending.current = sending;
-  }, [state, sending]);
-
-  // El resultado aparece cuando termina de salir el botón: ahí recibe el foco.
-  const attachResult = useCallback((element: HTMLParagraphElement | null) => {
-    if (element !== null && focusResult.current) {
-      focusResult.current = false;
-      element.focus();
-    }
-  }, []);
+  const attachResult = useFocusResult(state === 'applied', sending);
 
   function control() {
     if (application !== null) {

@@ -2,32 +2,29 @@ import { useRef, useState } from 'react';
 
 /**
  * Envíos en curso por elemento (p. ej. por convocatoria o por taller): mientras uno espera al
- * servidor, un segundo envío del mismo elemento se descarta. El bloqueo es inmediato: dos clics
- * antes de volver a pintar no envían dos veces.
+ * servidor, un segundo envío del mismo elemento no sale; recibe el resultado del que ya está en
+ * curso. El bloqueo es inmediato: dos clics antes de volver a pintar no envían dos veces.
  */
-export function useSubmitting() {
+export function useSubmitting<T = void>() {
   const [submittingIds, setSubmittingIds] = useState<ReadonlySet<string>>(new Set());
-  const active = useRef(new Set<string>());
+  const inFlight = useRef(new Map<string, Promise<T>>());
 
-  function mark(id: string, submitting: boolean) {
-    if (submitting) {
-      active.current.add(id);
-    } else {
-      active.current.delete(id);
-    }
-    setSubmittingIds(new Set(active.current));
+  function publish() {
+    setSubmittingIds(new Set(inFlight.current.keys()));
   }
 
-  async function submit(id: string, task: () => Promise<void>): Promise<void> {
-    if (active.current.has(id)) {
-      return;
+  function submit(id: string, task: () => Promise<T>): Promise<T> {
+    const current = inFlight.current.get(id);
+    if (current !== undefined) {
+      return current;
     }
-    mark(id, true);
-    try {
-      await task();
-    } finally {
-      mark(id, false);
-    }
+    const sending = task().finally(() => {
+      inFlight.current.delete(id);
+      publish();
+    });
+    inFlight.current.set(id, sending);
+    publish();
+    return sending;
   }
 
   return { isSubmitting: (id: string) => submittingIds.has(id), submit };
