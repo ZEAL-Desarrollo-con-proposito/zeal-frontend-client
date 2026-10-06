@@ -1,0 +1,95 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1112px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 70ch;
+}
+
+.title {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-ink-900);
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-ink-700);
+}
+
+/* Botón de contorno de la cabecera (Figma B6): lleva a Mis talleres. */
+.mine {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-teal-800);
+  text-decoration: none;
+  transition: border-color 160ms ease;
+}
+
+.mine:hover {
+  border-color: var(--color-teal-400);
+}
+
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Tres columnas en escritorio (Figma B6); se reacomoda sola en pantallas angostas. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+/* Tarjetas de carga (Figma F4): reservan el espacio para que nada salte. */
+.placeholder {
+  height: 268px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  color: var(--color-ink-700);
+}
+
+.feedbackTitle {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--color-ink-900);
+}

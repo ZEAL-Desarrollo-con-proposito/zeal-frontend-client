@@ -43,6 +43,8 @@ export const EMPLOYEE_PATHS = {
   sessionRoom: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas/sala/:reservationId`,
   projects: `${ROLE_BASE_PATH.EMPLEADO}/proyectos`,
   project: `${ROLE_BASE_PATH.EMPLEADO}/proyectos/:projectId`,
+  workshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres`,
+  myWorkshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres/mis-talleres`,
 } as const;
 
 /** Genera la ruta al detalle de una convocatoria interna. */

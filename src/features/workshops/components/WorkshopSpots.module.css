@@ -1,0 +1,78 @@
+.spots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.count {
+  display: inline-flex;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--color-ink-900);
+}
+
+.text {
+  display: inline-block;
+}
+
+/* "97%" en IBM Plex Mono (Figma B6). */
+.percent {
+  font-family: var(--font-mono);
+  font-size: var(--text-badge);
+  color: var(--color-ink-700);
+}
+
+.track {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+}
+
+/* Se escala desde la izquierda (transform): animarla no mueve el resto de la tarjeta. */
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-sage);
+  transform-origin: left center;
+}
+
+.spots[data-tone='mauve'] .fill {
+  background: var(--color-mauve);
+}
+
+.spots[data-tone='coral'] .fill {
+  background: var(--color-coral);
+}
+
+.spots[data-tone='coral'] .count {
+  color: var(--color-coral-strong);
+}
+
+/* Taller destacado sobre teal oscuro: cifra grande a la derecha, encima de la barra. */
+.spots[data-size='hero'] .row {
+  justify-content: flex-end;
+}
+
+.spots[data-size='hero'] .count {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-surface);
+}
+
+.spots[data-size='hero'] .track {
+  background: rgb(255 255 255 / 18%);
+}
+
+.spots[data-size='hero'][data-tone='coral'] .count {
+  color: var(--color-coral);
+}

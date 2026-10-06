@@ -14,6 +14,8 @@ import { AdminProjectsPage } from '@/features/projects/pages/AdminProjectsPage';
 import { ProjectDetailPage } from '@/features/projects/pages/ProjectDetailPage';
 import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
 import { SessionRoomPage } from '@/features/sessionRoom/pages/SessionRoomPage';
+import { MyWorkshopsPage } from '@/features/workshops/pages/MyWorkshopsPage';
+import { WorkshopsPage } from '@/features/workshops/pages/WorkshopsPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
@@ -45,6 +47,7 @@ const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [EMPLOYEE_PATHS.appointments]: <AppointmentsPage />,
   [EMPLOYEE_PATHS.messages]: <EmployeeMessagesPage />,
   [EMPLOYEE_PATHS.projects]: <ProjectsPage />,
+  [EMPLOYEE_PATHS.workshops]: <WorkshopsPage />,
 };
 
 /** Pantallas de un rol que no están en el menú (se llega a ellas desde otra pantalla). */
@@ -59,6 +62,11 @@ const ROLE_ROUTES: Partial<Record<Role, RouteObject[]>> = {
       path: EMPLOYEE_PATHS.project,
       handle: { title: 'Detalle de la convocatoria' } satisfies PageHandle,
       element: <ProjectDetailPage />,
+    },
+    {
+      path: EMPLOYEE_PATHS.myWorkshops,
+      handle: { title: 'Mis talleres' } satisfies PageHandle,
+      element: <MyWorkshopsPage />,
     },
   ],
 };

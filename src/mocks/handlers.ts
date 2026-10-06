@@ -14,6 +14,7 @@ import { directoryHandlers } from './wellbeing/directoryHandlers';
 import { freedSlotHandlers } from './wellbeing/freedSlotHandlers';
 import { wellbeingHandlers } from './wellbeing/handlers';
 import { roomHandlers } from './wellbeing/roomHandlers';
+import { workshopHandlers } from './workshops/handlers';
 
 interface LoginRequestBody {
   email?: unknown;
@@ -56,4 +57,5 @@ export const handlers = [
   ...applicationHandlers,
   ...projectHandlers,
   ...adminProjectHandlers,
+  ...workshopHandlers,
 ];

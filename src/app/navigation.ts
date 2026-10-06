@@ -55,7 +55,7 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Talleres',
-      path: section('EMPLEADO', 'talleres'),
+      path: EMPLOYEE_PATHS.workshops,
       icon: usersIcon,
       description: 'Inscríbete a talleres comunitarios con cupo limitado.',
     },
