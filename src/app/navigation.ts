@@ -12,7 +12,13 @@ import usersIcon from '@/assets/icons/users.svg';
 import videoIcon from '@/assets/icons/video.svg';
 import type { Role } from '@/features/auth/model/session';
 import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
-import { EMPLOYEE_PATHS, PSYCHOLOGIST_PATHS, ROLE_BASE_PATH, ROLE_HOME_PATH } from './paths';
+import {
+  ADMIN_PATHS,
+  EMPLOYEE_PATHS,
+  PSYCHOLOGIST_PATHS,
+  ROLE_BASE_PATH,
+  ROLE_HOME_PATH,
+} from './paths';
 
 export interface NavItem {
   label: string;
@@ -126,7 +132,7 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Proyectos',
-      path: section('ADMIN', 'proyectos'),
+      path: ADMIN_PATHS.projects,
       icon: briefcaseIcon,
       description: 'Publica convocatorias internas con cupos limitados.',
     },

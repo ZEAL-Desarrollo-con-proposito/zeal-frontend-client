@@ -303,6 +303,38 @@ solo dentro de la ventana de ingreso (en el simulador: desde 10 minutos antes ha
 persona de la sesión. `iceServers` son los STUN/TURN para el video, con credenciales temporales que
 entrega el servidor (el simulador envía `[]`: las dos pestañas están en el mismo equipo).
 
+### Contrato de publicación de proyectos (acordar con HU-BE-14)
+
+Rutas del rol `ADMIN`: las convocatorias publicadas por su organización y el alta de una nueva. En
+cuanto se crea, aparece en el catálogo del empleado (`GET /api/proyectos`) y en la lista de las
+demás sesiones del administrador por tiempo real.
+
+| Método y ruta               | Respuesta                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| `GET /api/admin/proyectos`  | `200` proyectos de la organización, más recientes primero · `403` rol sin `ADMIN`     |
+| `POST /api/admin/proyectos` | `201` proyecto creado · `400` datos inválidos · `409` título repetido con uno abierto |
+
+```json
+{
+  "title": "Taller de innovación abierta",
+  "area": "Innovación",
+  "cohort": "Semilla 2026-3",
+  "summary": "Explorar ideas nuevas con equipos de toda la empresa.",
+  "description": ["Equipo para explorar ideas nuevas en la empresa.", "Se reúne cada semana."],
+  "requirements": ["Experiencia previa en producto"],
+  "skills": [],
+  "capacity": 4,
+  "closesAt": "2026-10-30T23:59:59.000Z"
+}
+```
+
+El `GET` devuelve cada proyecto como el catálogo de HU-BE-16 más `publishedAt`. El servidor valida
+lo mismo que el formulario: título de 5 a 80 caracteres, área y cohorte de 2 a 40, resumen de 10 a
+140, descripción de 20 a 1500, hasta 8 requisitos y 8 habilidades de hasta 100 caracteres cada uno,
+capacidad entera de 1 a 100 y `closesAt` posterior al instante actual (el formulario envía el día
+elegido a las 23:59:59 hora local). El servidor asigna `id`, `publishedAt`, `occupied: 0` y
+`version: 1`; el 409 responde `Ya tienes un proyecto abierto con ese título`.
+
 ### Contrato de convocatorias internas (acordar con HU-BE-16)
 
 Rutas del rol `EMPLEADO`. Qué convocatorias están abiertas y cuántos cupos quedan lo decide el
@@ -381,6 +413,11 @@ con su puesto. Postularse dos veces a la misma convocatoria devuelve la misma po
   `{ "type": "CUPOS", "projectId": …, "capacity": …, "occupied": …, "version": … }` cuando el
   servidor asigna, libera o amplía cupos. Un aviso con versión menor o igual a la conocida se
   descarta; al reconectar se vuelve a pedir el catálogo.
+- **Cola privada `/user/queue/proyectos` (HU-FE-14):**
+  `{ "type": "PUBLICADO", "project": <proyecto> }` cuando esta sesión u otra de la empresa publica
+  una convocatoria. El cliente se queda con la versión más nueva de cada `id` (lo que publicó él
+  mismo no se anuncia dos veces) y la lista no se recarga; los cupos no viajan por aquí, tienen su
+  canal `/topic/proyectos/{id}/cupos`. Al reconectar se vuelve a pedir la lista.
 - **Cola privada `/user/queue/postulaciones` (HU-FE-17):**
   `{ "type": "POSTULACION", "application": <postulación> }` cuando se crea o cambia una postulación
   de la persona (otra pestaña, otro equipo o el paso de la lista de espera a aceptada). Se queda la
