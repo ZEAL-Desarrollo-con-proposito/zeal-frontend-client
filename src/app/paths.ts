@@ -33,6 +33,7 @@ export const PSYCHOLOGIST_PATHS = {
 /** Rutas del administrador. */
 export const ADMIN_PATHS = {
   projects: `${ROLE_BASE_PATH.ADMIN}/proyectos`,
+  workshops: `${ROLE_BASE_PATH.ADMIN}/talleres`,
 } as const;
 
 export const EMPLOYEE_PATHS = {
@@ -43,11 +44,20 @@ export const EMPLOYEE_PATHS = {
   sessionRoom: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas/sala/:reservationId`,
   projects: `${ROLE_BASE_PATH.EMPLEADO}/proyectos`,
   project: `${ROLE_BASE_PATH.EMPLEADO}/proyectos/:projectId`,
+  workshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres`,
 } as const;
 
 /** Genera la ruta al detalle de una convocatoria interna. */
 export function projectPath(projectId: string): string {
   return generatePath(EMPLOYEE_PATHS.project, { projectId });
+}
+
+/**
+ * Enlace a un taller para el empleado: la sección de talleres con el taller en `?taller=`, que el
+ * catálogo usa para destacarlo. Mientras no exista, el enlace lleva a la sección.
+ */
+export function workshopPath(workshopId: string): string {
+  return `${EMPLOYEE_PATHS.workshops}?taller=${encodeURIComponent(workshopId)}`;
 }
 
 /** Genera la ruta al perfil de un psicólogo. */
