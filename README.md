@@ -388,6 +388,40 @@ con su puesto. Postularse dos veces a la misma convocatoria devuelve la misma po
 `status` ∈ `ACEPTADA` (`waitlistPosition: null`), `EN_ESPERA`. Al aceptar, el servidor sube la
 `version` de los cupos y la avisa por el canal de la convocatoria.
 
+### Contrato de talleres comunitarios (acordar con HU-BE-15 y HU-BE-18)
+
+El taller es el mismo recurso que publica el administrador (HU-BE-15) y que ven los empleados de
+su empresa (HU-BE-18). El catálogo del empleado lista solo los que aún no empiezan, del más
+próximo al más lejano. Revisar el cupo y tomarlo es una sola operación atómica: nunca hay más
+inscritos que `capacity`; quien llega cuando ya no queda recibe un `409` con el motivo.
+Inscribirse dos veces al mismo taller devuelve la misma inscripción.
+
+| Método y ruta                           | Respuesta                                                                                 |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `GET /api/talleres`                     | `200` talleres próximos de la empresa con sus cupos                                       |
+| `POST /api/talleres/{id}/inscripciones` | `201` inscripción nueva · `200` la que ya existía · `409` sin cupos o ya empezó · `404`   |
+| `GET /api/inscripciones/mias`           | `200` inscripciones de la persona a talleres que no han terminado, la más próxima primero |
+
+```json
+{
+  "id": "taller-impostor",
+  "title": "Síndrome del impostor en tu primer empleo",
+  "description": "Herramientas para separar lo que sientes de lo que de verdad aportas.",
+  "startsAt": "2026-09-24T17:30:00.000Z",
+  "durationMinutes": 60,
+  "publishedAt": "2026-09-18T14:20:00.000Z",
+  "capacity": 30,
+  "occupied": 29,
+  "version": 4
+}
+```
+
+La inscripción trae `id`, `workshopId`, `workshopTitle`, `startsAt`, `durationMinutes`,
+`createdAt` y `version`. Los `409` responden `Este taller ya no tiene cupos.` o
+`Este taller ya empezó.`; el cliente muestra el mensaje en la confirmación. Al inscribir, el
+servidor sube la `version` de los cupos y la avisa por el canal del taller. En el cliente,
+`/empleado/talleres?taller={id}` (el enlace del aviso de un taller nuevo) lo muestra destacado.
+
 ## Tiempo real (RT-2)
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
@@ -422,6 +456,16 @@ con su puesto. Postularse dos veces a la misma convocatoria devuelve la misma po
   `{ "type": "POSTULACION", "application": <postulación> }` cuando se crea o cambia una postulación
   de la persona (otra pestaña, otro equipo o el paso de la lista de espera a aceptada). Se queda la
   versión más nueva; al reconectar se vuelve a pedir la lista.
+- **Canal de la empresa `/topic/organizaciones/{empresa}/talleres` (HU-FE-15 y 18):**
+  `{ "type": "PUBLICADO", "workshop": <taller> }` cuando el administrador publica un taller: el
+  catálogo del empleado lo agrega sin recargar (sin duplicarlo) y se anuncia con un aviso.
+- **Canal de cada taller `/topic/talleres/{id}/cupos` (HU-FE-18):**
+  `{ "type": "CUPOS", "workshopId": …, "capacity": …, "occupied": …, "version": … }` cuando alguien
+  se inscribe o se liberan cupos. Se descarta lo atrasado por `version`; al llegar a cero,
+  "Inscribirme" se deshabilita con el motivo, también en la confirmación abierta.
+- **Cola privada `/user/queue/inscripciones` (HU-FE-18):**
+  `{ "type": "INSCRIPCION", "enrollment": <inscripción> }` cuando la persona se inscribe desde
+  cualquier pestaña o equipo. Se queda la versión más nueva; al reconectar se vuelve a pedir.
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.

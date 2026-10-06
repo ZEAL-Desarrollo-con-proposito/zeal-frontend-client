@@ -8,6 +8,7 @@ import { RealtimeProvider } from '@/shared/realtime/RealtimeProvider';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
 import { scriptedRealtimeClient } from '@/test/realtime';
+import { keepOnlyAdminSeedWorkshop } from '@/test/workshops';
 import type { Workshop } from '../model/workshop';
 import { WORKSHOPS_QUEUE } from '../model/workshopEvent';
 import { useAdminWorkshops } from './useAdminWorkshops';
@@ -27,6 +28,7 @@ describe('useAdminWorkshops', () => {
 
   beforeEach(() => {
     freezeTime();
+    keepOnlyAdminSeedWorkshop();
     realtime = scriptedRealtimeClient();
     configureHttpAuth({
       accessToken: buildSession('ADMIN').accessToken,

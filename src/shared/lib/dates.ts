@@ -106,3 +106,8 @@ export function formatWeekRange(start: Date, end: Date): string {
 export function minutesSinceMidnight(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
+
+/** Instante ISO 8601 que se puede interpretar (fechas con hora que envía el API). */
+export function isIsoDateTime(value: unknown): value is string {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+}

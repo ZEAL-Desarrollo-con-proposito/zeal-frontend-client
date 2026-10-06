@@ -6,20 +6,24 @@ import type { AuthUser } from '@/features/auth/model/session';
  */
 export const DEMO_PASSWORD = 'Zeal2026*';
 
+/** Empresa de los usuarios semilla y otra empresa cuyos datos nunca deben verse en la suya. */
+export const SEED_ORGANIZATION = 'Nexura S.A.S.';
+export const OTHER_ORGANIZATION = 'Órbita Labs S.A.S.';
+
 export const SEED_USERS: readonly AuthUser[] = [
   {
     id: 'usr-empleado-001',
     fullName: 'David Cajamarca',
     email: 'david.cajamarca@nexura.co',
     role: 'EMPLEADO',
-    organization: 'Nexura S.A.S.',
+    organization: SEED_ORGANIZATION,
   },
   {
     id: 'usr-empleado-002',
     fullName: 'Mariana Torres',
     email: 'mariana.torres@nexura.co',
     role: 'EMPLEADO',
-    organization: 'Nexura S.A.S.',
+    organization: SEED_ORGANIZATION,
   },
   {
     id: 'usr-psicologo-001',
@@ -33,7 +37,7 @@ export const SEED_USERS: readonly AuthUser[] = [
     fullName: 'Talento Humano',
     email: 'talento.humano@nexura.co',
     role: 'ADMIN',
-    organization: 'Nexura S.A.S.',
+    organization: SEED_ORGANIZATION,
   },
 ];
 

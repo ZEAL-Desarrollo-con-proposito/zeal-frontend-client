@@ -1,6 +1,5 @@
 import { delay, http, HttpResponse } from 'msw';
 import { ADMIN_WORKSHOPS_ENDPOINT } from '@/features/workshops/api/adminWorkshopsApi';
-import type { Workshop } from '@/features/workshops/model/workshop';
 import { compareByNewest } from '@/features/workshops/model/workshop';
 import {
   DESCRIPTION_MAX_LENGTH,
@@ -21,7 +20,7 @@ import { authorize, errorBody } from '../mockAuth';
 import { publishMockEvent, publishToUser } from '../realtime';
 import { SEED_USERS } from '../seedUsers';
 import type { WorkshopRecord } from './db';
-import { readWorkshopsDb, writeWorkshopsDb } from './db';
+import { readWorkshopsDb, toWorkshop, writeWorkshopsDb } from './db';
 
 type Body = Record<string, unknown>;
 
@@ -61,32 +60,6 @@ async function readBody(request: Request): Promise<Body> {
   } catch {
     return {};
   }
-}
-
-/** Lo que viaja al cliente: el taller sin la empresa a la que pertenece. */
-function toWorkshop(record: WorkshopRecord): Workshop {
-  const {
-    id,
-    title,
-    description,
-    startsAt,
-    durationMinutes,
-    capacity,
-    occupied,
-    version,
-    publishedAt,
-  } = record;
-  return {
-    id,
-    title,
-    description,
-    startsAt,
-    durationMinutes,
-    capacity,
-    occupied,
-    version,
-    publishedAt,
-  };
 }
 
 /**

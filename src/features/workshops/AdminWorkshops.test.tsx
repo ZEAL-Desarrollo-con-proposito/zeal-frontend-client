@@ -10,6 +10,7 @@ import { freezeTime } from '@/test/clock';
 import { buildSession, seedUser, storeSession } from '@/test/credentials';
 import { controlledRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
+import { keepOnlyAdminSeedWorkshop } from '@/test/workshops';
 import { ADMIN_WORKSHOPS_ENDPOINT } from './api/adminWorkshopsApi';
 import type { Workshop } from './model/workshop';
 import { WORKSHOPS_QUEUE } from './model/workshopEvent';
@@ -66,6 +67,7 @@ function seedWorkshop(): WorkshopRecord {
 describe('Talleres del administrador · lista (HU-FE-15)', () => {
   beforeEach(() => {
     freezeTime();
+    keepOnlyAdminSeedWorkshop();
   });
 
   it('muestra el taller de su empresa con horario, capacidad e inscritas', async () => {
@@ -128,7 +130,7 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
   });
 
   it('explica el estado vacío', async () => {
-    writeWorkshopsDb({ workshops: [], sequence: 0 });
+    writeWorkshopsDb({ workshops: [], enrollments: [], sequence: 0 });
     storeSession('ADMIN');
     renderRoute(ADMIN_PATHS.workshops);
 
@@ -201,6 +203,7 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
 describe('Talleres del administrador · publicar (HU-FE-15)', () => {
   beforeEach(() => {
     freezeTime();
+    keepOnlyAdminSeedWorkshop();
   });
 
   afterEach(() => {
@@ -382,6 +385,7 @@ describe('Talleres del administrador · publicar (HU-FE-15)', () => {
 describe('Talleres del administrador · en tiempo real', () => {
   beforeEach(() => {
     freezeTime();
+    keepOnlyAdminSeedWorkshop();
   });
 
   const remote: Workshop = {

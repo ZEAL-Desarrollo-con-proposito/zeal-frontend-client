@@ -1,12 +1,12 @@
 import { useId } from 'react';
 import { motion } from 'motion/react';
 import { Badge } from '@/shared/ui/Badge/Badge';
-import { useLiveSpots } from '../hooks/useLiveSpots';
+import { useProjectSpots } from '../hooks/useProjectSpots';
 import type { AdminProject } from '../model/adminProject';
 import { describeDay, projectBadge } from '../model/adminProject';
 import { closingOf } from '../model/project';
 import { ClosingChip } from './ClosingChip';
-import { ProjectMark } from './ProjectMark';
+import { HexMark } from '@/shared/ui/HexMark/HexMark';
 import { SpotsMeter } from './SpotsMeter';
 import styles from './AdminProjectList.module.css';
 
@@ -34,7 +34,7 @@ interface AdminProjectCardProps {
 
 function AdminProjectCard({ project, now, index }: Readonly<AdminProjectCardProps>) {
   // Los cupos cambian cuando alguien se postula: la tarjeta los sigue sin recargar la lista.
-  const spots = useLiveSpots(project.id, project);
+  const spots = useProjectSpots(project.id, project);
   const badge = projectBadge({ ...spots, closesAt: project.closesAt }, now);
   const closing = closingOf(project.closesAt, now);
   const titleId = useId();
@@ -48,7 +48,7 @@ function AdminProjectCard({ project, now, index }: Readonly<AdminProjectCardProp
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: 'easeOut', delay: Math.min(index, 6) * 0.04 }}
     >
-      <ProjectMark project={project} />
+      <HexMark subject={project} />
       <div className={styles.body}>
         <div className={styles.head}>
           <h3 id={titleId} className={styles.name}>

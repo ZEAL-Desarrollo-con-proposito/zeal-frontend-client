@@ -2,7 +2,8 @@ import { isRecord } from '@/features/auth/model/session';
 import { formatLongDate } from '@/shared/lib/dates';
 import type { BadgeTone } from '@/shared/ui/Badge/Badge';
 import type { Project } from './project';
-import { availableSpots, closingOf, isProject } from './project';
+import { availableSpots } from '@/shared/spots/spots';
+import { closingOf, isProject } from './project';
 
 /**Convocatoria vista por el administrador de la empresa (HU-FE-14)*/
 export interface AdminProject extends Project {

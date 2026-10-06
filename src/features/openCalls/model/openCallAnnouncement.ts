@@ -1,8 +1,9 @@
 import { projectPath, workshopPath } from '@/app/paths';
 import type { Project } from '@/features/projects/model/project';
-import { availableSpots, closingOf, spotsLabel } from '@/features/projects/model/project';
+import { closingOf, spotsLabel } from '@/features/projects/model/project';
 import type { Workshop } from '@/features/workshops/model/workshop';
 import { capacityLabel, describeSchedule, hasStarted } from '@/features/workshops/model/workshop';
+import { availableSpots } from '@/shared/spots/spots';
 import type { ToastInput } from '@/shared/ui/Toast/toast';
 
 /** Aviso de una convocatoria que se acaba de abrir: un proyecto o un taller. */

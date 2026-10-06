@@ -5,6 +5,7 @@ import {
   formatTime,
   formatWeekdayShort,
   formatWeekRange,
+  isIsoDateTime,
   isSameDay,
   minutesSinceMidnight,
   parseIsoDate,
@@ -57,5 +58,11 @@ describe('fechas', () => {
       'Semana del 28 de septiembre al 2 de octubre',
     );
     expect(minutesSinceMidnight(new Date(2026, 8, 23, 9, 5))).toBe(545);
+  });
+
+  it('reconoce instantes ISO 8601 y descarta lo que no lo es', () => {
+    expect(isIsoDateTime('2026-09-23T14:20:00.000Z')).toBe(true);
+    expect(isIsoDateTime('mañana')).toBe(false);
+    expect(isIsoDateTime(1_790_000_000_000)).toBe(false);
   });
 });

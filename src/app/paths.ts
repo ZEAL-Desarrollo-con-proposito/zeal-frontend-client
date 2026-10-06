@@ -45,6 +45,7 @@ export const EMPLOYEE_PATHS = {
   projects: `${ROLE_BASE_PATH.EMPLEADO}/proyectos`,
   project: `${ROLE_BASE_PATH.EMPLEADO}/proyectos/:projectId`,
   workshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres`,
+  myWorkshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres/mis-talleres`,
 } as const;
 
 /** Genera la ruta al detalle de una convocatoria interna. */
@@ -54,7 +55,7 @@ export function projectPath(projectId: string): string {
 
 /**
  * Enlace a un taller para el empleado: la sección de talleres con el taller en `?taller=`, que el
- * catálogo usa para destacarlo. Mientras no exista, el enlace lleva a la sección.
+ * catálogo usa para destacarlo.
  */
 export function workshopPath(workshopId: string): string {
   return `${EMPLOYEE_PATHS.workshops}?taller=${encodeURIComponent(workshopId)}`;

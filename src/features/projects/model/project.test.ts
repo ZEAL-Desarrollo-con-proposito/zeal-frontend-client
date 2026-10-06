@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectDetail } from './project';
-import {
-  availableSpots,
-  closingOf,
-  isProject,
-  isProjectDetail,
-  isSpots,
-  projectInitials,
-  projectTone,
-  spotsLabel,
-} from './project';
+import { closingOf, isProject, isProjectDetail, spotsLabel } from './project';
 
 const NOW = new Date(2026, 8, 23, 9, 20).getTime();
 
@@ -30,7 +21,6 @@ const DETAIL: ProjectDetail = {
 
 describe('contrato de convocatorias', () => {
   it('acepta la convocatoria y su detalle', () => {
-    expect(isSpots(DETAIL)).toBe(true);
     expect(isProject(DETAIL)).toBe(true);
     expect(isProjectDetail(DETAIL)).toBe(true);
   });
@@ -55,11 +45,6 @@ describe('contrato de convocatorias', () => {
 });
 
 describe('cupos', () => {
-  it('cuenta los que quedan, nunca negativos', () => {
-    expect(availableSpots({ capacity: 8, occupied: 5, version: 1 })).toBe(3);
-    expect(availableSpots({ capacity: 3, occupied: 4, version: 1 })).toBe(0);
-  });
-
   it('describe los cupos en singular, en plural o agotados', () => {
     expect(spotsLabel({ capacity: 8, occupied: 5, version: 1 })).toBe('Quedan 3 de 8 cupos');
     expect(spotsLabel({ capacity: 6, occupied: 5, version: 1 })).toBe('Queda 1 de 6 cupos');
@@ -83,20 +68,5 @@ describe('closingOf', () => {
 
   it('una convocatoria vencida está cerrada', () => {
     expect(closingOf(at(23, 9), NOW)).toEqual({ label: 'Cerrada', urgent: true, closed: true });
-  });
-});
-
-describe('marca de la convocatoria', () => {
-  it('usa las iniciales de las dos primeras palabras con significado', () => {
-    expect(projectInitials('Squad de Observabilidad')).toBe('SO');
-    expect(projectInitials('Data Platform · Turno de guardia')).toBe('DP');
-    expect(projectInitials('  mentoría inversa Gen Z')).toBe('MI');
-  });
-
-  it('asigna un color estable a cada convocatoria', () => {
-    expect(projectTone('a')).toBe('mauve');
-    expect(projectTone('b')).toBe('teal');
-    expect(projectTone('c')).toBe('sage');
-    expect(projectTone('a')).toBe(projectTone('a'));
   });
 });

@@ -8,10 +8,10 @@ import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { CheckIcon, ChevronLeftIcon, LockIcon, TrendIcon } from '@/shared/ui/icons';
 import { ApplyButton } from '../components/ApplyButton';
 import { ClosingChip } from '../components/ClosingChip';
-import { ProjectMark } from '../components/ProjectMark';
+import { HexMark } from '@/shared/ui/HexMark/HexMark';
 import { SpotsMeter } from '../components/SpotsMeter';
 import { useApplications } from '../hooks/useApplications';
-import { useLiveSpots } from '../hooks/useLiveSpots';
+import { useProjectSpots } from '../hooks/useProjectSpots';
 import { useProject } from '../hooks/useProjects';
 import type { ProjectDetail } from '../model/project';
 import { closingOf } from '../model/project';
@@ -69,7 +69,7 @@ interface ProjectViewProps {
 }
 
 function ProjectView({ project, now }: Readonly<ProjectViewProps>) {
-  const spots = useLiveSpots(project.id, project);
+  const spots = useProjectSpots(project.id, project);
   const closing = closingOf(project.closesAt, now);
   const applications = useApplications();
 
@@ -90,7 +90,7 @@ function ProjectView({ project, now }: Readonly<ProjectViewProps>) {
           </p>
           <h1 className={styles.title}>{project.title}</h1>
         </div>
-        <ProjectMark project={project} size="lg" />
+        <HexMark subject={project} size="lg" />
       </header>
 
       <div className={styles.layout}>

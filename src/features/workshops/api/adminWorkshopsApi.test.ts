@@ -7,6 +7,7 @@ import { InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
+import { keepOnlyAdminSeedWorkshop } from '@/test/workshops';
 import { ADMIN_WORKSHOPS_ENDPOINT, createWorkshop, fetchAdminWorkshops } from './adminWorkshopsApi';
 import type { NewWorkshop } from './adminWorkshopsApi';
 
@@ -32,6 +33,7 @@ const NEW_WORKSHOP: NewWorkshop = {
 describe('adminWorkshopsApi (contrato con HU-BE-15)', () => {
   beforeEach(() => {
     freezeTime();
+    keepOnlyAdminSeedWorkshop();
   });
 
   afterEach(() => {

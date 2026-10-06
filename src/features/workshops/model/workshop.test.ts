@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { Workshop } from './workshop';
 import {
+  availabilityOf,
+  bySoonest,
   capacityLabel,
   compareByNewest,
   describeSchedule,
   hasStarted,
   isWorkshop,
+  occupancy,
+  spotsCount,
+  startBadge,
+  workshopWhen,
 } from './workshop';
 
 const WORKSHOP: Workshop = {
@@ -28,6 +34,7 @@ describe('contrato de talleres', () => {
   it.each<[string, unknown]>([
     ['un valor que no es objeto', 'taller'],
     ['sin cupos válidos', { ...WORKSHOP, capacity: -1 }],
+    ['sin capacidad', { ...WORKSHOP, capacity: 0, occupied: 0 }],
     ['con versión fraccional', { ...WORKSHOP, version: 1.5 }],
     ['sin id de texto', { ...WORKSHOP, id: 7 }],
     ['sin título de texto', { ...WORKSHOP, title: undefined }],
@@ -88,5 +95,57 @@ describe('capacityLabel', () => {
   it('habla de una persona en singular y del resto en plural', () => {
     expect(capacityLabel(1)).toBe('Capacidad para 1 persona');
     expect(capacityLabel(30)).toBe('Capacidad para 30 personas');
+  });
+});
+
+describe('catálogo del empleado (Figma B6)', () => {
+  const now = new Date(2026, 8, 23, 9, 20).getTime();
+
+  function at(hours: number, minutes: number, day = 23): string {
+    return new Date(2026, 8, day, hours, minutes).toISOString();
+  }
+
+  it.each([
+    [12, { label: 'Con cupo', tone: 'sage', full: false }],
+    [26, { label: 'Últimos cupos', tone: 'mauve', full: false }],
+    [29, { label: 'Últimos cupos', tone: 'mauve', full: false }],
+    [30, { label: 'Cupos agotados', tone: 'coral', full: true }],
+  ])('con %i de 30 ocupados muestra su disponibilidad', (occupied, availability) => {
+    expect(availabilityOf({ capacity: 30, occupied, version: 1 })).toEqual(availability);
+  });
+
+  it('cuenta cupos y ocupación sin pasarse de la capacidad', () => {
+    expect(spotsCount({ capacity: 30, occupied: 29, version: 1 })).toBe('29 / 30 cupos');
+    expect(occupancy({ capacity: 30, occupied: 29, version: 1 })).toBe(97);
+    expect(spotsCount({ capacity: 3, occupied: 5, version: 1 })).toBe('3 / 3 cupos');
+    expect(occupancy({ capacity: 3, occupied: 5, version: 1 })).toBe(100);
+  });
+
+  it('dice cuándo es y cuánto dura', () => {
+    expect(workshopWhen({ startsAt: at(16, 0), durationMinutes: 50 }, now)).toBe(
+      'Hoy · 16:00 · 50 min',
+    );
+    expect(workshopWhen({ startsAt: at(12, 30, 24), durationMinutes: 60 }, now)).toBe(
+      'Mañana · 12:30 · 60 min',
+    );
+    expect(workshopWhen({ startsAt: at(7, 0, 28), durationMinutes: 90 }, now)).toBe(
+      'Lun 28 · 7:00 · 90 min',
+    );
+  });
+
+  it('marca cuándo empieza pronto y cuándo ya empezó', () => {
+    expect(startBadge({ startsAt: at(10, 5) }, now)).toEqual({
+      label: 'Empieza en 45 min',
+      tone: 'coral',
+    });
+    expect(startBadge({ startsAt: at(9, 20) }, now)).toEqual({ label: 'En curso', tone: 'sage' });
+    expect(startBadge({ startsAt: at(10, 20) }, now)).toBeNull();
+  });
+
+  it('ordena del más próximo al más lejano', () => {
+    const later = { startsAt: at(16, 0) };
+    const sooner = { startsAt: at(10, 5) };
+
+    expect([later, sooner].sort(bySoonest)).toEqual([sooner, later]);
   });
 });
