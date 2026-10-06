@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectDetail } from './project';
-import {
-  closingOf,
-  isProject,
-  isProjectDetail,
-  projectInitials,
-  projectTone,
-  spotsLabel,
-} from './project';
+import { closingOf, isProject, isProjectDetail, spotsLabel } from './project';
 
 const NOW = new Date(2026, 8, 23, 9, 20).getTime();
 
@@ -75,20 +68,5 @@ describe('closingOf', () => {
 
   it('una convocatoria vencida está cerrada', () => {
     expect(closingOf(at(23, 9), NOW)).toEqual({ label: 'Cerrada', urgent: true, closed: true });
-  });
-});
-
-describe('marca de la convocatoria', () => {
-  it('usa las iniciales de las dos primeras palabras con significado', () => {
-    expect(projectInitials('Squad de Observabilidad')).toBe('SO');
-    expect(projectInitials('Data Platform · Turno de guardia')).toBe('DP');
-    expect(projectInitials('  mentoría inversa Gen Z')).toBe('MI');
-  });
-
-  it('asigna un color estable a cada convocatoria', () => {
-    expect(projectTone('a')).toBe('mauve');
-    expect(projectTone('b')).toBe('teal');
-    expect(projectTone('c')).toBe('sage');
-    expect(projectTone('a')).toBe(projectTone('a'));
   });
 });

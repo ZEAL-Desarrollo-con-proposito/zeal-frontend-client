@@ -8,7 +8,7 @@ import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { CheckIcon, ChevronLeftIcon, LockIcon, TrendIcon } from '@/shared/ui/icons';
 import { ApplyButton } from '../components/ApplyButton';
 import { ClosingChip } from '../components/ClosingChip';
-import { ProjectMark } from '../components/ProjectMark';
+import { HexMark } from '@/shared/ui/HexMark/HexMark';
 import { SpotsMeter } from '../components/SpotsMeter';
 import { useApplications } from '../hooks/useApplications';
 import { useProjectSpots } from '../hooks/useProjectSpots';
@@ -90,7 +90,7 @@ function ProjectView({ project, now }: Readonly<ProjectViewProps>) {
           </p>
           <h1 className={styles.title}>{project.title}</h1>
         </div>
-        <ProjectMark project={project} size="lg" />
+        <HexMark subject={project} size="lg" />
       </header>
 
       <div className={styles.layout}>

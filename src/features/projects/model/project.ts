@@ -2,7 +2,6 @@ import { isRecord } from '@/features/auth/model/session';
 import { addDays, isSameDay, startOfDay } from '@/shared/lib/dates';
 import type { Spots } from '@/shared/spots/spots';
 import { availableSpots, isSpots } from '@/shared/spots/spots';
-import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
 
 /** Convocatoria interna con cupos limitados, como la ve un empleado (contrato con HU-BE-16). */
 export interface Project extends Spots {
@@ -90,28 +89,4 @@ export function closingOf(closesAt: string, now: number): Closing {
     (startOfDay(closing).getTime() - startOfDay(today).getTime()) / (24 * 60 * 60 * 1000),
   );
   return { label: `Cierra en ${String(days)} días`, urgent: days <= URGENT_DAYS, closed: false };
-}
-
-const CONNECTORS = new Set(['de', 'del', 'la', 'el', 'en', 'y', 'a', 'para', 'con', '·']);
-
-/** Iniciales del hexágono de la convocatoria ("Squad de Observabilidad" → "SO"). */
-export function projectInitials(title: string): string {
-  return title
-    .split(/\s+/)
-    .filter((word) => word !== '' && !CONNECTORS.has(word.toLowerCase()))
-    .slice(0, 2)
-    .map((word) => word.charAt(0))
-    .join('')
-    .toUpperCase();
-}
-
-const TONES: readonly [AvatarTone, AvatarTone, AvatarTone] = ['sage', 'mauve', 'teal'];
-
-/** Color estable del hexágono de cada convocatoria. */
-export function projectTone(id: string): AvatarTone {
-  let hash = 0;
-  for (const character of id) {
-    hash += character.charCodeAt(0);
-  }
-  return TONES[(hash % TONES.length) as 0 | 1 | 2];
 }

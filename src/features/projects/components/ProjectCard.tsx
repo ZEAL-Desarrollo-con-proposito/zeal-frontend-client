@@ -8,7 +8,7 @@ import type { Project } from '../model/project';
 import { closingOf } from '../model/project';
 import { ApplyButton } from './ApplyButton';
 import { ClosingChip } from './ClosingChip';
-import { ProjectMark } from './ProjectMark';
+import { HexMark } from '@/shared/ui/HexMark/HexMark';
 import { SpotsMeter } from './SpotsMeter';
 import styles from './ProjectCard.module.css';
 
@@ -48,7 +48,7 @@ export function ProjectCard({
       }}
       whileHover={{ y: -3, transition: { duration: 0.2, ease: 'easeOut' } }}
     >
-      <ProjectMark project={project} />
+      <HexMark subject={project} />
       <div className={styles.body}>
         <div className={styles.heading}>
           <h2 id={titleId} className={styles.title}>
