@@ -3,6 +3,8 @@ import { ADMIN_PROJECTS_ENDPOINT } from '@/features/projects/api/adminProjectsAp
 import type { AdminProject } from '@/features/projects/model/adminProject';
 import { compareByNewest } from '@/features/projects/model/adminProject';
 import { PROJECTS_QUEUE } from '@/features/projects/model/adminProjectEvent';
+import { publishMockEvent } from '../realtime';
+import { organizationProjectsTopic } from '@/features/projects/model/projectCatalogEvent';
 import {
   DESCRIPTION_MAX_LENGTH,
   DESCRIPTION_MIN_LENGTH,
@@ -162,6 +164,12 @@ export const adminProjectHandlers = [
         publishToUser(colleague.id, PROJECTS_QUEUE, { type: 'PUBLICADO', project });
       }
     }
+    // Y toda la organización se entera por el topic público: el catálogo del empleado
+    // se actualiza solo, sin recargar (HU-FE-16).
+    publishMockEvent(organizationProjectsTopic(admin.organization), {
+      type: 'PUBLICADO',
+      project: record,
+    });
     return HttpResponse.json(project, { status: 201 });
   }),
 ];
