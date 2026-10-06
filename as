@@ -1,0 +1,30 @@
+ README.md                                          |  37 [32m++[m
+ src.zip                                            | Bin [31m439873[m -> [32m0[m bytes
+ src/app/navigation.ts                              |  10 [32m+[m[31m-[m
+ src/app/paths.ts                                   |   5 [32m+[m
+ src/app/routes.tsx                                 |  11 [32m+[m[31m-[m
+ src/features/projects/AdminProjects.test.tsx       | 390 [32m+++++++++++++++++++++[m
+ src/features/projects/api/adminProjectsApi.test.ts | 134 [32m+++++++[m
+ src/features/projects/api/adminProjectsApi.ts      |  41 [32m+++[m
+ .../components/AdminProjectList.module.css         |  65 [32m++++[m
+ .../projects/components/AdminProjectList.tsx       |  74 [32m++++[m
+ .../components/CreateProjectForm.module.css        |  44 [32m+++[m
+ .../projects/components/CreateProjectForm.tsx      | 197 [32m+++++++++++[m
+ src/features/projects/hooks/useAdminProjects.ts    |  83 [32m+++++[m
+ .../projects/hooks/useCreateProjectForm.ts         |  74 [32m++++[m
+ src/features/projects/model/adminProject.test.ts   |  93 [32m+++++[m
+ src/features/projects/model/adminProject.ts        |  44 [32m+++[m
+ src/features/projects/model/adminProjectEvent.ts   |  19 [32m+[m
+ src/features/projects/model/adminProjectsState.ts  |  57 [32m+++[m
+ src/features/projects/model/projectDraft.test.ts   | 132 [32m+++++++[m
+ src/features/projects/model/projectDraft.ts        | 221 [32m++++++++++++[m
+ .../projects/pages/AdminProjectsPage.module.css    | 173 [32m+++++++++[m
+ src/features/projects/pages/AdminProjectsPage.tsx  | 107 [32m++++++[m
+ src/mocks/handlers.ts                              |   2 [32m+[m
+ src/mocks/projects/adminHandlers.ts                | 167 [32m+++++++++[m
+ src/mocks/projects/db.ts                           |  59 [32m+++[m[31m-[m
+ src/mocks/projects/handlers.ts                     |  32 [32m+[m[31m-[m
+ .../ui/TextAreaField/TextAreaField.module.css      |  67 [32m++++[m
+ src/shared/ui/TextAreaField/TextAreaField.tsx      |  52 [32m+++[m
+ src/shared/ui/TextField/TextField.module.css       |  23 [32m+[m[31m-[m
+ 29 files changed, 2397 insertions(+), 16 deletions(-)

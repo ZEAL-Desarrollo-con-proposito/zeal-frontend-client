@@ -4,6 +4,7 @@ import { errorBody } from './mockAuth';
 import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
 import { notificationHandlers } from './notifications/handlers';
 import { presenceHandlers } from './presenceHandlers';
+import { adminProjectHandlers } from './projects/adminHandlers';
 import { applicationHandlers } from './projects/applicationHandlers';
 import { projectHandlers } from './projects/handlers';
 import { findSeedUser } from './seedUsers';
@@ -54,4 +55,5 @@ export const handlers = [
   ...presenceHandlers,
   ...applicationHandlers,
   ...projectHandlers,
+  ...adminProjectHandlers,
 ];

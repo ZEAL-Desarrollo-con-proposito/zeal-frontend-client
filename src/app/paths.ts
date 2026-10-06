@@ -30,6 +30,11 @@ export const PSYCHOLOGIST_PATHS = {
 } as const;
 
 /** Rutas del empleado. */
+/** Rutas del administrador. */
+export const ADMIN_PATHS = {
+  projects: `${ROLE_BASE_PATH.ADMIN}/proyectos`,
+} as const;
+
 export const EMPLOYEE_PATHS = {
   wellbeing: `${ROLE_BASE_PATH.EMPLEADO}/bienestar`,
   appointments: `${ROLE_BASE_PATH.EMPLEADO}/mis-citas`,

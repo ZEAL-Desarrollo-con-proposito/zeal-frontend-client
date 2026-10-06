@@ -16,13 +16,22 @@ export interface ApplicationRecord {
   version: number;
 }
 
+/** Convocatoria guardada: de qué empresa es y cuándo se publicó (HU-BE-14). */
+export interface ProjectRecord extends ProjectDetail {
+  organization: string;
+  publishedAt: string;
+}
+
+export const SEED_ORGANIZATION = 'Nexura S.A.S.';
+export const OTHER_ORGANIZATION = 'Órbita Labs S.A.S.';
+
 /**
  * "Base de datos" de convocatorias internas simulada (HU-BE-16 y 17), en localStorage para que
  * varias pestañas compartan los mismos cupos y postulaciones, como con el backend real. Cupos y
  * postulaciones se guardan juntos: asignar un cupo es una sola escritura.
  */
 export interface ProjectsDb {
-  projects: ProjectDetail[];
+  projects: ProjectRecord[];
   applications: ApplicationRecord[];
   sequence: number;
 }
@@ -32,12 +41,15 @@ export const PROJECTS_DB_KEY = 'zeal.mock.proyectos';
 /** Convocatorias del Figma B8, con fechas de cierre relativas a `now`. */
 export function seedProjectsDb(now: Date): ProjectsDb {
   const closesIn = (days: number) => addDays(now, days).toISOString();
+  const publishedAgo = (days: number) => addDays(now, -days).toISOString();
   return {
     applications: [],
     sequence: 0,
     projects: [
       {
         id: 'proyecto-observabilidad',
+        organization: SEED_ORGANIZATION,
+        publishedAt: publishedAgo(3),
         title: 'Squad de Observabilidad',
         area: 'Plataforma',
         cohort: 'Semilla 2026-2',
@@ -63,6 +75,8 @@ export function seedProjectsDb(now: Date): ProjectsDb {
       },
       {
         id: 'proyecto-mentoria-inversa',
+        organization: SEED_ORGANIZATION,
+        publishedAt: publishedAgo(6),
         title: 'Mentoría inversa Gen Z',
         area: 'Cultura',
         cohort: 'Talento Humano',
@@ -80,6 +94,8 @@ export function seedProjectsDb(now: Date): ProjectsDb {
       },
       {
         id: 'proyecto-guardia-datos',
+        organization: SEED_ORGANIZATION,
+        publishedAt: publishedAgo(9),
         title: 'Data Platform · Turno de guardia',
         area: 'Datos',
         cohort: 'Rotación trimestral',
@@ -96,6 +112,8 @@ export function seedProjectsDb(now: Date): ProjectsDb {
       },
       {
         id: 'proyecto-accesibilidad',
+        organization: SEED_ORGANIZATION,
+        publishedAt: publishedAgo(12),
         title: 'Accesibilidad en producto',
         area: 'Producto',
         cohort: 'Iniciativa transversal',
@@ -110,6 +128,38 @@ export function seedProjectsDb(now: Date): ProjectsDb {
         requirements: ['Interés en accesibilidad', 'Ganas de probar con usuarios reales'],
         skills: ['Diseño inclusivo +12%', 'Calidad de producto +5%'],
       },
+      {
+        id: 'proyecto-mentorias-cruzadas',
+        organization: SEED_ORGANIZATION,
+        publishedAt: publishedAgo(30),
+        title: 'Piloto de mentorías cruzadas',
+        area: 'Cultura',
+        cohort: 'Semilla 2026-1',
+        summary: 'Mentorías entre áreas para compartir experiencia.',
+        capacity: 6,
+        occupied: 5,
+        version: 1,
+        closesAt: closesIn(-4),
+        description: ['Programa piloto de mentorías entre áreas de la empresa.'],
+        requirements: [],
+        skills: [],
+      },
+      {
+        id: 'proyecto-otra-empresa',
+        organization: OTHER_ORGANIZATION,
+        publishedAt: publishedAgo(1),
+        title: 'Proyecto de otra empresa',
+        area: 'Ventas',
+        cohort: 'Semilla 2026-2',
+        summary: 'Este proyecto pertenece a otra organización y nunca debe verse aquí.',
+        capacity: 2,
+        occupied: 0,
+        version: 1,
+        closesAt: closesIn(7),
+        description: ['Solo lo ven las personas de esa empresa.'],
+        requirements: [],
+        skills: [],
+      },
     ],
   };
 }
@@ -120,6 +170,13 @@ function isProjectsDb(value: unknown): value is ProjectsDb {
     value !== null &&
     'projects' in value &&
     Array.isArray(value.projects) &&
+    value.projects.every(
+      (project: unknown) =>
+        typeof project === 'object' &&
+        project !== null &&
+        'organization' in project &&
+        typeof project.organization === 'string',
+    ) &&
     'applications' in value &&
     Array.isArray(value.applications) &&
     'sequence' in value &&

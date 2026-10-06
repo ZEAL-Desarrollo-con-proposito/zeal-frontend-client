@@ -10,6 +10,7 @@ import { AppointmentsPage } from '@/features/appointments/pages/AppointmentsPage
 import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
 import { DirectoryPage } from '@/features/directory/pages/DirectoryPage';
 import { PsychologistPage } from '@/features/directory/pages/PsychologistPage';
+import { AdminProjectsPage } from '@/features/projects/pages/AdminProjectsPage';
 import { ProjectDetailPage } from '@/features/projects/pages/ProjectDetailPage';
 import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
 import { SessionRoomPage } from '@/features/sessionRoom/pages/SessionRoomPage';
@@ -22,7 +23,14 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SectionPage } from './pages/SectionPage';
 import { UnexpectedErrorPage } from './pages/UnexpectedErrorPage';
-import { EMPLOYEE_PATHS, PATHS, PSYCHOLOGIST_PATHS, ROLE_BASE_PATH, ROLE_HOME_PATH } from './paths';
+import {
+  ADMIN_PATHS,
+  EMPLOYEE_PATHS,
+  PATHS,
+  PSYCHOLOGIST_PATHS,
+  ROLE_BASE_PATH,
+  ROLE_HOME_PATH,
+} from './paths';
 import { RootLayout } from './RootLayout';
 import { EmployeeMessagesPage } from '@/features/chat/pages/EmployeeMessagesPage';
 import { PsychologistMessagesPage } from '@/features/chat/pages/PsychologistMessagesPage';
@@ -32,6 +40,7 @@ const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [PSYCHOLOGIST_PATHS.agenda]: <AgendaPage />,
   [PSYCHOLOGIST_PATHS.availability]: <AvailabilityPage />,
   [PSYCHOLOGIST_PATHS.messages]: <PsychologistMessagesPage />,
+  [ADMIN_PATHS.projects]: <AdminProjectsPage />,
   [EMPLOYEE_PATHS.wellbeing]: <DirectoryPage />,
   [EMPLOYEE_PATHS.appointments]: <AppointmentsPage />,
   [EMPLOYEE_PATHS.messages]: <EmployeeMessagesPage />,
