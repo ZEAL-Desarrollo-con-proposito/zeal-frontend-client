@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useFetch } from '@/shared/hooks/useFetch';
 import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
@@ -61,9 +61,14 @@ export function useProjects() {
     }
   });
 
-  const loadedIds = new Set((catalog.data ?? []).map(({ id }) => id));
-  const liveOnly = live.liveProjects.filter(({ id }) => !loadedIds.has(id));
-  const merged = [...(catalog.data ?? []), ...liveOnly].sort(byClosingSoonest);
+  // Memoriza la lista para que la identidad se mantenga entre renders si los datos no cambian.
+  // Sin esto, cada render crea un array nuevo y los hijos (`ProjectCard` → `useLiveSpots`)
+  // se re-montan, perdiendo el estado de los cupos en vivo.
+  const merged = useMemo(() => {
+    const loadedIds = new Set((catalog.data ?? []).map(({ id }) => id));
+    const liveOnly = live.liveProjects.filter(({ id }) => !loadedIds.has(id));
+    return [...(catalog.data ?? []), ...liveOnly].sort(byClosingSoonest);
+  }, [catalog.data, live.liveProjects]);
 
   return { status: catalog.status, projects: merged, reload: catalog.reload };
 }
