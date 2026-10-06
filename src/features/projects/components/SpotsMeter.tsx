@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
-import type { Spots } from '../model/project';
-import { availableSpots, spotsLabel } from '../model/project';
+import type { Spots } from '@/shared/spots/spots';
+import { availableSpots } from '@/shared/spots/spots';
+import { spotsLabel } from '../model/project';
 import styles from './SpotsMeter.module.css';
 
 interface SpotsMeterProps {

@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectDetail } from './project';
 import {
-  availableSpots,
   closingOf,
   isProject,
   isProjectDetail,
-  isSpots,
   projectInitials,
   projectTone,
   spotsLabel,
@@ -30,7 +28,6 @@ const DETAIL: ProjectDetail = {
 
 describe('contrato de convocatorias', () => {
   it('acepta la convocatoria y su detalle', () => {
-    expect(isSpots(DETAIL)).toBe(true);
     expect(isProject(DETAIL)).toBe(true);
     expect(isProjectDetail(DETAIL)).toBe(true);
   });
@@ -55,11 +52,6 @@ describe('contrato de convocatorias', () => {
 });
 
 describe('cupos', () => {
-  it('cuenta los que quedan, nunca negativos', () => {
-    expect(availableSpots({ capacity: 8, occupied: 5, version: 1 })).toBe(3);
-    expect(availableSpots({ capacity: 3, occupied: 4, version: 1 })).toBe(0);
-  });
-
   it('describe los cupos en singular, en plural o agotados', () => {
     expect(spotsLabel({ capacity: 8, occupied: 5, version: 1 })).toBe('Quedan 3 de 8 cupos');
     expect(spotsLabel({ capacity: 6, occupied: 5, version: 1 })).toBe('Queda 1 de 6 cupos');

@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { motion } from 'motion/react';
 import { Badge } from '@/shared/ui/Badge/Badge';
-import { useLiveSpots } from '../hooks/useLiveSpots';
+import { useProjectSpots } from '../hooks/useProjectSpots';
 import type { AdminProject } from '../model/adminProject';
 import { describeDay, projectBadge } from '../model/adminProject';
 import { closingOf } from '../model/project';
@@ -34,7 +34,7 @@ interface AdminProjectCardProps {
 
 function AdminProjectCard({ project, now, index }: Readonly<AdminProjectCardProps>) {
   // Los cupos cambian cuando alguien se postula: la tarjeta los sigue sin recargar la lista.
-  const spots = useLiveSpots(project.id, project);
+  const spots = useProjectSpots(project.id, project);
   const badge = projectBadge({ ...spots, closesAt: project.closesAt }, now);
   const closing = closingOf(project.closesAt, now);
   const titleId = useId();

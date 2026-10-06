@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { projectPath } from '@/app/paths';
-import { useLiveSpots } from '../hooks/useLiveSpots';
+import { useProjectSpots } from '../hooks/useProjectSpots';
 import type { Application } from '../model/application';
 import type { Project } from '../model/project';
 import { closingOf } from '../model/project';
@@ -31,7 +31,7 @@ export function ProjectCard({
   sending,
   onApply,
 }: Readonly<ProjectCardProps>) {
-  const spots = useLiveSpots(project.id, project);
+  const spots = useProjectSpots(project.id, project);
   const closing = closingOf(project.closesAt, now);
   const titleId = useId();
   const detail = projectPath(project.id);

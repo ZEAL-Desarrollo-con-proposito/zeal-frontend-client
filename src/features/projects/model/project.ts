@@ -1,13 +1,8 @@
 import { isRecord } from '@/features/auth/model/session';
-import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
 import { addDays, isSameDay, startOfDay } from '@/shared/lib/dates';
-
-/** Cupos de una convocatoria. Los decide el servidor; `version` crece con cada cambio. */
-export interface Spots {
-  capacity: number;
-  occupied: number;
-  version: number;
-}
+import type { Spots } from '@/shared/spots/spots';
+import { availableSpots, isSpots } from '@/shared/spots/spots';
+import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
 
 /** Convocatoria interna con cupos limitados, como la ve un empleado (contrato con HU-BE-16). */
 export interface Project extends Spots {
@@ -29,18 +24,8 @@ export interface ProjectDetail extends Project {
   skills: string[];
 }
 
-function isCount(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
-}
-
 function isTextList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-export function isSpots(value: unknown): value is Spots {
-  return (
-    isRecord(value) && isCount(value.capacity) && isCount(value.occupied) && isCount(value.version)
-  );
 }
 
 export function isProject(value: unknown): value is Project {
@@ -65,11 +50,6 @@ export function isProjectDetail(value: unknown): value is ProjectDetail {
     isTextList(value.requirements) &&
     isTextList(value.skills)
   );
-}
-
-/** Cupos que quedan; nunca negativo aunque el servidor reporte más ocupados que capacidad. */
-export function availableSpots({ capacity, occupied }: Spots): number {
-  return Math.max(capacity - occupied, 0);
 }
 
 /** "Quedan 3 de 8 cupos", "Queda 1 de 6 cupos" o "Sin cupos · 3 de 3 ocupados". */

@@ -4,8 +4,8 @@ import { Badge } from '@/shared/ui/Badge/Badge';
 import { Button } from '@/shared/ui/Button/Button';
 import type { Application } from '../model/application';
 import { applicationBadge } from '../model/application';
-import type { Spots } from '../model/project';
-import { availableSpots } from '../model/project';
+import type { Spots } from '@/shared/spots/spots';
+import { availableSpots } from '@/shared/spots/spots';
 import styles from './ApplyButton.module.css';
 
 interface ApplyButtonProps {
