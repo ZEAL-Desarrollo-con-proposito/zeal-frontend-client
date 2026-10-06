@@ -5,6 +5,7 @@ import { Outlet, useLocation, useMatches } from 'react-router';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { FreedSlotAlerts } from '@/features/freedSlots/components/FreedSlotAlerts';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import { OpenCallAnnouncer } from '@/features/openCalls/components/OpenCallAnnouncer';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { RealtimeStatusBadge } from './RealtimeStatusBadge';
 import { CloseIcon, MenuIcon } from '@/shared/ui/icons';
@@ -173,6 +174,7 @@ export function AppLayout() {
       </div>
 
       {user.role === 'EMPLEADO' && <FreedSlotAlerts />}
+      {user.role === 'EMPLEADO' && <OpenCallAnnouncer />}
     </div>
   );
 }
