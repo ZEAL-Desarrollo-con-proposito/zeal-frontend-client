@@ -5,10 +5,12 @@ import { EMPLOYEE_PATHS, projectPath, ROLE_HOME_PATH } from '@/app/paths';
 import { readProjectsDb, updateOccupiedSpots, writeProjectsDb } from '@/mocks/projects/db';
 import { server } from '@/mocks/server';
 import { freezeTime } from '@/test/clock';
-import { storeSession } from '@/test/credentials';
+import { seedUser, storeSession } from '@/test/credentials';
 import { scriptedRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
 import { PROJECTS_ENDPOINT } from './api/projectsApi';
+import type { ProjectDetail } from './model/project';
+import { organizationProjectsTopic } from './model/projectCatalogEvent';
 import { projectTopic } from './model/spotsEvent';
 
 const GUARDIA = 'proyecto-guardia-datos';
@@ -26,6 +28,24 @@ async function cardOf(title: string) {
 
 function spotsEvent(occupied: number, version: number, projectId = GUARDIA) {
   return { type: 'CUPOS', projectId, capacity: 4, occupied, version };
+}
+
+function publishedDetail(overrides: Partial<ProjectDetail> = {}): ProjectDetail {
+  return {
+    id: 'proyecto-en-vivo-1',
+    title: 'Nueva convocatoria en vivo',
+    area: 'Innovación',
+    cohort: 'Semilla 2026-3',
+    summary: 'Aparece en el catálogo en cuanto la publica la empresa.',
+    description: ['Equipo para explorar ideas nuevas.'],
+    requirements: [],
+    skills: [],
+    capacity: 4,
+    occupied: 2,
+    version: 1,
+    closesAt: new Date(2026, 9, 30).toISOString(),
+    ...overrides,
+  };
 }
 
 describe('Catálogo de convocatorias (HU-FE-16)', () => {
@@ -150,6 +170,62 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
     await user.click(within(alert).getByRole('button', { name: 'Reintentar' }));
 
     expect(await cardOf('Mentoría inversa Gen Z')).toBeTruthy();
+  });
+
+  it('muestra al instante una convocatoria que la empresa publica en vivo', async () => {
+    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    expect(await cardOf('Data Platform · Turno de guardia')).toBeTruthy();
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(4);
+
+    act(() => {
+      realtime.deliver(organizationProjectsTopic(seedUser('EMPLEADO').organization), {
+        type: 'PUBLICADO',
+        project: publishedDetail(),
+      });
+    });
+
+    const card = await cardOf('Nueva convocatoria en vivo');
+    expect(card.getByText('Quedan 2 de 4 cupos')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(5);
+  });
+
+  it('no duplica lo que ya trajo del servidor ni el mismo aviso dos veces', async () => {
+    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
+    await cardOf('Data Platform · Turno de guardia');
+
+    // Ya está en el catálogo que cargó por HTTP: el aviso no agrega nada.
+    act(() => {
+      realtime.deliver(target, {
+        type: 'PUBLICADO',
+        project: { ...publishedDetail(), id: GUARDIA, title: 'Data Platform · Turno de guardia' },
+      });
+    });
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(4);
+
+    // La misma convocatoria nueva llega dos veces: solo una tarjeta.
+    act(() => {
+      realtime.deliver(target, { type: 'PUBLICADO', project: publishedDetail() });
+      realtime.deliver(target, { type: 'PUBLICADO', project: publishedDetail() });
+    });
+
+    expect(await cardOf('Nueva convocatoria en vivo')).toBeTruthy();
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(5);
+  });
+
+  it('ignora los mensajes mal formados del canal de la organización', async () => {
+    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
+    await cardOf('Data Platform · Turno de guardia');
+
+    act(() => {
+      realtime.deliver(target, 'fuera de forma');
+      realtime.deliver(target, { type: 'CUPOS', projectId: 'x' });
+      realtime.deliver(target, { type: 'PUBLICADO', project: { id: 'solo-id' } });
+    });
+
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(4);
+    expect(screen.queryByText('Nueva convocatoria en vivo')).not.toBeInTheDocument();
   });
 });
 
