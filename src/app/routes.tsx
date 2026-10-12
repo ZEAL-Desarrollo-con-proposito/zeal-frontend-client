@@ -17,6 +17,7 @@ import { AdminWorkshopsPage } from '@/features/workshops/pages/AdminWorkshopsPag
 import { SessionRoomPage } from '@/features/sessionRoom/pages/SessionRoomPage';
 import { MyWorkshopsPage } from '@/features/workshops/pages/MyWorkshopsPage';
 import { WorkshopsPage } from '@/features/workshops/pages/WorkshopsPage';
+import { WorkshopRoomPage } from '@/features/workshopRoom/pages/WorkshopRoomPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
@@ -74,12 +75,28 @@ const ROLE_ROUTES: Partial<Record<Role, RouteObject[]>> = {
 };
 
 /** Pantallas de un rol a pantalla completa, sin barra lateral (la sala de la sesión, Figma C2). */
-const FULLSCREEN_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+const FULLSCREEN_ROUTES: Record<Role, RouteObject[]> = {
   EMPLEADO: [
     {
       path: EMPLOYEE_PATHS.sessionRoom,
       element: (
         <SessionRoomPage exit={{ to: EMPLOYEE_PATHS.appointments, label: 'Volver a mis citas' }} />
+      ),
+    },
+    {
+      path: EMPLOYEE_PATHS.workshopRoom,
+      element: (
+        <WorkshopRoomPage
+          exit={{ to: EMPLOYEE_PATHS.myWorkshops, label: 'Volver a mis talleres' }}
+        />
+      ),
+    },
+  ],
+  ADMIN: [
+    {
+      path: ADMIN_PATHS.workshopRoom,
+      element: (
+        <WorkshopRoomPage exit={{ to: ADMIN_PATHS.workshops, label: 'Volver a talleres' }} />
       ),
     },
   ],
@@ -126,7 +143,7 @@ export const routes: RouteObject[] = [
               ...(ROLE_ROUTES[role] ?? []),
             ],
           },
-          ...(FULLSCREEN_ROUTES[role] ?? []),
+          ...FULLSCREEN_ROUTES[role],
           // Toda dirección bajo el prefijo pasa por el control del rol: un enlace a una pantalla de
           // otro rol (p. ej. el chat de un empleado) da "Permiso denegado" aunque no exista.
           { path: `${ROLE_BASE_PATH[role]}/*`, element: <NotFoundPage /> },

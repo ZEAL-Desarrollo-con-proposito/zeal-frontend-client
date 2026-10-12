@@ -1,3 +1,5 @@
+import { waitFor } from '@testing-library/react';
+import { expect } from 'vitest';
 import type { RealtimeClient, RealtimeListener } from '@/shared/realtime/realtimeClient';
 import { createStatusStore } from '@/shared/realtime/realtimeClient';
 
@@ -70,5 +72,17 @@ export function scriptedRealtimeClient() {
     });
   }
 
-  return { client, store, deliver, published };
+  /**
+   * Espera a que la pantalla se suscriba al destino. React suscribe en un efecto, que puede
+   * correr justo después de que el contenido aparece: un aviso enviado antes se perdería.
+   */
+  async function subscribedTo(destination: string): Promise<void> {
+    await waitFor(() => {
+      expect([...subscriptions.values()].some((entry) => entry.destination === destination)).toBe(
+        true,
+      );
+    });
+  }
+
+  return { client, store, deliver, published, subscribedTo };
 }

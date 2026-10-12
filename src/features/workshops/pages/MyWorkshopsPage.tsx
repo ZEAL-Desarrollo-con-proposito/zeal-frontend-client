@@ -1,7 +1,8 @@
 import { useId } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router';
-import { EMPLOYEE_PATHS } from '@/app/paths';
+import { EMPLOYEE_PATHS, workshopRoomPath } from '@/app/paths';
+import { isRoomWindow } from '@/features/workshopRoom/model/workshopRoom';
 import { useNow } from '@/shared/hooks/useNow';
 import { Badge } from '@/shared/ui/Badge/Badge';
 import { Button } from '@/shared/ui/Button/Button';
@@ -39,7 +40,17 @@ function EnrollmentItem({ enrollment, now }: Readonly<{ enrollment: Enrollment; 
           {workshopWhen(enrollment, now)}
         </p>
       </div>
-      <Badge tone={badge.tone}>{badge.label}</Badge>
+      <div className={styles.aside}>
+        <Badge tone={badge.tone}>{badge.label}</Badge>
+        {isRoomWindow(enrollment, now) && (
+          <LinkButton
+            to={workshopRoomPath('EMPLEADO', enrollment.workshopId)}
+            aria-label={`Entrar a la sala de ${enrollment.workshopTitle}`}
+          >
+            Entrar a la sala
+          </LinkButton>
+        )}
+      </div>
     </motion.li>
   );
 }
