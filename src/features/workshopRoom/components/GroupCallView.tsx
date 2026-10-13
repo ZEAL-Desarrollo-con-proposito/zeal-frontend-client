@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { CallControls } from '@/features/sessionRoom/components/CallControls';
 import { VideoTile } from '@/features/sessionRoom/components/VideoTile';
@@ -5,8 +6,9 @@ import type { MediaErrorReason } from '@/features/sessionRoom/call/localMedia';
 import { MEDIA_ERROR_MESSAGES } from '@/features/sessionRoom/call/localMedia';
 import type { MediaState } from '@/features/sessionRoom/model/roomEvent';
 import { AlertIcon } from '@/shared/ui/icons';
-import type { GroupCallSnapshot } from '../call/groupCall';
+import type { GroupCallSnapshot, GroupChatMessage } from '../call/groupCall';
 import { participantLabel } from '../call/groupCall';
+import { GroupChatPanel } from './GroupChatPanel';
 import styles from './GroupCallView.module.css';
 
 interface GroupCallViewProps {
@@ -16,6 +18,9 @@ interface GroupCallViewProps {
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onLeave: () => void;
+  messages: readonly GroupChatMessage[];
+  chatFailed: boolean;
+  onSendMessage: (text: string) => void;
 }
 
 function countLabel(count: number): string {
@@ -30,8 +35,16 @@ export function GroupCallView({
   onToggleAudio,
   onToggleVideo,
   onLeave,
+  messages,
+  chatFailed,
+  onSendMessage,
 }: Readonly<GroupCallViewProps>) {
   const { participants, status } = snapshot;
+  const [chatOpen, setChatOpen] = useState(false);
+  // Mensajes de otras personas ya vistos: los que llegan con el chat cerrado se cuentan.
+  const fromOthers = messages.filter(({ self }) => !self).length;
+  const [seen, setSeen] = useState(0);
+  const unread = chatOpen ? 0 : fromOthers - seen;
   const error = mediaError === null ? null : MEDIA_ERROR_MESSAGES[mediaError];
 
   return (
@@ -58,34 +71,49 @@ export function GroupCallView({
           </p>
         </div>
       )}
-      <ul
-        className={styles.grid}
-        aria-label="Participantes"
-        data-count={Math.min(participants.length, 9)}
-      >
-        {participants.map((participant) => (
-          <li
-            key={participant.id}
-            className={styles.cell}
-            data-speaking={participant.speaking}
-            data-host={participant.host}
-          >
-            <VideoTile
-              stream={participant.stream}
-              name={participant.name}
-              label={participantLabel(participant)}
-              tone={participant.host ? 'sage' : 'teal'}
-              media={participant.self ? media : participant.media}
-              self={participant.self}
-            />
-          </li>
-        ))}
-      </ul>
+      <div className={styles.content}>
+        <ul
+          className={styles.grid}
+          aria-label="Participantes"
+          data-count={Math.min(participants.length, 9)}
+        >
+          {participants.map((participant) => (
+            <li
+              key={participant.id}
+              className={styles.cell}
+              data-speaking={participant.speaking}
+              data-host={participant.host}
+            >
+              <VideoTile
+                stream={participant.stream}
+                name={participant.name}
+                label={participantLabel(participant)}
+                tone={participant.host ? 'sage' : 'teal'}
+                media={participant.self ? media : participant.media}
+                self={participant.self}
+              />
+            </li>
+          ))}
+        </ul>
+        {chatOpen && (
+          <aside className={styles.aside}>
+            <GroupChatPanel messages={messages} failed={chatFailed} onSend={onSendMessage} />
+          </aside>
+        )}
+      </div>
       <CallControls
         media={media}
         onToggleAudio={onToggleAudio}
         onToggleVideo={onToggleVideo}
         onLeave={onLeave}
+        chat={{
+          open: chatOpen,
+          unread,
+          onToggle: () => {
+            setSeen(fromOthers);
+            setChatOpen((open) => !open);
+          },
+        }}
       />
     </motion.section>
   );

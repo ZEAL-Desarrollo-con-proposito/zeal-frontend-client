@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { cx } from '@/shared/lib/cx';
 import type { CallSnapshot, CallStatus } from '../call/callSession';
 import type { MediaState } from '../model/roomEvent';
+import type { CallChatControl } from './CallControls';
 import { CallControls } from './CallControls';
 import { VideoTile } from './VideoTile';
 import styles from './CallView.module.css';
@@ -16,6 +18,9 @@ interface CallViewProps {
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onLeave: () => void;
+  chat: CallChatControl;
+  /** Conversación de la sesión, al lado del video mientras el chat está abierto. */
+  chatPanel: ReactNode;
 }
 
 function statusText(status: CallStatus, participant: string, remoteLeft: boolean): string {
@@ -43,6 +48,8 @@ export function CallView({
   onToggleAudio,
   onToggleVideo,
   onLeave,
+  chat,
+  chatPanel,
 }: Readonly<CallViewProps>) {
   const connected = call.status === 'connected';
   // La otra persona se fue: el aviso se distingue del "aún no llega" y de los estados de conexión.
@@ -56,48 +63,55 @@ export function CallView({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className={styles.stage}>
-        <VideoTile
-          stream={call.remoteStream}
-          name={participant}
-          label={participant}
-          tone="sage"
-          media={call.remoteMedia}
-        />
-        <motion.div
-          className={styles.pip}
-          initial={{ opacity: 0, x: 24, y: -12 }}
-          animate={{ opacity: 1, x: 0, y: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.1 }}
-        >
+      <div className={styles.content}>
+        <div className={styles.stage}>
           <VideoTile
-            stream={localStream}
-            name={selfName}
-            label="Tú"
-            tone="teal"
-            media={media}
-            self
+            stream={call.remoteStream}
+            name={participant}
+            label={participant}
+            tone="sage"
+            media={call.remoteMedia}
           />
-        </motion.div>
-        {/* Región viva estable: anuncia cuando la otra persona entra, se conecta, se pierde o sale. */}
-        <div className={styles.status} role="status">
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={left ? 'left' : call.status}
-              className={cx(
-                connected && 'visually-hidden',
-                !connected && styles.statusText,
-                left && styles.statusLeft,
-              )}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {statusText(call.status, participant, call.remoteLeft)}
-            </motion.p>
-          </AnimatePresence>
+          <motion.div
+            className={styles.pip}
+            initial={{ opacity: 0, x: 24, y: -12 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.1 }}
+          >
+            <VideoTile
+              stream={localStream}
+              name={selfName}
+              label="Tú"
+              tone="teal"
+              media={media}
+              self
+            />
+          </motion.div>
+          {/* Región viva estable: anuncia cuando la otra persona entra, se conecta, se pierde o sale. */}
+          <div className={styles.status} role="status">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={left ? 'left' : call.status}
+                className={cx(
+                  connected && 'visually-hidden',
+                  !connected && styles.statusText,
+                  left && styles.statusLeft,
+                )}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {statusText(call.status, participant, call.remoteLeft)}
+              </motion.p>
+            </AnimatePresence>
+          </div>
         </div>
+        {chat.open && (
+          <aside className={styles.aside} aria-label="Chat de la sesión">
+            {chatPanel}
+          </aside>
+        )}
       </div>
       <p className={styles.privacy}>No se graba · sin transcripción automática</p>
       <CallControls
@@ -105,6 +119,7 @@ export function CallView({
         onToggleAudio={onToggleAudio}
         onToggleVideo={onToggleVideo}
         onLeave={onLeave}
+        chat={chat}
       />
     </motion.section>
   );

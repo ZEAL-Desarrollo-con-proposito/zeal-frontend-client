@@ -11,12 +11,18 @@ import { controlClock, freezeTime, jumpTo } from '@/test/clock';
 import { storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import { workshopRoomEndpoint } from './api/workshopRoomApi';
-import type { GroupCallOptions, GroupCallSnapshot, GroupParticipant } from './call/groupCall';
+import type {
+  GroupCallOptions,
+  GroupCallSnapshot,
+  GroupChatMessage,
+  GroupParticipant,
+} from './call/groupCall';
 
 /** Servidor de video simulado: la prueba decide cuándo conecta y qué personas hay en la sala. */
 const video = vi.hoisted(() => ({
   connect: vi.fn(),
   setMedia: vi.fn(),
+  sendMessage: vi.fn(),
   leave: vi.fn(),
   options: null as GroupCallOptions | null,
 }));
@@ -99,6 +105,31 @@ function serverSends(snapshot: GroupCallSnapshot) {
   });
 }
 
+/** Llega un mensaje del chat por la sala de video. */
+function chatArrives(message: Partial<GroupChatMessage> & { id: string; text: string }) {
+  act(() => {
+    video.options?.onMessage({
+      senderId: HOST.id,
+      senderName: HOST.name,
+      sentAt: wednesdayAt(9, 30).toISOString(),
+      self: false,
+      ...message,
+    });
+  });
+}
+
+async function joinWith(participants: GroupParticipant[]) {
+  const view = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+  await view.user.click(await joinButton());
+  serverSends({ status: 'connected', participants });
+  await live().findByText(`${String(participants.length)} personas en la sala`);
+  return view;
+}
+
+function chatPanel() {
+  return within(screen.getByRole('region', { name: 'Chat del taller' }));
+}
+
 function openAs(role: Role, path: string) {
   storeSession(role);
   return renderRoute(path);
@@ -123,9 +154,14 @@ function live() {
 beforeEach(() => {
   video.options = null;
   video.setMedia.mockResolvedValue(undefined);
+  video.sendMessage.mockResolvedValue(undefined);
   video.connect.mockImplementation((options: GroupCallOptions) => {
     video.options = options;
-    return Promise.resolve({ setMedia: video.setMedia, leave: video.leave });
+    return Promise.resolve({
+      setMedia: video.setMedia,
+      sendMessage: video.sendMessage,
+      leave: video.leave,
+    });
   });
 });
 
@@ -249,7 +285,7 @@ describe('Sala del taller (videollamada grupal)', () => {
       options.onChange({ status: 'connected', participants: [SELF] });
       return new Promise((resolve) => {
         finish = () => {
-          resolve({ setMedia: video.setMedia, leave: video.leave });
+          resolve({ setMedia: video.setMedia, sendMessage: video.sendMessage, leave: video.leave });
         };
       });
     });
@@ -259,6 +295,12 @@ describe('Sala del taller (videollamada grupal)', () => {
 
     await user.click(await live().findByRole('button', { name: 'Silenciar micrófono' }));
     expect(video.setMedia).not.toHaveBeenCalled();
+    await user.click(live().getByRole('button', { name: 'Mostrar chat' }));
+    await user.type(
+      within(screen.getByRole('region', { name: 'Chat del taller' })).getByRole('textbox'),
+      'Hola{Enter}',
+    );
+    expect(video.sendMessage).not.toHaveBeenCalled();
     await user.click(live().getByRole('button', { name: 'Salir de la sala' }));
     expect(video.leave).not.toHaveBeenCalled();
     expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.myWorkshops);
@@ -317,6 +359,71 @@ describe('Sala del taller (videollamada grupal)', () => {
     unmount();
 
     expect(video.leave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Chat del taller en vivo', () => {
+  beforeEach(() => {
+    freezeTime(wednesdayAt(9, 30));
+    seedWorkshops();
+  });
+
+  it('se escribe a toda la sala y se ven las respuestas al instante', async () => {
+    const { user } = await joinWith([SELF, HOST]);
+
+    await user.click(live().getByRole('button', { name: 'Mostrar chat' }));
+    expect(chatPanel().getByText(/Aún no hay mensajes/)).toBeInTheDocument();
+
+    await user.type(chatPanel().getByRole('textbox'), '¿Podemos repetir el ejercicio?{Enter}');
+    expect(video.sendMessage).toHaveBeenCalledWith('¿Podemos repetir el ejercicio?');
+    chatArrives({ id: 'm-1', text: '¿Podemos repetir el ejercicio?', self: true, senderId: DAVID });
+    chatArrives({ id: 'm-2', text: 'Claro, lo hacemos de nuevo.' });
+    chatArrives({ id: 'm-2', text: 'Claro, lo hacemos de nuevo.' });
+
+    const messages = within(chatPanel().getByRole('list', { name: 'Mensajes del taller' }));
+    expect(
+      messages.getAllByRole('listitem').filter((item) => item.textContent !== ''),
+    ).toHaveLength(2);
+    expect(messages.getByText('Tú')).toBeInTheDocument();
+    expect(messages.getByText('Talento Humano')).toBeInTheDocument();
+    expect(messages.getByText('Claro, lo hacemos de nuevo.')).toBeInTheDocument();
+
+    await user.click(live().getByRole('button', { name: 'Ocultar chat' }));
+    expect(screen.queryByRole('region', { name: 'Chat del taller' })).not.toBeInTheDocument();
+  });
+
+  it('con el chat cerrado cuenta los mensajes nuevos de los demás', async () => {
+    const { user } = await joinWith([SELF, HOST]);
+
+    chatArrives({ id: 'm-1', text: 'Bienvenidos' });
+    expect(live().getByText('1 mensaje sin leer')).toBeInTheDocument();
+    chatArrives({ id: 'm-2', text: 'Empezamos en un minuto' });
+    chatArrives({ id: 'm-3', text: 'Mío', self: true });
+    expect(live().getByText('2 mensajes sin leer')).toBeInTheDocument();
+
+    await user.click(live().getByRole('button', { name: 'Mostrar chat' }));
+    expect(live().queryByText(/sin leer/)).not.toBeInTheDocument();
+    await user.click(live().getByRole('button', { name: 'Ocultar chat' }));
+    expect(live().queryByText(/sin leer/)).not.toBeInTheDocument();
+
+    for (let index = 0; index < 10; index += 1) {
+      chatArrives({ id: `n-${String(index)}`, text: `Mensaje ${String(index)}` });
+    }
+    expect(live().getByText('9+')).toBeInTheDocument();
+  });
+
+  it('si un mensaje no se puede enviar, lo avisa', async () => {
+    video.sendMessage.mockRejectedValueOnce(new Error('sin conexión'));
+    const { user } = await joinWith([SELF, HOST]);
+
+    await user.click(live().getByRole('button', { name: 'Mostrar chat' }));
+    await user.type(chatPanel().getByRole('textbox'), 'Hola{Enter}');
+
+    expect(await chatPanel().findByRole('alert')).toHaveTextContent('No se pudo enviar tu mensaje');
+    await user.type(chatPanel().getByRole('textbox'), 'Hola otra vez{Enter}');
+    await waitFor(() => {
+      expect(chatPanel().queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 });
 

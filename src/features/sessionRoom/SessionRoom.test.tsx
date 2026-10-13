@@ -377,6 +377,28 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
   });
 });
 
+describe('Chat dentro de la sesión 1:1', () => {
+  beforeEach(() => {
+    freezeTime();
+  });
+
+  it('la conversación de Mensajes está al lado del video y se puede ocultar', async () => {
+    const { user } = await joinAsPsychologist();
+
+    const chat = within(screen.getByRole('complementary', { name: 'Chat de la sesión' }));
+    expect(chat.getByRole('region', { name: 'Chat con David Cajamarca' })).toBeInTheDocument();
+    await user.type(await chat.findByRole('textbox'), '¿Me escuchas bien?{Enter}');
+    expect(await chat.findByText('¿Me escuchas bien?')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ocultar chat' }));
+    expect(
+      screen.queryByRole('complementary', { name: 'Chat de la sesión' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mostrar chat' }));
+    expect(screen.getByRole('complementary', { name: 'Chat de la sesión' })).toBeInTheDocument();
+  });
+});
+
 describe('Sala de la sesión · vestíbulo', () => {
   it('antes de la hora dice cuándo abre, y se habilita y se cierra sola', async () => {
     controlClock(wednesdayAt(9, 55));
@@ -512,6 +534,10 @@ describe('Sala de la sesión · empleado (HU-FE-12)', () => {
     await activateAsPsychologist();
     const { user, router } = openAs('EMPLEADO', employeeRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
+    // El empleado ve la misma conversación con su psicóloga dentro de la llamada.
+    expect(
+      await screen.findByRole('region', { name: 'Chat con Laura Martínez' }),
+    ).toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Salir de la sala' }));
 

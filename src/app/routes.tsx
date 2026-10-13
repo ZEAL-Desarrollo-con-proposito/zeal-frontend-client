@@ -18,6 +18,7 @@ import { SessionRoomPage } from '@/features/sessionRoom/pages/SessionRoomPage';
 import { MyWorkshopsPage } from '@/features/workshops/pages/MyWorkshopsPage';
 import { WorkshopsPage } from '@/features/workshops/pages/WorkshopsPage';
 import { WorkshopRoomPage } from '@/features/workshopRoom/pages/WorkshopRoomPage';
+import { EmployeesPage } from '@/features/organization/pages/EmployeesPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
@@ -46,6 +47,7 @@ const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [PSYCHOLOGIST_PATHS.messages]: <PsychologistMessagesPage />,
   [ADMIN_PATHS.projects]: <AdminProjectsPage />,
   [ADMIN_PATHS.workshops]: <AdminWorkshopsPage />,
+  [ADMIN_PATHS.employees]: <EmployeesPage />,
   [EMPLOYEE_PATHS.wellbeing]: <DirectoryPage />,
   [EMPLOYEE_PATHS.appointments]: <AppointmentsPage />,
   [EMPLOYEE_PATHS.messages]: <EmployeeMessagesPage />,

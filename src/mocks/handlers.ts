@@ -17,6 +17,7 @@ import { wellbeingHandlers } from './wellbeing/handlers';
 import { roomHandlers } from './wellbeing/roomHandlers';
 import { workshopHandlers } from './workshops/handlers';
 import { workshopRoomHandlers } from './workshops/roomHandlers';
+import { organizationHandlers } from './organizationHandlers';
 
 interface LoginRequestBody {
   email?: unknown;
@@ -60,6 +61,7 @@ export const handlers = [
   ...projectHandlers,
   ...adminProjectHandlers,
   ...adminWorkshopHandlers,
+  ...organizationHandlers,
   ...workshopRoomHandlers,
   ...workshopHandlers,
 ];

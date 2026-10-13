@@ -22,9 +22,24 @@ export interface GroupCallSnapshot {
   participants: GroupParticipant[];
 }
 
+/** Mensaje del chat del taller. Viaja por la sala de video: solo lo ven quienes están adentro. */
+export interface GroupChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  sentAt: string;
+  self: boolean;
+}
+
+/** Límite de un mensaje del chat del taller (el mismo del chat 1:1). */
+export const MAX_CHAT_MESSAGE_LENGTH = 2000;
+
 export interface GroupCall {
   /** Enciende o apaga micrófono y cámara; el navegador pide permiso la primera vez. */
   setMedia: (media: MediaState) => Promise<void>;
+  /** Envía un mensaje a todas las personas de la sala. */
+  sendMessage: (text: string) => Promise<void>;
   leave: () => void;
 }
 
@@ -32,6 +47,8 @@ export interface GroupCallOptions {
   serverUrl: string;
   token: string;
   onChange: (snapshot: GroupCallSnapshot) => void;
+  /** Llega un mensaje del chat, de otra persona o el propio ya enviado. */
+  onMessage: (message: GroupChatMessage) => void;
 }
 
 /** Conecta con el servidor de video (SFU). En el navegador lo implementa LiveKit. */

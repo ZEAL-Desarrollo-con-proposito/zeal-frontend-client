@@ -3,7 +3,12 @@ import type { MediaErrorReason } from '@/features/sessionRoom/call/localMedia';
 import { mediaErrorReason } from '@/features/sessionRoom/call/localMedia';
 import type { MediaState } from '@/features/sessionRoom/model/roomEvent';
 import { API_BASE_URL } from '@/shared/config/apiBaseUrl';
-import type { GroupCall, GroupCallConnector, GroupCallSnapshot } from '../call/groupCall';
+import type {
+  GroupCall,
+  GroupCallConnector,
+  GroupCallSnapshot,
+  GroupChatMessage,
+} from '../call/groupCall';
 import type { WorkshopRoomConnection } from '../model/workshopRoom';
 import { resolveServerUrl } from '../model/workshopRoom';
 
@@ -32,6 +37,8 @@ export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit)
   const [phase, setPhase] = useState<GroupCallPhase>({ kind: 'idle' });
   const [media, setMediaState] = useState<MediaState>(INITIAL_MEDIA);
   const [mediaError, setMediaError] = useState<MediaErrorReason | null>(null);
+  const [messages, setMessages] = useState<GroupChatMessage[]>([]);
+  const [chatFailed, setChatFailed] = useState(false);
   const callRef = useRef<GroupCall | null>(null);
 
   useEffect(
@@ -55,12 +62,19 @@ export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit)
 
   async function join(connection: WorkshopRoomConnection) {
     setPhase({ kind: 'joining' });
+    // El chat del taller vive en la sala: al volver a entrar empieza vacío.
+    setMessages([]);
     try {
       const call = await connector({
         serverUrl: resolveServerUrl(connection.serverUrl, API_BASE_URL),
         token: connection.token,
         onChange: (snapshot) => {
           setPhase(snapshot.status === 'ended' ? { kind: 'ended' } : { kind: 'joined', snapshot });
+        },
+        onMessage: (message) => {
+          setMessages((current) =>
+            current.some(({ id }) => id === message.id) ? current : [...current, message],
+          );
         },
       });
       callRef.current = call;
@@ -77,6 +91,17 @@ export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit)
     }
   }
 
+  function sendMessage(text: string) {
+    const call = callRef.current;
+    if (call === null) {
+      return;
+    }
+    setChatFailed(false);
+    call.sendMessage(text).catch(() => {
+      setChatFailed(true);
+    });
+  }
+
   function leave() {
     callRef.current?.leave();
     callRef.current = null;
@@ -87,6 +112,9 @@ export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit)
     phase,
     media,
     mediaError,
+    messages,
+    chatFailed,
+    sendMessage,
     join,
     leave,
     toggleAudio: () => {

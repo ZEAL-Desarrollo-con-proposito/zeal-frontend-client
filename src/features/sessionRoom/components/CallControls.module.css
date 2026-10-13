@@ -41,3 +41,43 @@
 .leave {
   padding: 0 var(--space-6);
 }
+
+/* Chat de la llamada: abierto se resalta en sage; el contador avisa lo que llegó con el panel cerrado. */
+.chat {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-teal-700);
+  color: var(--color-surface);
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.chat:hover {
+  background: var(--color-teal-600);
+}
+
+.chat[aria-expanded='true'] {
+  background: var(--color-sage);
+  color: var(--color-teal-900);
+}
+
+.unread {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-coral-strong);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-surface);
+}

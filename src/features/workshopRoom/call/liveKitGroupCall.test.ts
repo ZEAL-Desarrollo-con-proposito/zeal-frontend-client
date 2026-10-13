@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GroupCallSnapshot } from './groupCall';
-import { connectLiveKit, isHostMetadata } from './liveKitGroupCall';
+import type { GroupCallSnapshot, GroupChatMessage } from './groupCall';
+import { CHAT_TOPIC, connectLiveKit, isHostMetadata, parseChatPayload } from './liveKitGroupCall';
 
 /** Sala de LiveKit simulada: la prueba decide quién está, qué publica y qué eventos llegan. */
 const sdk = vi.hoisted(() => {
-  type Handler = () => void;
+  type Handler = (...args: unknown[]) => void;
 
   class FakeParticipant {
     identity: string;
@@ -36,6 +36,9 @@ const sdk = vi.hoisted(() => {
       this.isCameraEnabled = enabled;
       return Promise.resolve();
     });
+    publishData = vi.fn<(data: Uint8Array, options: unknown) => Promise<void>>(() =>
+      Promise.resolve(),
+    );
   }
 
   const rooms: FakeRoom[] = [];
@@ -66,9 +69,9 @@ const sdk = vi.hoisted(() => {
       return this;
     }
 
-    emit(event: string) {
+    emit(event: string, ...args: unknown[]) {
       for (const handler of this.handlers.get(event) ?? []) {
-        handler();
+        handler(...args);
       }
     }
   }
@@ -94,6 +97,7 @@ vi.mock('livekit-client', () => ({
     Reconnecting: 'reconnecting',
     Reconnected: 'reconnected',
     Disconnected: 'disconnected',
+    DataReceived: 'dataReceived',
   },
 }));
 
@@ -122,10 +126,12 @@ function room() {
 
 async function connect() {
   const snapshots: GroupCallSnapshot[] = [];
+  const messages: GroupChatMessage[] = [];
   const call = await connectLiveKit({
     serverUrl: 'wss://zeal.co/livekit',
     token: 'permiso',
     onChange: (snapshot) => snapshots.push(snapshot),
+    onMessage: (message) => messages.push(message),
   });
   const latest = () => {
     const snapshot = snapshots.at(-1);
@@ -134,7 +140,7 @@ async function connect() {
     }
     return snapshot;
   };
-  return { call, snapshots, latest };
+  return { call, snapshots, latest, messages };
 }
 
 describe('connectLiveKit', () => {
@@ -239,6 +245,77 @@ describe('connectLiveKit', () => {
 
     expect(room().disconnect).toHaveBeenCalled();
     expect(latest().status).toBe('ended');
+  });
+});
+
+const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+const CHAT = {
+  id: 'm-1',
+  text: '¿Pueden repetir el ejercicio?',
+  sentAt: '2026-09-23T14:30:00.000Z',
+};
+
+describe('chat del taller', () => {
+  it('envía el mensaje a la sala por el canal del chat y lo muestra como propio', async () => {
+    const { call, messages } = await connect();
+
+    await call.sendMessage('  Hola a todos  ');
+
+    const published = room().localParticipant.publishData.mock.calls[0];
+    if (published === undefined) {
+      throw new Error('No se publicó el mensaje');
+    }
+    const [data, options] = published;
+    expect(options).toEqual({ reliable: true, topic: CHAT_TOPIC });
+    const sent = parseChatPayload(data);
+    expect(sent?.text).toBe('Hola a todos');
+    expect(messages).toEqual([
+      {
+        id: sent?.id,
+        text: 'Hola a todos',
+        sentAt: sent?.sentAt,
+        senderId: 'usr-admin-001',
+        senderName: 'Talento Humano',
+        self: true,
+      },
+    ]);
+  });
+
+  it('si no se puede enviar, no lo muestra como enviado', async () => {
+    const { call, messages } = await connect();
+    room().localParticipant.publishData.mockRejectedValueOnce(new Error('sin conexión'));
+
+    await expect(call.sendMessage('Hola')).rejects.toThrow('sin conexión');
+    expect(messages).toEqual([]);
+  });
+
+  it('muestra los mensajes de las demás personas y descarta lo que no es del chat', async () => {
+    const { messages } = await connect();
+    const david = new sdk.FakeParticipant('usr-empleado-001', 'David Cajamarca');
+
+    room().emit('dataReceived', encode(CHAT), david, 0, CHAT_TOPIC);
+    room().emit('dataReceived', encode(CHAT), david, 0, 'otro-canal');
+    room().emit('dataReceived', encode(CHAT), undefined, 0, CHAT_TOPIC);
+    room().emit('dataReceived', encode({ ...CHAT, text: '' }), david, 0, CHAT_TOPIC);
+
+    expect(messages).toEqual([
+      { ...CHAT, senderId: 'usr-empleado-001', senderName: 'David Cajamarca', self: false },
+    ]);
+  });
+});
+
+describe('parseChatPayload', () => {
+  it.each([
+    ['no es JSON', new TextEncoder().encode('hola')],
+    ['no es un objeto', encode('hola')],
+    ['sin id', encode({ ...CHAT, id: 3 })],
+    ['sin texto', encode({ ...CHAT, text: undefined })],
+    ['en blanco', encode({ ...CHAT, text: '   ' })],
+    ['demasiado largo', encode({ ...CHAT, text: 'a'.repeat(2001) })],
+    ['sin fecha', encode({ ...CHAT, sentAt: 7 })],
+    ['con fecha inválida', encode({ ...CHAT, sentAt: 'ayer' })],
+  ])('descarta un mensaje %s', (_, data) => {
+    expect(parseChatPayload(data)).toBeNull();
   });
 });
 

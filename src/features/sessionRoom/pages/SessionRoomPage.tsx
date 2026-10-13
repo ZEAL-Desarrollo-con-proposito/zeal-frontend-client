@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { ChatConversation } from '@/features/chat/components/ChatConversation';
+import { conversationId } from '@/features/chat/model/chatMessage';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { ApiError } from '@/shared/api/errors';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
@@ -45,6 +48,8 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
     role: host ? 'caller' : 'callee',
     iceServers: room.data?.iceServers ?? [],
   });
+  // En la sesión 1:1 el chat empieza abierto: es la misma conversación de Mensajes.
+  const [chatOpen, setChatOpen] = useState(true);
   useDocumentTitle('Sala de sesión');
 
   async function activateAndJoin() {
@@ -62,6 +67,9 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
   function content(data: Room) {
     const participant = data.participant.fullName;
     if (call.phase.kind === 'joined') {
+      const conversation = host
+        ? conversationId(data.participant.id, user.id)
+        : conversationId(user.id, data.participant.id);
       return (
         <CallView
           participant={participant}
@@ -72,6 +80,20 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
           onToggleAudio={call.toggleAudio}
           onToggleVideo={call.toggleVideo}
           onLeave={leave}
+          chat={{
+            open: chatOpen,
+            unread: 0,
+            onToggle: () => {
+              setChatOpen((open) => !open);
+            },
+          }}
+          chatPanel={
+            <ChatConversation
+              conversationId={conversation}
+              peer={data.participant}
+              currentUserId={user.id}
+            />
+          }
         />
       );
     }
