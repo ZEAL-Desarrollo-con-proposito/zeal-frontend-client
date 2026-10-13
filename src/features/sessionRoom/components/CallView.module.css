@@ -14,11 +14,13 @@
   min-height: 0;
 }
 
+/* El chat nunca empuja los controles fuera de la pantalla: sus mensajes se desplazan adentro. */
 .aside {
   display: flex;
   flex-direction: column;
   width: min(360px, 38%);
   min-height: 0;
+  max-height: calc(100dvh - 240px);
 }
 
 .stage {
