@@ -117,6 +117,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   it('descarta los avisos atrasados y los de otra convocatoria', async () => {
     const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const guardia = await cardOf('Data Platform · Turno de guardia');
+    await realtime.subscribedTo(projectTopic(GUARDIA));
 
     act(() => {
       realtime.deliver(projectTopic(GUARDIA), spotsEvent(4, 3));

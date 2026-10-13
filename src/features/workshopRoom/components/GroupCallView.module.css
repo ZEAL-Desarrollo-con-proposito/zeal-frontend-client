@@ -1,0 +1,102 @@
+.call {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-surface);
+}
+
+.privacy {
+  padding: 6px var(--space-4);
+  border: 1px solid var(--color-teal-700);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption);
+  color: var(--color-teal-300);
+}
+
+.alert {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-coral-strong);
+}
+
+.alert svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Cuadrícula que se adapta al número de personas: 1, 2, 2×2, 3×2, 3×3 y luego con scroll. */
+.grid {
+  display: grid;
+  flex: 1;
+  gap: var(--space-3);
+  grid-auto-rows: minmax(180px, 1fr);
+  grid-template-columns: repeat(var(--columns, 3), minmax(0, 1fr));
+  min-height: 320px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.grid[data-count='1'] {
+  --columns: 1;
+}
+
+.grid[data-count='2'],
+.grid[data-count='3'],
+.grid[data-count='4'] {
+  --columns: 2;
+}
+
+.cell {
+  display: grid;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 160ms ease;
+}
+
+/* Quien habla se resalta; la anfitriona lleva un borde suave permanente. */
+.cell[data-host='true'] {
+  outline-color: var(--color-teal-600);
+}
+
+.cell[data-speaking='true'] {
+  outline-color: var(--color-sage);
+}
+
+@media (width <= 767px) {
+  .grid {
+    --columns: 1;
+
+    grid-auto-rows: minmax(200px, auto);
+  }
+
+  .grid[data-count='2'],
+  .grid[data-count='3'],
+  .grid[data-count='4'] {
+    --columns: 1;
+  }
+}

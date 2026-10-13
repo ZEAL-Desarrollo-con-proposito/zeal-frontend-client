@@ -1,6 +1,9 @@
 import { useId } from 'react';
 import { motion } from 'motion/react';
+import { workshopRoomPath } from '@/app/paths';
+import { isRoomWindow } from '@/features/workshopRoom/model/workshopRoom';
 import { Badge } from '@/shared/ui/Badge/Badge';
+import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import type { Workshop } from '../model/workshop';
 import { capacityLabel, describeSchedule, hasStarted } from '../model/workshop';
 import styles from './AdminWorkshopList.module.css';
@@ -62,6 +65,15 @@ function AdminWorkshopCard({ workshop, now, index }: Readonly<AdminWorkshopCardP
       <p className={styles.capacity}>
         {capacityLabel(workshop.capacity)} · {workshop.occupied} inscritas
       </p>
+      {isRoomWindow(workshop, now) && (
+        <LinkButton
+          to={workshopRoomPath('ADMIN', workshop.id)}
+          className={styles.roomLink}
+          aria-label={`Abrir la sala de ${workshop.title}`}
+        >
+          Abrir la sala del taller
+        </LinkButton>
+      )}
     </motion.li>
   );
 }

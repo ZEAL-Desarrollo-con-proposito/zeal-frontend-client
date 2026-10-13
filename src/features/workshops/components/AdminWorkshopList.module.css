@@ -51,3 +51,9 @@
   font-size: var(--text-caption);
   color: var(--color-ink-700);
 }
+
+/* Entrada de la empresa anfitriona a la sala del taller (abre 10 minutos antes). */
+.roomLink {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}

@@ -67,6 +67,14 @@
   min-width: 0;
 }
 
+/* Estado del cupo y, mientras el taller está por empezar o en curso, la entrada a la sala. */
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
 .itemTitle {
   font-size: 1rem;
   font-weight: 600;
@@ -104,5 +112,10 @@
 @media (width <= 640px) {
   .item {
     flex-wrap: wrap;
+  }
+
+  .aside {
+    align-items: flex-start;
+    width: 100%;
   }
 }

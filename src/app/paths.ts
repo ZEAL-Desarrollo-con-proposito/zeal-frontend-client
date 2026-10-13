@@ -34,6 +34,7 @@ export const PSYCHOLOGIST_PATHS = {
 export const ADMIN_PATHS = {
   projects: `${ROLE_BASE_PATH.ADMIN}/proyectos`,
   workshops: `${ROLE_BASE_PATH.ADMIN}/talleres`,
+  workshopRoom: `${ROLE_BASE_PATH.ADMIN}/talleres/sala/:workshopId`,
 } as const;
 
 export const EMPLOYEE_PATHS = {
@@ -46,7 +47,14 @@ export const EMPLOYEE_PATHS = {
   project: `${ROLE_BASE_PATH.EMPLEADO}/proyectos/:projectId`,
   workshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres`,
   myWorkshops: `${ROLE_BASE_PATH.EMPLEADO}/talleres/mis-talleres`,
+  workshopRoom: `${ROLE_BASE_PATH.EMPLEADO}/talleres/sala/:workshopId`,
 } as const;
+
+/** Genera la ruta de la sala de video de un taller, para el empleado o para la empresa. */
+export function workshopRoomPath(role: 'EMPLEADO' | 'ADMIN', workshopId: string): string {
+  const path = role === 'ADMIN' ? ADMIN_PATHS.workshopRoom : EMPLOYEE_PATHS.workshopRoom;
+  return generatePath(path, { workshopId });
+}
 
 /** Genera la ruta al detalle de una convocatoria interna. */
 export function projectPath(projectId: string): string {
