@@ -1,0 +1,118 @@
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+
+.hint {
+  font-size: var(--text-caption);
+  color: var(--color-ink-500);
+}
+
+.empty {
+  flex: 1;
+  padding: var(--space-5) var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+
+.list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+/* Los mensajes propios a la derecha, en el teal de la marca (como en el chat 1:1). */
+.message[data-self='true'] {
+  align-self: flex-end;
+  background: var(--color-teal-800);
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-caption);
+  color: var(--color-ink-500);
+}
+
+.message[data-self='true'] .meta {
+  color: var(--color-teal-300);
+}
+
+.sender {
+  font-weight: 600;
+  color: var(--color-ink-700);
+}
+
+.message[data-self='true'] .sender {
+  color: var(--color-surface);
+}
+
+.text {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-ink-900);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.message[data-self='true'] .text {
+  color: var(--color-surface);
+}
+
+.end {
+  height: 0;
+}
+
+.alert {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0 var(--space-4) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  font-size: 0.8125rem;
+  color: var(--color-coral-strong);
+}
+
+.alert svg {
+  flex-shrink: 0;
+}

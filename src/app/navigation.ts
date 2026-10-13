@@ -126,9 +126,9 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Empleados',
-      path: section('ADMIN', 'empleados'),
+      path: ADMIN_PATHS.employees,
       icon: usersIcon,
-      description: 'Invita empleados y sigue la adopción de ZEAL.',
+      description: 'Consulta las personas de tu empresa que usan ZEAL.',
     },
     {
       label: 'Proyectos',

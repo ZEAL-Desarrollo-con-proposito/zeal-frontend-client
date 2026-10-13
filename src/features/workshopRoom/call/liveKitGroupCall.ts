@@ -1,7 +1,13 @@
-import type { Participant } from 'livekit-client';
+import type { Participant, RemoteParticipant } from 'livekit-client';
 import { ConnectionState, Room, RoomEvent, Track } from 'livekit-client';
 import { isRecord } from '@/features/auth/model/session';
-import type { GroupCallConnector, GroupCallSnapshot, GroupParticipant } from './groupCall';
+import type {
+  GroupCallConnector,
+  GroupCallSnapshot,
+  GroupChatMessage,
+  GroupParticipant,
+} from './groupCall';
+import { MAX_CHAT_MESSAGE_LENGTH } from './groupCall';
 
 /** Cualquier cambio de personas, pistas o voz activa vuelve a dibujar la llamada. */
 const REFRESH_EVENTS = [
@@ -19,6 +25,36 @@ const REFRESH_EVENTS = [
   RoomEvent.Reconnected,
 ] as const;
 
+/** Canal de datos por el que viaja el chat del taller dentro de la sala. */
+export const CHAT_TOPIC = 'zeal.chat';
+
+interface ChatPayload {
+  id: string;
+  text: string;
+  sentAt: string;
+}
+
+/** Lo que llega por el canal es de otra persona: se valida antes de mostrarlo. */
+export function parseChatPayload(data: Uint8Array): ChatPayload | null {
+  try {
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(data));
+    if (
+      isRecord(parsed) &&
+      typeof parsed.id === 'string' &&
+      typeof parsed.text === 'string' &&
+      parsed.text.trim() !== '' &&
+      parsed.text.length <= MAX_CHAT_MESSAGE_LENGTH &&
+      typeof parsed.sentAt === 'string' &&
+      !Number.isNaN(Date.parse(parsed.sentAt))
+    ) {
+      return { id: parsed.id, text: parsed.text, sentAt: parsed.sentAt };
+    }
+  } catch {
+    // No es JSON: se ignora.
+  }
+  return null;
+}
+
 /** El servidor firma el rol de cada persona en su metadata: `{"role":"ANFITRION"}`. */
 export function isHostMetadata(metadata: string | undefined): boolean {
   try {
@@ -29,12 +65,23 @@ export function isHostMetadata(metadata: string | undefined): boolean {
   }
 }
 
+function displayName(participant: Participant): string {
+  return participant.name === undefined || participant.name === ''
+    ? participant.identity
+    : participant.name;
+}
+
 /**
  * Adaptador de LiveKit: une la sala del SDK con el modelo de la llamada. Cada persona se dibuja
  * con un `MediaStream` (cámara y, si es otra persona, micrófono) que solo se recrea cuando
  * cambian sus pistas: reasignarlo reiniciaría la reproducción.
  */
-export const connectLiveKit: GroupCallConnector = async ({ serverUrl, token, onChange }) => {
+export const connectLiveKit: GroupCallConnector = async ({
+  serverUrl,
+  token,
+  onChange,
+  onMessage,
+}) => {
   // Sin adaptiveStream: el video se dibuja con el MediaStream del navegador, no con attach().
   const room = new Room({ adaptiveStream: false, dynacast: true });
   const streams = new Map<string, { key: string; stream: MediaStream }>();
@@ -63,10 +110,7 @@ export const connectLiveKit: GroupCallConnector = async ({ serverUrl, token, onC
   function toParticipant(participant: Participant, self: boolean): GroupParticipant {
     return {
       id: participant.identity,
-      name:
-        participant.name === undefined || participant.name === ''
-          ? participant.identity
-          : participant.name,
+      name: displayName(participant),
       host: isHostMetadata(participant.metadata),
       self,
       stream: streamOf(participant, self),
@@ -100,6 +144,21 @@ export const connectLiveKit: GroupCallConnector = async ({ serverUrl, token, onC
   for (const event of REFRESH_EVENTS) {
     room.on(event, notify);
   }
+  room.on(
+    RoomEvent.DataReceived,
+    (data: Uint8Array, participant?: RemoteParticipant, _kind?: unknown, topic?: string) => {
+      const payload = topic === CHAT_TOPIC ? parseChatPayload(data) : null;
+      if (payload === null || participant === undefined) {
+        return;
+      }
+      onMessage({
+        ...payload,
+        senderId: participant.identity,
+        senderName: displayName(participant),
+        self: false,
+      });
+    },
+  );
   room.on(RoomEvent.Disconnected, () => {
     ended = true;
     notify();
@@ -116,6 +175,22 @@ export const connectLiveKit: GroupCallConnector = async ({ serverUrl, token, onC
       } finally {
         notify();
       }
+    },
+    async sendMessage(text) {
+      const message: GroupChatMessage = {
+        id: crypto.randomUUID(),
+        text: text.trim().slice(0, MAX_CHAT_MESSAGE_LENGTH),
+        sentAt: new Date().toISOString(),
+        senderId: room.localParticipant.identity,
+        senderName: displayName(room.localParticipant),
+        self: true,
+      };
+      const { id, text: body, sentAt } = message;
+      await room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ id, text: body, sentAt })),
+        { reliable: true, topic: CHAT_TOPIC },
+      );
+      onMessage(message);
     },
     leave() {
       ended = true;

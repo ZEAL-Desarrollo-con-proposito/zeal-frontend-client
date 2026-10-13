@@ -77,6 +77,9 @@ export function WorkshopRoomPage({ exit }: Readonly<WorkshopRoomPageProps>) {
           onToggleAudio={call.toggleAudio}
           onToggleVideo={call.toggleVideo}
           onLeave={leaveRoom}
+          messages={call.messages}
+          chatFailed={call.chatFailed}
+          onSendMessage={call.sendMessage}
         />
       );
     }

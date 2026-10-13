@@ -39,6 +39,42 @@ export const SEED_USERS: readonly AuthUser[] = [
     role: 'ADMIN',
     organization: SEED_ORGANIZATION,
   },
+  {
+    id: 'usr-empleado-003',
+    fullName: 'Camilo Rincón',
+    email: 'camilo.rincon@nexura.co',
+    role: 'EMPLEADO',
+    organization: SEED_ORGANIZATION,
+  },
+  {
+    id: 'usr-empleado-004',
+    fullName: 'Sofía Mejía',
+    email: 'sofia.mejia@nexura.co',
+    role: 'EMPLEADO',
+    organization: SEED_ORGANIZATION,
+  },
+  // Segunda empresa cliente: su administradora y sus 4 empleados (aislamiento entre empresas).
+  {
+    id: 'usr-admin-002',
+    fullName: 'Gestión Humana Órbita',
+    email: 'gestion.humana@orbitalabs.co',
+    role: 'ADMIN',
+    organization: OTHER_ORGANIZATION,
+  },
+  ...(
+    [
+      ['usr-empleado-101', 'Andrea Gómez', 'andrea.gomez'],
+      ['usr-empleado-102', 'Felipe Restrepo', 'felipe.restrepo'],
+      ['usr-empleado-103', 'Natalia Vargas', 'natalia.vargas'],
+      ['usr-empleado-104', 'Santiago Herrera', 'santiago.herrera'],
+    ] as const
+  ).map(([id, fullName, user]) => ({
+    id,
+    fullName,
+    email: `${user}@orbitalabs.co`,
+    role: 'EMPLEADO' as const,
+    organization: OTHER_ORGANIZATION,
+  })),
 ];
 
 export function findSeedUser(email: string, password: string): AuthUser | undefined {

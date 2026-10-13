@@ -2,23 +2,43 @@ import type { ReactNode, Ref } from 'react';
 import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '@/shared/ui/Button/Button';
-import { CameraIcon, CameraOffIcon, MicIcon, MicOffIcon, PhoneOffIcon } from '@/shared/ui/icons';
+import {
+  CameraIcon,
+  CameraOffIcon,
+  ChatIcon,
+  MicIcon,
+  MicOffIcon,
+  PhoneOffIcon,
+} from '@/shared/ui/icons';
 import type { MediaState } from '../model/roomEvent';
 import styles from './CallControls.module.css';
+
+/** Chat dentro de la llamada: abierto o cerrado, y cuántos mensajes llegaron sin verse. */
+export interface CallChatControl {
+  open: boolean;
+  unread: number;
+  onToggle: () => void;
+}
 
 interface CallControlsProps {
   media: MediaState;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onLeave: () => void;
+  chat: CallChatControl;
 }
 
-/** Figma C2 · barra de la llamada: micrófono, cámara y salir de la sala. */
+function unreadLabel(unread: number): string {
+  return unread === 1 ? '1 mensaje sin leer' : `${String(unread)} mensajes sin leer`;
+}
+
+/** Figma C2 · barra de la llamada: micrófono, cámara, chat y salir de la sala. */
 export function CallControls({
   media,
   onToggleAudio,
   onToggleVideo,
   onLeave,
+  chat,
 }: Readonly<CallControlsProps>) {
   const firstControl = useRef<HTMLButtonElement>(null);
 
@@ -49,6 +69,23 @@ export function CallControls({
         onClick={onToggleVideo}
         icon={media.video ? <CameraIcon /> : <CameraOffIcon />}
       />
+      <motion.button
+        type="button"
+        className={styles.chat}
+        aria-label={chat.open ? 'Ocultar chat' : 'Mostrar chat'}
+        aria-expanded={chat.open}
+        title={chat.open ? 'Ocultar chat' : 'Mostrar chat'}
+        onClick={chat.onToggle}
+        whileTap={{ scale: 0.9 }}
+      >
+        <ChatIcon />
+        {chat.unread > 0 && !chat.open && (
+          <span className={styles.unread}>
+            <span aria-hidden="true">{chat.unread > 9 ? '9+' : chat.unread}</span>
+            <span className="visually-hidden">{unreadLabel(chat.unread)}</span>
+          </span>
+        )}
+      </motion.button>
       <Button variant="danger" className={styles.leave} onClick={onLeave}>
         <PhoneOffIcon />
         Salir de la sala
