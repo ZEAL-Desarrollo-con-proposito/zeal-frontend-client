@@ -96,10 +96,15 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
     act(() => {
       publishToUser(DAVID, NOTIFICATIONS_QUEUE, event);
       publishToUser(DAVID, NOTIFICATIONS_QUEUE, event);
+      // El aviso de control llega al final: cuando aparece, los anteriores ya se procesaron.
+      publishToUser(DAVID, NOTIFICATIONS_QUEUE, {
+        type: 'NUEVA',
+        notification: liveNotification('control'),
+      });
     });
 
-    expect(await bellWithUnread(2)).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(await toasts().findByText('Aviso control')).toBeInTheDocument();
+    expect(await bellWithUnread(3)).toBeInTheDocument();
     expect(toasts().getAllByText('Aviso repetida')).toHaveLength(1);
   });
 

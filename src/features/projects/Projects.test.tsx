@@ -91,8 +91,9 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('el contador cambia en vivo y, al llegar a cero, la postulación se deshabilita', async () => {
-    openAsEmployee();
+    const { subscribedTo } = openAsEmployee();
     const guardia = await cardOf('Data Platform · Turno de guardia');
+    await subscribedTo(projectTopic(GUARDIA));
 
     act(() => {
       updateOccupiedSpots(GUARDIA, 3);
@@ -115,9 +116,9 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('descarta los avisos atrasados y los de otra convocatoria', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const guardia = await cardOf('Data Platform · Turno de guardia');
-    await realtime.subscribedTo(projectTopic(GUARDIA));
+    await subscribedTo(projectTopic(GUARDIA));
 
     act(() => {
       realtime.deliver(projectTopic(GUARDIA), spotsEvent(4, 3));
@@ -174,15 +175,14 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('muestra al instante una convocatoria que la empresa publica en vivo', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
     expect(await cardOf('Data Platform · Turno de guardia')).toBeTruthy();
     expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(4);
+    await subscribedTo(target);
 
     act(() => {
-      realtime.deliver(organizationProjectsTopic(seedUser('EMPLEADO').organization), {
-        type: 'PUBLICADO',
-        project: publishedDetail(),
-      });
+      realtime.deliver(target, { type: 'PUBLICADO', project: publishedDetail() });
     });
 
     const card = await cardOf('Nueva convocatoria en vivo');
@@ -191,9 +191,10 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('no duplica lo que ya trajo del servidor ni el mismo aviso dos veces', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
     await cardOf('Data Platform · Turno de guardia');
+    await subscribedTo(target);
 
     // Ya está en el catálogo que cargó por HTTP: el aviso no agrega nada.
     act(() => {
@@ -215,9 +216,10 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('ignora los mensajes mal formados del canal de la organización', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
     await cardOf('Data Platform · Turno de guardia');
+    await subscribedTo(target);
 
     act(() => {
       realtime.deliver(target, 'fuera de forma');
@@ -268,8 +270,9 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
   });
 
   it('sus cupos también cambian en vivo hasta agotarse', async () => {
-    openAsEmployee(projectPath(GUARDIA));
+    const { subscribedTo } = openAsEmployee(projectPath(GUARDIA));
     const spots = within(await screen.findByRole('region', { name: 'Tu postulación' }));
+    await subscribedTo(projectTopic(GUARDIA));
 
     act(() => {
       updateOccupiedSpots(GUARDIA, 4);

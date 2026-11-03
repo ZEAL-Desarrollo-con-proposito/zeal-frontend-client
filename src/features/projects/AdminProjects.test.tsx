@@ -18,6 +18,7 @@ import { takeDown } from '@/test/server';
 import { ADMIN_PROJECTS_ENDPOINT } from './api/adminProjectsApi';
 import type { AdminProject } from './model/adminProject';
 import { PROJECTS_QUEUE } from './model/adminProjectEvent';
+import { projectTopic } from './model/spotsEvent';
 
 const list = () => within(screen.getByRole('list', { name: 'Proyectos publicados' }));
 const form = () => within(screen.getByRole('region', { name: 'Publicar proyecto' }));
@@ -317,24 +318,18 @@ describe('Proyectos del administrador · en tiempo real', () => {
   });
 
   it('los cupos de cada tarjeta cambian en vivo cuando alguien se postula', async () => {
-    await openProjects();
+    const { subscribedTo } = await openProjects();
     const guardia = cardOf('Data Platform · Turno de guardia');
     expect(guardia.getByText('Quedan 2 de 4 cupos')).toBeInTheDocument();
+    // Cada tarjeta escucha sus cupos desde que aparece: el aviso se envía cuando ya escucha.
+    await subscribedTo(projectTopic('proyecto-guardia-datos'));
 
     act(() => {
       updateOccupiedSpots('proyecto-guardia-datos', 4);
     });
 
-    // El aviso viaja por un canal asíncrono: con la suite entera en paralelo puede tardar más de 1 s.
-    expect(
-      await guardia.findByText('Sin cupos · 4 de 4 ocupados', {}, { timeout: 5000 }),
-    ).toBeInTheDocument();
-    await waitFor(
-      () => {
-        expect(guardia.getByText('Sin cupos')).toBeInTheDocument();
-      },
-      { timeout: 5000 },
-    );
+    expect(await guardia.findByText('Sin cupos · 4 de 4 ocupados')).toBeInTheDocument();
+    expect(guardia.getByText('Sin cupos')).toBeInTheDocument();
   });
 
   it('ignora mensajes mal formados y no duplica lo que publicó esta sesión', async () => {
@@ -348,11 +343,16 @@ describe('Proyectos del administrador · en tiempo real', () => {
     await fillForm(user);
     await publish(user);
     await list().findByText('Taller de innovación abierta');
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    expect(list().getAllByRole('listitem')).toHaveLength(6);
     expect(announcements()).toHaveTextContent('Publicaste el proyecto');
+
+    // El aviso de control sale después del eco de lo publicado aquí: cuando aparece, el eco ya
+    // se procesó.
+    act(() => {
+      publishToUser(seedUser('ADMIN').id, PROJECTS_QUEUE, { type: 'PUBLICADO', project: remote });
+    });
+    await list().findByText('Publicado desde otra sesión');
+
+    expect(list().getAllByRole('listitem')).toHaveLength(7);
   });
 
   it('vuelve a pedir la lista al recuperar la conexión', async () => {

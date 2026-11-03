@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { EMPLOYEE_PATHS, projectPath } from '@/app/paths';
 import { readProjectsDb, writeProjectsDb } from '@/mocks/projects/db';
@@ -199,14 +199,9 @@ describe('Mis postulaciones (HU-FE-17)', () => {
   });
 
   it('se llega desde el encabezado y muestra que carga', async () => {
-    server.use(
-      http.get(`*${MY_APPLICATIONS_ENDPOINT}`, async () => {
-        await delay(50);
-        return HttpResponse.json([]);
-      }),
-    );
     openAsEmployee();
 
+    // Antes de que responda el servidor (que no puede contestar dentro del mismo turno).
     expect(screen.getByRole('link', { name: 'Mis postulaciones' })).toHaveAttribute(
       'href',
       '#mis-postulaciones',

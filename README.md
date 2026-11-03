@@ -37,7 +37,14 @@ La aplicación queda en <http://localhost:3000>.
 | `npm run verify`        | Tipos + lint + formato + pruebas con cobertura (lo mismo que corre el CI) |
 
 Las pruebas corren un proceso por archivo (aislamiento del tiempo real simulado) y usan como máximo
-la mitad de los núcleos, para no saturar la máquina.
+la mitad de los núcleos, para no saturar la máquina. Para que pasen igual con la máquina ocupada,
+no usan esperas fijas (HU-DT-04):
+
+- antes de publicar un aviso en vivo esperan a que la pantalla escuche el destino
+  (`subscribedTo`, de `renderRoute`);
+- para comprobar que algo _no_ pasó, publican al final un aviso de control y esperan a verlo: el
+  canal entrega en orden, así que lo anterior ya se procesó;
+- `setupUser()` escribe sin pausa real entre tecla y tecla.
 
 ## Estructura
 

@@ -39,6 +39,11 @@ function offer(id = OFFER_ID, overrides: Partial<FreedSlotOffer> = {}): FreedSlo
   };
 }
 
+/** El mismo cupo de las 10:00, con otro psicólogo: se distingue por su nombre. */
+function offerFrom(id: string, fullName: string): FreedSlotOffer {
+  return offer(id, { psychologist: { id: `psi-${id}`, fullName, title: 'Psicólogo' } });
+}
+
 const WON_APPOINTMENT = {
   id: 'reserva-90',
   psychologist: { id: 'usr-psicologo-001', fullName: 'Laura Martínez', title: 'Psicóloga clínica' },
@@ -180,30 +185,27 @@ describe('Cupo liberado · la alerta (HU-FE-08)', () => {
   it('si el mismo cupo llega dos veces, o después de cerrarlo, se muestra una sola vez', async () => {
     const { user } = await openHomeReady();
 
+    // Con dos alertas, el botón de cerrar sería ambiguo y la prueba fallaría.
     release(offer(), offer());
-    await alerts().findAllByRole('listitem');
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(alerts().getAllByRole('listitem')).toHaveLength(1);
-
-    await user.click(alerts().getByRole('button', { name: 'Cerrar aviso de cupo' }));
+    await user.click(await alerts().findByRole('button', { name: 'Cerrar aviso de cupo' }));
     await waitFor(() => {
       expect(alerts().queryByRole('listitem')).not.toBeInTheDocument();
     });
-    release(offer());
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(alerts().queryByRole('listitem')).not.toBeInTheDocument();
+
+    // El cupo de control llega al final: cuando aparece, los anteriores ya se procesaron.
+    release(offer(), offerFrom('control', 'Tomás Control'));
+    expect(await alerts().findByText(/Tomás Control/)).toBeInTheDocument();
+    expect(alerts().getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('muestra como máximo 3 alertas: la más antigua sale', async () => {
     await openHomeReady();
-    const by = (id: string, fullName: string) =>
-      offer(id, { psychologist: { id: `psi-${id}`, fullName, title: 'Psicólogo' } });
 
     release(
-      by('a', 'Ana Uno'),
-      by('b', 'Beto Dos'),
-      by('c', 'Carla Tres'),
-      by('d', 'Diego Cuatro'),
+      offerFrom('a', 'Ana Uno'),
+      offerFrom('b', 'Beto Dos'),
+      offerFrom('c', 'Carla Tres'),
+      offerFrom('d', 'Diego Cuatro'),
     );
 
     expect(await alerts().findByText(/Diego Cuatro/)).toBeInTheDocument();
@@ -490,7 +492,7 @@ describe('Cupo liberado · al entrar y al recuperar la conexión (HU-FE-19)', ()
     storeSession('EMPLEADO');
     const realtime = scriptedRealtimeClient();
     const rendered = renderRoute(ROLE_HOME_PATH.EMPLEADO, () => realtime.client);
-    await realtime.subscribedTo(FREED_SLOTS_QUEUE);
+    await rendered.subscribedTo(FREED_SLOTS_QUEUE);
     return { ...rendered, realtime };
   }
 
