@@ -198,7 +198,21 @@ describe('Mi disponibilidad · en tiempo real (RT-2)', () => {
     await user.click(form.getByRole('button', { name: 'Abrir franja' }));
 
     expect(await wednesday().findByText('12:00 – 13:00')).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(wednesday().getAllByRole('listitem')).toHaveLength(1);
+
+    // El evento de control sale después del propio: cuando se ve, el propio ya se procesó.
+    const created = seededSlot(new Date(2026, 8, 23, 12));
+    act(() => {
+      publishMockEvent(SLOTS_TOPIC, {
+        type: 'CREADA',
+        slot: {
+          ...created,
+          id: 'franja-control',
+          startsAt: new Date(2026, 8, 23, 14).toISOString(),
+          endsAt: new Date(2026, 8, 23, 15).toISOString(),
+        },
+      });
+    });
+    expect(await wednesday().findByText('14:00 – 15:00')).toBeInTheDocument();
+    expect(wednesday().getAllByText('12:00 – 13:00')).toHaveLength(1);
   });
 });

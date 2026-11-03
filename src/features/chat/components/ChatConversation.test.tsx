@@ -1,5 +1,4 @@
 import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createMockRealtimeClient, publishToUser } from '@/mocks/realtime';
 import { appendChatMessage } from '@/mocks/wellbeing/chatDb';
@@ -9,6 +8,7 @@ import { RealtimeFactoryContext } from '@/shared/realtime/RealtimeContext';
 import { RealtimeProvider } from '@/shared/realtime/RealtimeProvider';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
+import { setupUser } from '@/test/user';
 import type { ChatPeer } from '../model/chatPeer';
 import { CHATS_QUEUE } from '../model/chatEvent';
 import { conversationId } from '../model/chatMessage';
@@ -25,7 +25,7 @@ const LAURA: ChatPeer = {
 const session = buildSession('EMPLEADO');
 
 function abrirConversacion() {
-  const user = userEvent.setup();
+  const user = setupUser();
   render(
     <RealtimeFactoryContext value={(token) => createMockRealtimeClient(token, handleChatMessage)}>
       <RealtimeProvider accessToken={session.accessToken}>
@@ -98,14 +98,13 @@ describe('ChatConversation', () => {
     abrirConversacion();
     await screen.findByText('Aún no tienes mensajes con Laura Martínez');
 
-    await act(async () => {
+    act(() => {
       publishToUser(EMPLOYEE, CHATS_QUEUE, {
         type: 'ESCRIBIENDO',
         conversationId: CONVERSATION,
         userId: 'usr-psicologo-001',
         typing: true,
       });
-      await new Promise((resolve) => setTimeout(resolve, 30));
     });
 
     expect(await screen.findByText(/Laura Martínez está escribiendo/)).toBeInTheDocument();

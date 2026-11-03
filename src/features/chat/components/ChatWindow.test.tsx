@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { freezeTime } from '@/test/clock';
+import { setupUser } from '@/test/user';
 import type { ChatMessage } from '../model/chatMessage';
 import type { ChatPeer } from '../model/chatPeer';
 import { ChatWindow } from './ChatWindow';
@@ -100,7 +100,7 @@ describe('ChatWindow', () => {
 
   it('si el historial falla ofrece reintentar', async () => {
     const { props } = renderWindow({ historyStatus: 'error' });
-    const user = userEvent.setup();
+    const user = setupUser();
 
     expect(screen.getByText('No pudimos cargar los mensajes')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reintentar' }));
@@ -110,7 +110,7 @@ describe('ChatWindow', () => {
 
   it('si el historial falla más tarde, avisa sin tapar lo que ya está en pantalla', async () => {
     const { props, rerender } = renderWindow({ messages: [mensaje()] });
-    const user = userEvent.setup();
+    const user = setupUser();
 
     rerender(<ChatWindow {...props} historyStatus="loading" />);
     expect(screen.getByRole('log')).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('ChatWindow', () => {
 
   it('escribe lo que la persona envía', async () => {
     const { props } = renderWindow();
-    const user = userEvent.setup();
+    const user = setupUser();
 
     await user.type(screen.getByRole('textbox', { name: 'Escribe un mensaje' }), 'hola');
     await user.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
@@ -170,7 +170,7 @@ describe('ChatWindow', () => {
   it('avisa que la otra persona está escribiendo y sigue suTecleo', async () => {
     const onTyping = vi.fn();
     renderWindow({ peerTyping: true, onTyping });
-    const user = userEvent.setup();
+    const user = setupUser();
 
     expect(screen.getByText(/Laura Martínez está escribiendo/)).toBeInTheDocument();
 

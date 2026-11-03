@@ -102,9 +102,9 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('los cupos cambian en vivo: al llenarse se deshabilita y si se libera vuelve a ofrecerse', async () => {
-    const { realtime } = openAsEmployee(true);
+    const { realtime, subscribedTo } = openAsEmployee(true);
     const impostor = await cardOf(IMPOSTOR_TITLE);
-    await realtime.subscribedTo(workshopTopic(IMPOSTOR));
+    await subscribedTo(workshopTopic(IMPOSTOR));
 
     act(() => {
       realtime.deliver(workshopTopic(IMPOSTOR), updateWorkshopOccupied(IMPOSTOR, 30));
@@ -122,9 +122,9 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('descarta los avisos atrasados, los de otro taller y los que no son del contrato', async () => {
-    const { realtime } = openAsEmployee(true);
+    const { realtime, subscribedTo } = openAsEmployee(true);
     const impostor = await cardOf(IMPOSTOR_TITLE);
-    await realtime.subscribedTo(workshopTopic(IMPOSTOR));
+    await subscribedTo(workshopTopic(IMPOSTOR));
 
     act(() => {
       realtime.deliver(workshopTopic(IMPOSTOR), spotsEvent(30, 3));
@@ -153,10 +153,11 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('un taller que publica el administrador aparece al instante, sin repetirse', async () => {
-    const { realtime } = openAsEmployee(true);
+    const { realtime, subscribedTo } = openAsEmployee(true);
     await cardOf(IMPOSTOR_TITLE);
     const published = workshop({ id: 'taller-en-vivo', title: 'Taller recién publicado' });
     const topic = organizationWorkshopsTopic(SEED_ORGANIZATION);
+    await subscribedTo(topic);
 
     act(() => {
       realtime.deliver(topic, { type: 'PUBLICADO', workshop: published });

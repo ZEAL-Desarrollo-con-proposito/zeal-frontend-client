@@ -1,13 +1,14 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EMPLOYEE_PATHS, psychologistPath } from '@/app/paths';
 import { RESERVATIONS_ENDPOINT } from '@/features/agenda/api/agendaApi';
 import { PSYCHOLOGISTS_ENDPOINT } from '@/features/directory/api/directoryApi';
+import { notify } from '@/mocks/notifications/db';
 import { server } from '@/mocks/server';
 import { readWellbeingDb, SEED_PSYCHOLOGIST_ID } from '@/mocks/wellbeing/db';
 import { freezeTime } from '@/test/clock';
-import { storeSession } from '@/test/credentials';
+import { seedUser, storeSession } from '@/test/credentials';
 import { fakeMediaQueryList } from '@/test/media';
 import { renderRoute } from '@/test/renderRoute';
 
@@ -143,8 +144,17 @@ describe('Agendar cita (HU-FE-05)', () => {
       toasts.getByText('Laura Martínez · miércoles, 23 de septiembre de 10:00 a 10:50'),
     ).toBeInTheDocument();
 
-    // Llega por la cola privada de notificaciones, una sola vez.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Llega por la cola privada de notificaciones, una sola vez: el aviso de control sale después
+    // por la misma cola y, cuando aparece, ya se entregó todo lo anterior.
+    act(() => {
+      notify(seedUser('EMPLEADO').id, {
+        type: 'RECORDATORIO',
+        title: 'Aviso de control',
+        message: 'Mensaje',
+        link: null,
+      });
+    });
+    expect(await toasts.findByText('Aviso de control')).toBeInTheDocument();
     expect(toasts.getAllByText('Tu cita quedó confirmada')).toHaveLength(1);
 
     await user.click(toasts.getByRole('link', { name: 'Ver mis citas' }));

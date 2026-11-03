@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setupUser } from '@/test/user';
 import { ChatComposer } from './ChatComposer';
 
 /** jsdom no calcula el alto del `<textarea>`: se simula el que tendría con contenido. */
@@ -15,7 +15,7 @@ function altoDe(px: number | ((value: string) => number)) {
 
 function renderComposer(disabled?: boolean, onTyping?: (typing: boolean) => void) {
   const onSend = vi.fn();
-  const user = userEvent.setup();
+  const user = setupUser();
   render(
     <ChatComposer
       onSend={onSend}

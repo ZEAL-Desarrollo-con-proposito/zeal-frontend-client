@@ -424,11 +424,16 @@ describe('Talleres del administrador · en tiempo real', () => {
     await fillForm(user);
     await publish(user);
     await list().findByText('Taller de respiración profunda');
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    expect(list().getAllByRole('listitem')).toHaveLength(2);
     expect(announcements()).toHaveTextContent('Publicaste el taller');
+
+    // El aviso de control sale después del eco de lo publicado aquí: cuando aparece, el eco ya
+    // se procesó.
+    act(() => {
+      publishToUser(seedUser('ADMIN').id, WORKSHOPS_QUEUE, { type: 'PUBLICADO', workshop: remote });
+    });
+    await list().findByText('Publicado desde otra sesión');
+
+    expect(list().getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('vuelve a pedir la lista al recuperar la conexión', async () => {

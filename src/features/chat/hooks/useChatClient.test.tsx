@@ -67,10 +67,12 @@ async function abrir() {
   return cliente;
 }
 
-/** Espera a que la cola privada entregue lo que se publicó (BroadcastChannel es asíncrona). */
-function llegaElMensaje() {
-  return act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 30));
+/** Se publica al final: cuando llega, la cola privada ya entregó todo lo anterior. */
+const CONTROL = mensaje({ id: 'control', sentAt: new Date(2026, 8, 23, 10, 30).toISOString() });
+
+async function llegaElControl(result: { current: ReturnType<typeof useChatClient> }) {
+  await waitFor(() => {
+    expect(result.current.messages.map(({ id }) => id)).toContain(CONTROL.id);
   });
 }
 
@@ -107,13 +109,13 @@ describe('useChatClient', () => {
     historialDe(CONVERSATION, [mensaje()]);
     const { result } = await abrir();
 
-    await llegaElMensaje();
     act(() => {
       publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO', message: mensaje({ id: 'en-vivo' }) });
     });
-    await llegaElMensaje();
 
-    expect(result.current.messages.map(({ id }) => id)).toEqual(['mensaje-1', 'en-vivo']);
+    await waitFor(() => {
+      expect(result.current.messages.map(({ id }) => id)).toEqual(['mensaje-1', 'en-vivo']);
+    });
   });
 
   it('no repite un mensaje que ya había llegado', async () => {
@@ -121,12 +123,12 @@ describe('useChatClient', () => {
     const { result } = await abrir();
     const repetido = mensaje({ id: 'repetido' });
 
-    await llegaElMensaje();
     act(() => {
       publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO', message: repetido });
       publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO', message: repetido });
+      publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO', message: CONTROL });
     });
-    await llegaElMensaje();
+    await llegaElControl(result);
 
     expect(result.current.messages.filter(({ id }) => id === 'repetido')).toHaveLength(1);
   });
@@ -135,7 +137,6 @@ describe('useChatClient', () => {
     historialDe(CONVERSATION, [mensaje()]);
     const { result } = await abrir();
 
-    await llegaElMensaje();
     act(() => {
       publishToUser(EMPLOYEE, CHATS_QUEUE, 'hola');
       publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO' });
@@ -144,10 +145,11 @@ describe('useChatClient', () => {
         type: 'NUEVO',
         message: mensaje({ id: 'ajeno', conversationId: OTRA_CONVERSATION }),
       });
+      publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO', message: CONTROL });
     });
-    await llegaElMensaje();
+    await llegaElControl(result);
 
-    expect(result.current.messages.map(({ id }) => id)).toEqual(['mensaje-1']);
+    expect(result.current.messages.map(({ id }) => id)).toEqual(['mensaje-1', CONTROL.id]);
   });
 
   it('publica lo que la persona escribe en el destino de su conversación', async () => {
@@ -183,12 +185,12 @@ describe('useChatClient', () => {
     historialDe(OTRA_CONVERSATION, []);
     const { result, rerender } = await abrir();
 
-    await llegaElMensaje();
     act(() => {
       publishToUser(EMPLOYEE, CHATS_QUEUE, { type: 'NUEVO', message: mensaje({ id: 'en-vivo' }) });
     });
-    await llegaElMensaje();
-    expect(result.current.messages).toHaveLength(2);
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
 
     rerender({ conversationId: OTRA_CONVERSATION });
     await waitFor(() => {

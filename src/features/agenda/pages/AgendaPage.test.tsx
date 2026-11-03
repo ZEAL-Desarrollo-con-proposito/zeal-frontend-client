@@ -187,6 +187,7 @@ describe('Mi agenda · en tiempo real (RT-2)', () => {
     openAgenda();
     await rowsOf(TODAY);
     const slot = readWellbeingDb().slots[0];
+    const control = cancelReservationAt(new Date(2026, 8, 23, 11));
 
     act(() => {
       publishMockEvent(SLOTS_TOPIC, {
@@ -195,10 +196,15 @@ describe('Mi agenda · en tiempo real (RT-2)', () => {
       });
       publishMockEvent(SLOTS_TOPIC, { type: 'CREADA', slot });
       publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA' });
+      // El evento de control (válido) llega al final: cuando se ve, los anteriores ya se procesaron.
+      publishMockEvent(SLOTS_TOPIC, { type: 'ACTUALIZADA', slot: control });
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(requests).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(within(row(TODAY, '11:00 – 11:50')).getByText('Cancelada')).toBeInTheDocument();
+    });
+    // La carga inicial y la que pidió el evento de control: los demás no pidieron nada.
+    expect(requests).toHaveBeenCalledTimes(2);
   });
 
   it('recupera los cambios perdidos al reconectarse', async () => {
