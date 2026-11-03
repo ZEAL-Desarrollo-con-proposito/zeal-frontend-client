@@ -14,6 +14,7 @@ import { freezeTime } from '@/test/clock';
 import { buildSession, seedUser, storeSession } from '@/test/credentials';
 import { controlledRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
+import { takeDown } from '@/test/server';
 import { ADMIN_PROJECTS_ENDPOINT } from './api/adminProjectsApi';
 import type { AdminProject } from './model/adminProject';
 import { PROJECTS_QUEUE } from './model/adminProjectEvent';
@@ -99,11 +100,12 @@ describe('Proyectos del administrador · lista (HU-FE-14)', () => {
   });
 
   it('permite reintentar si la carga falla', async () => {
-    server.use(http.get(`*${ADMIN_PROJECTS_ENDPOINT}`, () => HttpResponse.error(), { once: true }));
+    const bringBack = takeDown(ADMIN_PROJECTS_ENDPOINT);
     storeSession('ADMIN');
     const { user } = renderRoute(ADMIN_PATHS.projects);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cargar los proyectos.');
+    bringBack();
     await user.click(screen.getByRole('button', { name: 'Reintentar' }));
 
     expect(await screen.findByRole('list', { name: 'Proyectos publicados' })).toBeInTheDocument();

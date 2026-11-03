@@ -476,6 +476,18 @@ servidor sube la `version` de los cupos y la avisa por el canal del taller. En e
   activa la sala desde su agenda y el empleado, que espera desde "Ir a la sala" en Mis citas, entra
   en cuanto se activa.
 
+## Disponibilidad (HU-FE-19)
+
+El backend corre en varias réplicas detrás de un balanceador; el cliente tolera que una caiga:
+
+- **Reintentos:** una consulta (`GET`) que no llega a un servidor sano (sin conexión, `502`, `503`
+  o `504`) se repite hasta 3 veces, con una espera al azar que duplica su tope en cada intento
+  (250, 500 y 1000 ms) para que las pestañas no reintenten a la vez. Los envíos (`POST`, `PUT`,
+  `PATCH`, `DELETE`) nunca se repiten solos: podrían duplicar una reserva o una postulación.
+- **Reconexión:** el cliente STOMP vuelve a suscribir cada destino al reconectarse (quizá con otra
+  réplica del Real-Time Gateway) y cada vista vuelve a pedir su estado para no perder lo que pasó
+  sin conexión.
+
 ## Sesión y seguridad
 
 - **Rutas por rol:** cada rol vive bajo su prefijo (`/empleado`, `/psicologo`, `/admin`). Sin

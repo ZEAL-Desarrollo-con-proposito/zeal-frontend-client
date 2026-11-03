@@ -1,8 +1,15 @@
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
+import { fixRetryJitter } from '@/test/server';
 import { ApiError, NetworkError } from './errors';
-import { configureHttpAuth, isAbortError, request } from './httpClient';
+import {
+  configureHttpAuth,
+  isAbortError,
+  MAX_RETRIES,
+  request,
+  RETRY_BASE_DELAY_MS,
+} from './httpClient';
 
 const ENDPOINT = '/api/prueba';
 
@@ -122,9 +129,121 @@ describe('httpClient.request', () => {
     });
   });
 
-  it('lanza NetworkError cuando no hay conexión con el servidor', async () => {
-    server.use(http.get(`*${ENDPOINT}`, () => HttpResponse.error()));
+  describe('cuando el servidor no está disponible', () => {
+    beforeEach(() => {
+      // Sin espera entre reintentos, salvo en las pruebas que la miden.
+      fixRetryJitter(0);
+    });
 
-    await expect(request(ENDPOINT)).rejects.toBeInstanceOf(NetworkError);
+    /** Responde `failure` los primeros `failures` intentos y luego `{ ok: true }`. */
+    function unavailableFirst(failures: number, failure: () => Response) {
+      const attempts = { count: 0 };
+      server.use(
+        http.get(`*${ENDPOINT}`, () => {
+          attempts.count += 1;
+          return attempts.count <= failures ? failure() : HttpResponse.json({ ok: true });
+        }),
+      );
+      return attempts;
+    }
+
+    it.each([502, 503, 504])(
+      'repite una consulta que recibe %i hasta que una réplica sana responde',
+      async (status) => {
+        const attempts = unavailableFirst(MAX_RETRIES, () => new HttpResponse(null, { status }));
+
+        await expect(request(ENDPOINT)).resolves.toEqual({ ok: true });
+        expect(attempts.count).toBe(MAX_RETRIES + 1);
+      },
+    );
+
+    it('repite una consulta que no llegó al servidor', async () => {
+      const attempts = unavailableFirst(1, () => HttpResponse.error());
+
+      await expect(request(ENDPOINT)).resolves.toEqual({ ok: true });
+      expect(attempts.count).toBe(2);
+    });
+
+    it('si ninguna réplica responde, entrega el error del último intento', async () => {
+      const attempts = unavailableFirst(Infinity, () =>
+        HttpResponse.json({ message: 'ZEAL está en mantenimiento' }, { status: 503 }),
+      );
+
+      await expect(request(ENDPOINT)).rejects.toEqual(
+        new ApiError(503, 'ZEAL está en mantenimiento'),
+      );
+      expect(attempts.count).toBe(MAX_RETRIES + 1);
+    });
+
+    it('lanza NetworkError cuando nunca hay conexión con el servidor', async () => {
+      unavailableFirst(Infinity, () => HttpResponse.error());
+
+      await expect(request(ENDPOINT)).rejects.toBeInstanceOf(NetworkError);
+    });
+
+    it.each([
+      ['un envío sin conexión', 'POST', () => HttpResponse.error()],
+      ['un envío con el servidor caído', 'PUT', () => new HttpResponse(null, { status: 503 })],
+      ['un envío sin respuesta a tiempo', 'PATCH', () => new HttpResponse(null, { status: 504 })],
+      [
+        'una cancelación con el servidor caído',
+        'DELETE',
+        () => new HttpResponse(null, { status: 502 }),
+      ],
+      ['una consulta con un error interno', 'GET', () => new HttpResponse(null, { status: 500 })],
+      ['una consulta de algo que no existe', 'GET', () => new HttpResponse(null, { status: 404 })],
+    ] as const)('no repite %s', async (_case, method, failure) => {
+      let attempts = 0;
+      server.use(
+        http.all(`*${ENDPOINT}`, () => {
+          attempts += 1;
+          return failure();
+        }),
+      );
+
+      await expect(request(ENDPOINT, { method })).rejects.toBeInstanceOf(Error);
+      expect(attempts).toBe(1);
+    });
+
+    it('espera cada vez más entre reintentos, al azar hasta el tope de cada uno', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      fixRetryJitter(0.5);
+      const attempts = unavailableFirst(MAX_RETRIES, () => new HttpResponse(null, { status: 503 }));
+
+      const pending = request(ENDPOINT);
+
+      // Topes de 250, 500 y 1000 ms: con el azar a la mitad, espera 125, 250 y 500 ms.
+      for (const [elapsed, expected] of [
+        [0, 1],
+        [RETRY_BASE_DELAY_MS / 2 - 1, 1],
+        [1, 2],
+        [RETRY_BASE_DELAY_MS - 1, 2],
+        [1, 3],
+        [RETRY_BASE_DELAY_MS * 2 - 1, 3],
+        [1, 4],
+      ] as const) {
+        await vi.advanceTimersByTimeAsync(elapsed);
+        expect(attempts.count).toBe(expected);
+      }
+      await expect(pending).resolves.toEqual({ ok: true });
+    });
+
+    it('si quien pidió cancela durante la espera, no vuelve a intentar', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const attempts = unavailableFirst(Infinity, () => new HttpResponse(null, { status: 503 }));
+      fixRetryJitter(0.99);
+      const controller = new AbortController();
+
+      const pending = request(ENDPOINT, { signal: controller.signal }).catch(
+        (reason: unknown) => reason,
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(attempts.count).toBe(1);
+      controller.abort();
+
+      expect(isAbortError(await pending)).toBe(true);
+      await vi.advanceTimersByTimeAsync(RETRY_BASE_DELAY_MS * 2 ** MAX_RETRIES);
+      expect(attempts.count).toBe(1);
+    });
   });
 });
