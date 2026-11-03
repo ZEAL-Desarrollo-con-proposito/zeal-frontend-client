@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
-import { useEffect, useId, useRef } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { ButtonVariant } from '../Button/Button';
 import { Button } from '../Button/Button';
@@ -50,7 +50,9 @@ function DialogContent({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
+  // De layout y no pasivo: el foco vuelve en el mismo commit que retira el diálogo, sin un
+  // instante en <body> (un efecto pasivo se limpia después, cuando React tenga tiempo).
+  useLayoutEffect(() => {
     // activeElement siempre existe mientras hay documento (como mínimo, <body>).
     const opener = document.activeElement as HTMLElement;
     cancelRef.current?.focus();

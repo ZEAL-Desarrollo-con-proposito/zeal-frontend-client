@@ -148,7 +148,10 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
     await user.click(button);
     await user.keyboard('{Escape}');
 
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    // El diálogo sale con su animación: se retira (y devuelve el foco) en un cuadro posterior.
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
     expect(button).toHaveFocus();
     expect(requests).toBe(0);
   });
