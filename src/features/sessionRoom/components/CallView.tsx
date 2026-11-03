@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
 import { cx } from '@/shared/lib/cx';
 import type { CallSnapshot, CallStatus } from '../call/callSession';
 import type { MediaState } from '../model/roomEvent';
@@ -87,24 +87,23 @@ export function CallView({
               self
             />
           </motion.div>
-          {/* Región viva estable: anuncia cuando la otra persona entra, se conecta, se pierde o sale. */}
+          {/* Región viva estable: anuncia cuando la otra persona entra, se conecta, se pierde o sale.
+              El texto nuevo reemplaza al anterior al instante y solo anima su entrada: la región
+              siempre dice el estado actual, sin esperar a que termine la salida del anterior. */}
           <div className={styles.status} role="status">
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={left ? 'left' : call.status}
-                className={cx(
-                  connected && 'visually-hidden',
-                  !connected && styles.statusText,
-                  left && styles.statusLeft,
-                )}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {statusText(call.status, participant, call.remoteLeft)}
-              </motion.p>
-            </AnimatePresence>
+            <motion.p
+              key={left ? 'left' : call.status}
+              className={cx(
+                connected && 'visually-hidden',
+                !connected && styles.statusText,
+                left && styles.statusLeft,
+              )}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {statusText(call.status, participant, call.remoteLeft)}
+            </motion.p>
           </div>
         </div>
         {chat.open && (
