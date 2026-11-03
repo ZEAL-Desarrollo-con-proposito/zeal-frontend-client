@@ -10,6 +10,7 @@ import { freezeTime } from '@/test/clock';
 import { buildSession, seedUser, storeSession } from '@/test/credentials';
 import { controlledRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
+import { takeDown } from '@/test/server';
 import { keepOnlyAdminSeedWorkshop } from '@/test/workshops';
 import { ADMIN_WORKSHOPS_ENDPOINT } from './api/adminWorkshopsApi';
 import type { Workshop } from './model/workshop';
@@ -138,13 +139,12 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
   });
 
   it('permite reintentar si la carga falla', async () => {
-    server.use(
-      http.get(`*${ADMIN_WORKSHOPS_ENDPOINT}`, () => HttpResponse.error(), { once: true }),
-    );
+    const bringBack = takeDown(ADMIN_WORKSHOPS_ENDPOINT);
     storeSession('ADMIN');
     const { user } = renderRoute(ADMIN_PATHS.workshops);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cargar los talleres.');
+    bringBack();
     await user.click(screen.getByRole('button', { name: 'Reintentar' }));
 
     expect(await screen.findByRole('list', { name: 'Talleres publicados' })).toBeInTheDocument();

@@ -5,7 +5,12 @@ import { ApiError, InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { freezeTime } from '@/test/clock';
 import { buildSession } from '@/test/credentials';
-import { claimEndpoint, claimFreedSlot, FREED_SLOTS_ENDPOINT } from './freedSlotsApi';
+import {
+  claimEndpoint,
+  claimFreedSlot,
+  fetchOpenOffers,
+  FREED_SLOTS_ENDPOINT,
+} from './freedSlotsApi';
 
 const APPOINTMENT = {
   id: 'reserva-90',
@@ -67,5 +72,34 @@ describe('freedSlotsApi.claimFreedSlot', () => {
       serverMessage: 'Otra persona tomó este cupo antes que tú.',
     });
     await expect(claimFreedSlot('cupo-1')).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('freedSlotsApi.fetchOpenOffers', () => {
+  const OFFER = {
+    id: 'cupo-1',
+    psychologist: {
+      id: 'usr-psicologo-001',
+      fullName: 'Laura Martínez',
+      title: 'Psicóloga clínica',
+    },
+    startsAt: new Date(2026, 8, 24, 8).toISOString(),
+    endsAt: new Date(2026, 8, 24, 8, 50).toISOString(),
+    expiresAt: new Date(2026, 8, 23, 9, 25).toISOString(),
+  };
+
+  it('entrega los cupos que siguen abiertos para la persona', async () => {
+    server.use(http.get(`*${FREED_SLOTS_ENDPOINT}`, () => HttpResponse.json([OFFER])));
+
+    await expect(fetchOpenOffers()).resolves.toEqual([OFFER]);
+  });
+
+  it.each([
+    ['no es una lista', { offers: [OFFER] }],
+    ['trae un cupo incompleto', [OFFER, { id: 'cupo-2' }]],
+  ])('rechaza una respuesta que %s', async (_case, payload) => {
+    server.use(http.get(`*${FREED_SLOTS_ENDPOINT}`, () => HttpResponse.json(payload)));
+
+    await expect(fetchOpenOffers()).rejects.toBeInstanceOf(InvalidResponseError);
   });
 });

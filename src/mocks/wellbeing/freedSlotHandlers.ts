@@ -9,14 +9,38 @@ import { publishMockEvent, publishToUser } from '../realtime';
 import { toAppointment } from './bookingHandlers';
 import type { ReservationRecord } from './db';
 import { nextId, readWellbeingDb, writeWellbeingDb } from './db';
-import { overlaps, readFreedSlotsDb, writeFreedSlotsDb } from './freedSlotsDb';
+import { overlaps, readFreedSlotsDb, toOffer, writeFreedSlotsDb } from './freedSlotsDb';
 
 /**
- * Tomar un cupo liberado (HU-BE-08). La carrera se resuelve como en la reserva normal: validar
- * y escribir ocurren sin pausas intermedias, así que solo la primera petición gana (200) y las
- * demás reciben 409 "otra persona lo tomó primero".
+ * Cupos liberados (HU-BE-08):
+ * - consultar los que la persona aún puede tomar, para recuperarlos tras reconectar;
+ * - tomar uno. La carrera se resuelve como en la reserva normal: validar y escribir ocurren sin
+ *   pausas intermedias, así que solo la primera petición gana (200) y las demás reciben 409
+ *   "otra persona lo tomó primero".
  */
 export const freedSlotHandlers = [
+  http.get(`*${FREED_SLOTS_ENDPOINT}`, async ({ request }) => {
+    await delay();
+    const user = authorize(request, 'EMPLEADO');
+    if (user instanceof Response) {
+      return user;
+    }
+    const { psychologists } = readWellbeingDb();
+    const now = Date.now();
+    const open = readFreedSlotsDb()
+      .offers.filter(
+        ({ status, recipientIds, expiresAt }) =>
+          status === 'ABIERTO' && recipientIds.includes(user.id) && Date.parse(expiresAt) > now,
+      )
+      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+    return HttpResponse.json(
+      open.flatMap((record) => {
+        const psychologist = psychologists.find(({ id }) => id === record.psychologistId);
+        return psychologist === undefined ? [] : [toOffer(record, psychologist)];
+      }),
+    );
+  }),
+
   http.post<{ id: string }>(`*${FREED_SLOTS_ENDPOINT}/:id/tomar`, async ({ request, params }) => {
     await delay();
     const user = authorize(request, 'EMPLEADO');

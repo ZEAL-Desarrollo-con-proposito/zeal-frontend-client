@@ -466,6 +466,12 @@ servidor sube la `version` de los cupos y la avisa por el canal del taller. En e
 - **Cola privada `/user/queue/inscripciones` (HU-FE-18):**
   `{ "type": "INSCRIPCION", "enrollment": <inscripción> }` cuando la persona se inscribe desde
   cualquier pestaña o equipo. Se queda la versión más nueva; al reconectar se vuelve a pedir.
+- **Cola privada `/user/queue/cupos-liberados` (HU-FE-08):**
+  `{ "type": "LIBERADO", "offer": <cupo> }` cuando se libera un cupo para la persona y
+  `{ "type": "TOMADO", "offerId": … }` cuando otra persona lo toma. Al entrar y al reconectar se
+  piden los que siguen abiertos (`GET /api/wellbeing/cupos`): aparecen los que se ofrecieron sin
+  conexión y los que se conocían y ya no están pasan a "Este cupo ya no está disponible". Tomarlo es
+  `POST /api/wellbeing/cupos/{id}/tomar` (`200` la cita · `409` otra persona se adelantó).
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
@@ -475,6 +481,18 @@ servidor sube la `version` de los cupos y la avisa por el canal del taller. En e
   como psicóloga en una pestaña y como empleado en otra durante una sesión en curso: la psicóloga
   activa la sala desde su agenda y el empleado, que espera desde "Ir a la sala" en Mis citas, entra
   en cuanto se activa.
+
+## Disponibilidad (HU-FE-19)
+
+El backend corre en varias réplicas detrás de un balanceador; el cliente tolera que una caiga:
+
+- **Reintentos:** una consulta (`GET`) que no llega a un servidor sano (sin conexión, `502`, `503`
+  o `504`) se repite hasta 3 veces, con una espera al azar que duplica su tope en cada intento
+  (250, 500 y 1000 ms) para que las pestañas no reintenten a la vez. Los envíos (`POST`, `PUT`,
+  `PATCH`, `DELETE`) nunca se repiten solos: podrían duplicar una reserva o una postulación.
+- **Reconexión:** el cliente STOMP vuelve a suscribir cada destino al reconectarse (quizá con otra
+  réplica del Real-Time Gateway) y cada vista vuelve a pedir su estado para no perder lo que pasó
+  sin conexión.
 
 ## Sesión y seguridad
 

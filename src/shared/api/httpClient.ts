@@ -13,6 +13,13 @@ interface RequestOptions {
 
 const NO_CONTENT = 204;
 
+/** Reintentos de una consulta (GET) que no llegó a un servidor sano antes de dar el error. */
+export const MAX_RETRIES = 3;
+/** Espera máxima antes del primer reintento; se duplica en cada uno (backoff exponencial). */
+export const RETRY_BASE_DELAY_MS = 250;
+/** Respuestas del balanceador cuando una réplica cayó, está saturada o no respondió a tiempo. */
+const UNAVAILABLE_STATUSES = new Set([502, 503, 504]);
+
 /** Credencial de la sesión activa y reacción cuando el servidor la rechaza. */
 export interface HttpAuth {
   accessToken: string;
@@ -29,11 +36,72 @@ export function configureHttpAuth(auth: HttpAuth | null): void {
 /**
  * Cliente HTTP JSON. Devuelve `unknown`: cada módulo de API valida la forma de la respuesta,
  * porque lo que llega del servidor es un límite de confianza. Una respuesta 204 devuelve `null`.
+ *
+ * Si una consulta (GET) no llega a un servidor sano (sin conexión, 502, 503 o 504), se repite
+ * hasta `MAX_RETRIES` veces con espera creciente: otra réplica puede atenderla. Los envíos nunca
+ * se repiten solos, porque podrían duplicar una reserva o una postulación.
  */
-export async function request(
+export async function request(path: string, options: RequestOptions = {}): Promise<unknown> {
+  const send = () => sendOnce(path, options);
+  return (options.method ?? 'GET') === 'GET' ? retryWhileUnavailable(send, options.signal) : send();
+}
+
+async function retryWhileUnavailable(
+  send: () => Promise<unknown>,
+  signal: AbortSignal | undefined,
+): Promise<unknown> {
+  for (let retry = 0; retry < MAX_RETRIES; retry += 1) {
+    try {
+      return await send();
+    } catch (error) {
+      if (!isUnavailable(error)) {
+        throw error;
+      }
+    }
+    await wait(retryDelayMs(retry), signal);
+  }
+  return send(); // Último intento: si también falla, su error llega a quien pidió.
+}
+
+/** La petición no llegó a un servidor sano; los demás errores se repetirían igual. */
+function isUnavailable(error: unknown): boolean {
+  return (
+    error instanceof NetworkError ||
+    (error instanceof ApiError && UNAVAILABLE_STATUSES.has(error.status))
+  );
+}
+
+/** Espera al azar hasta el tope del reintento (jitter): las pestañas no reintentan a la vez. */
+function retryDelayMs(retry: number): number {
+  return randomFraction() * RETRY_BASE_DELAY_MS * 2 ** retry;
+}
+
+/** Número en [0, 1) tomado de `crypto`: Sonar marca Math.random como generador inseguro. */
+function randomFraction(): number {
+  const [value = 0] = crypto.getRandomValues(new Uint32Array(1));
+  return value / 2 ** 32;
+}
+
+/** Espera `ms`; si quien pidió cancela, termina de inmediato con el mismo error que daría fetch. */
+function wait(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    const cancel = () => {
+      clearTimeout(timer);
+      reject(signal?.reason as Error);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', cancel);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', cancel, { once: true });
+  });
+}
+
+async function sendOnce(
   path: string,
-  { method = 'GET', body, query = {}, signal }: RequestOptions = {},
-) {
+  { method = 'GET', body, query = {}, signal }: RequestOptions,
+): Promise<unknown> {
   const auth = httpAuth;
   const headers = new Headers({ Accept: 'application/json' });
   if (body !== undefined) {
