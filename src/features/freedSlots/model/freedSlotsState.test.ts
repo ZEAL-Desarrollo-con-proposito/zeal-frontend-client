@@ -97,17 +97,24 @@ describe('freedSlotsReducer', () => {
     expect(claimStatus(state)).toEqual({ status: 'lost', detail: undefined });
   });
 
+  it('si al reconectar el servidor ya no lo ofrece, pasa a "ya no está disponible"', () => {
+    const state = run({ type: 'offered', offer: offer('a') }, { type: 'closed', id: 'a' });
+    expect(claimStatus(state)).toEqual({ status: 'gone', detail: undefined });
+  });
+
   it.each([
-    ['mientras se toma', 'claim-start'],
-    ['después de ganarlo', 'claim-won'],
-  ] as const)('un aviso de "tomado" %s no cambia el resultado', (_name, last) => {
+    ['tomado', 'mientras se toma', 'taken', 'claim-start'],
+    ['tomado', 'después de ganarlo', 'taken', 'claim-won'],
+    ['cerrado al reconectar', 'mientras se toma', 'closed', 'claim-start'],
+    ['cerrado al reconectar', 'después de ganarlo', 'closed', 'claim-won'],
+  ] as const)('un aviso de "%s" %s no cambia el resultado', (_notice, _moment, type, last) => {
     const state = run(
       { type: 'offered', offer: offer('a') },
       { type: 'claim-start', id: 'a' },
       ...(last === 'claim-won' ? [{ type: 'claim-won', id: 'a' } as const] : []),
     );
 
-    expect(freedSlotsReducer(state, { type: 'taken', id: 'a' })).toEqual(state);
+    expect(freedSlotsReducer(state, { type, id: 'a' })).toEqual(state);
   });
 
   it('un resultado atrasado no pisa otro estado ni afecta a otros cupos', () => {

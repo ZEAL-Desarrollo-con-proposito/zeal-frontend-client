@@ -1,8 +1,9 @@
-import { useReducer, useRef } from 'react';
+import { useEffect, useEffectEvent, useReducer, useRef } from 'react';
 import { describeMutationError } from '@/shared/api/describeError';
 import { ApiError } from '@/shared/api/errors';
-import { useRealtimeSubscription } from '@/shared/realtime/useRealtime';
-import { claimFreedSlot } from '../api/freedSlotsApi';
+import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
+import { claimFreedSlot, fetchOpenOffers } from '../api/freedSlotsApi';
+import type { FreedSlotOffer } from '../model/freedSlot';
 import { remainingMs } from '../model/freedSlot';
 import { FREED_SLOTS_QUEUE, isFreedSlotEvent } from '../model/freedSlotEvent';
 import { freedSlotsReducer, INITIAL_FREED_SLOTS_STATE } from '../model/freedSlotsState';
@@ -11,6 +12,9 @@ import { freedSlotsReducer, INITIAL_FREED_SLOTS_STATE } from '../model/freedSlot
  * Cupos liberados que le llegan a la persona por su cola privada (HU-FE-08):
  * - cada cupo nuevo aparece al instante, sin recargar, y se anuncia una sola vez;
  * - si otra persona lo toma antes, la alerta se actualiza sola;
+ * - al entrar y cada vez que se recupera la conexión (quizá con otra réplica del servidor) se
+ *   piden los cupos abiertos: aparecen los que se ofrecieron sin conexión y se cierran los que se
+ *   tomaron o vencieron mientras tanto (HU-FE-19);
  * - `claim` compite por el cupo: solo el primer clic viaja al servidor (el resto se ignora, incluso
  *   si llega antes de que React vuelva a pintar) y el servidor decide quién gana.
  */
@@ -20,6 +24,42 @@ export function useFreedSlots() {
   const announced = useRef(new Set<string>());
   /** Cupos con un intento en curso o ya resuelto: bloquea el segundo clic de inmediato. */
   const attempted = useRef(new Set<string>());
+  const { recoveries } = useRealtimeStatus();
+
+  function announce(offer: FreedSlotOffer) {
+    // Un cupo que ya venció al llegar no sirve de nada mostrarlo.
+    if (announced.current.has(offer.id) || remainingMs(offer, Date.now()) === 0) {
+      return;
+    }
+    announced.current.add(offer.id);
+    dispatch({ type: 'offered', offer });
+  }
+
+  /** `known`: los cupos anunciados al pedir la lista; los que no siguen abiertos ya se cerraron. */
+  const synchronize = useEffectEvent((open: FreedSlotOffer[], known: ReadonlySet<string>) => {
+    const openIds = new Set(open.map(({ id }) => id));
+    known.forEach((id) => {
+      if (!openIds.has(id)) {
+        dispatch({ type: 'closed', id });
+      }
+    });
+    open.forEach(announce);
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    // Un cupo que llega en vivo mientras se espera la lista no cuenta: quizá aún no estaba en ella.
+    const known = new Set(announced.current);
+    fetchOpenOffers(controller.signal).then(
+      (open) => {
+        synchronize(open, known);
+      },
+      () => undefined, // Sin la lista se sigue con lo que llegue en vivo.
+    );
+    return () => {
+      controller.abort();
+    };
+  }, [recoveries]);
 
   useRealtimeSubscription(FREED_SLOTS_QUEUE, (payload) => {
     if (!isFreedSlotEvent(payload)) {
@@ -29,13 +69,7 @@ export function useFreedSlots() {
       dispatch({ type: 'taken', id: payload.offerId });
       return;
     }
-    const { offer } = payload;
-    // Un cupo que ya venció al llegar (p. ej. tras reconectar) no sirve de nada mostrarlo.
-    if (announced.current.has(offer.id) || remainingMs(offer, Date.now()) === 0) {
-      return;
-    }
-    announced.current.add(offer.id);
-    dispatch({ type: 'offered', offer });
+    announce(payload.offer);
   });
 
   async function claim(id: string) {

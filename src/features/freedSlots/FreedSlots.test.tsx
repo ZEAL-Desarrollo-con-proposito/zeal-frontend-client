@@ -7,14 +7,16 @@ import { createMockToken } from '@/mocks/mockToken';
 import { publishToUser } from '@/mocks/realtime';
 import { SEED_USERS } from '@/mocks/seedUsers';
 import { server } from '@/mocks/server';
-import { FREED_SLOTS_DB_KEY } from '@/mocks/wellbeing/freedSlotsDb';
+import type { FreedSlotRecord } from '@/mocks/wellbeing/freedSlotsDb';
+import { FREED_SLOTS_DB_KEY, writeFreedSlotsDb } from '@/mocks/wellbeing/freedSlotsDb';
 import { readWellbeingDb } from '@/mocks/wellbeing/db';
 import { MUTATION_ERROR_MESSAGES } from '@/shared/api/describeError';
 import { controlClock, freezeTime } from '@/test/clock';
 import { storeSession } from '@/test/credentials';
+import { scriptedRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
 import { arrangeFreedSlotCompetition, MARIANA } from '@/test/wellbeing';
-import { claimEndpoint } from './api/freedSlotsApi';
+import { claimEndpoint, FREED_SLOTS_ENDPOINT } from './api/freedSlotsApi';
 import type { FreedSlotOffer } from './model/freedSlot';
 import { FREED_SLOTS_QUEUE } from './model/freedSlotEvent';
 
@@ -455,5 +457,164 @@ describe('Cupo liberado · de punta a punta con el servidor simulado (HU-FE-08)'
 
     expect(await alerts().findByText('Otra persona lo tomó primero')).toBeInTheDocument();
     expect(alerts().getByText('Otra persona tomó este cupo antes que tú.')).toBeInTheDocument();
+  });
+});
+
+describe('Cupo liberado · al entrar y al recuperar la conexión (HU-FE-19)', () => {
+  beforeEach(() => {
+    freezeTime();
+  });
+
+  /** Lo que el servidor simulado guarda del cupo `offer(id)`: abierto y ofrecido a David. */
+  function offerRecord(id = OFFER_ID, overrides: Partial<FreedSlotRecord> = {}): FreedSlotRecord {
+    const { psychologist, startsAt, endsAt, expiresAt } = offer(id);
+    return {
+      id,
+      slotId: `franja-${id}`,
+      psychologistId: psychologist.id,
+      startsAt,
+      endsAt,
+      expiresAt,
+      recipientIds: [DAVID],
+      status: 'ABIERTO',
+      takenBy: null,
+      ...overrides,
+    };
+  }
+
+  function storeOffers(...records: FreedSlotRecord[]) {
+    writeFreedSlotsDb({ offers: records, sequence: records.length });
+  }
+
+  async function openHomeScripted() {
+    storeSession('EMPLEADO');
+    const realtime = scriptedRealtimeClient();
+    const rendered = renderRoute(ROLE_HOME_PATH.EMPLEADO, () => realtime.client);
+    await realtime.subscribedTo(FREED_SLOTS_QUEUE);
+    return { ...rendered, realtime };
+  }
+
+  /** La conexión se cae, pasa `meanwhile` en el servidor y vuelve (quizá a otra réplica). */
+  function reconnect(
+    realtime: ReturnType<typeof scriptedRealtimeClient>,
+    meanwhile: () => void = () => undefined,
+  ) {
+    act(() => {
+      realtime.store.set('reconnecting');
+    });
+    meanwhile();
+    act(() => {
+      realtime.store.set('connected');
+    });
+  }
+
+  it('al entrar muestra los cupos que la persona todavía puede tomar', async () => {
+    storeOffers(
+      offerRecord(),
+      offerRecord('tomado', { status: 'TOMADO', takenBy: MARIANA }),
+      offerRecord('vencido', { expiresAt: new Date(2026, 8, 23, 9, 10).toISOString() }),
+      offerRecord('de-mariana', { recipientIds: [MARIANA] }),
+    );
+    await openHomeReady();
+
+    expect(await alerts().findByText('Se liberó un cupo')).toBeInTheDocument();
+    expect(alerts().getAllByRole('listitem')).toHaveLength(1);
+    expect(alerts().getByRole('button', { name: 'Tomar el cupo' })).toBeEnabled();
+  });
+
+  it('al recuperar la conexión aparecen los cupos que se ofrecieron mientras no había', async () => {
+    const { realtime } = await openHomeScripted();
+    expect(alerts().queryByRole('listitem')).not.toBeInTheDocument();
+
+    // El aviso en vivo se perdió con la conexión; el cupo sigue abierto en el servidor.
+    reconnect(realtime, () => {
+      storeOffers(offerRecord());
+    });
+
+    expect(await alerts().findByText('Se liberó un cupo')).toBeInTheDocument();
+    expect(alerts().getByText('Laura Martínez · Hoy · 10:00 – 10:50')).toBeInTheDocument();
+    expect(alerts().getByRole('button', { name: 'Tomar el cupo' })).toBeEnabled();
+  });
+
+  it('si otra persona lo tomó mientras no había conexión, deja de ofrecerlo', async () => {
+    storeOffers(offerRecord());
+    const { realtime } = await openHomeScripted();
+    expect(await alerts().findByRole('button', { name: 'Tomar el cupo' })).toBeEnabled();
+
+    reconnect(realtime, () => {
+      storeOffers(offerRecord(OFFER_ID, { status: 'TOMADO', takenBy: MARIANA }));
+    });
+
+    expect(await alerts().findByText('Este cupo ya no está disponible')).toBeInTheDocument();
+    expect(alerts().queryByRole('button', { name: 'Tomar el cupo' })).not.toBeInTheDocument();
+  });
+
+  it('no repite un cupo ya anunciado, aunque se haya cerrado su alerta', async () => {
+    storeOffers(offerRecord());
+    const { user, realtime } = await openHomeScripted();
+    await user.click(await alerts().findByRole('button', { name: 'Cerrar aviso de cupo' }));
+    await waitFor(() => {
+      expect(alerts().queryByRole('listitem')).not.toBeInTheDocument();
+    });
+
+    reconnect(realtime, () => {
+      storeOffers(
+        offerRecord(),
+        offerRecord('cupo-2', {
+          startsAt: new Date(2026, 8, 23, 11).toISOString(),
+          endsAt: new Date(2026, 8, 23, 11, 50).toISOString(),
+        }),
+      );
+    });
+
+    expect(await alerts().findByText('Laura Martínez · Hoy · 11:00 – 11:50')).toBeInTheDocument();
+    expect(alerts().getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('un cupo que llega en vivo mientras se pide la lista no se da por cerrado', async () => {
+    let requests = 0;
+    let answer: () => void = () => undefined;
+    server.use(
+      http.get(`*${FREED_SLOTS_ENDPOINT}`, async () => {
+        requests += 1;
+        if (requests === 1) {
+          return HttpResponse.json([]);
+        }
+        await new Promise<void>((resolve) => {
+          answer = resolve;
+        });
+        // La lista se armó antes de que se liberara el cupo que llegó en vivo.
+        return HttpResponse.json([offer('cupo-2')]);
+      }),
+    );
+    const { realtime } = await openHomeScripted();
+    await waitFor(() => {
+      expect(requests).toBe(1);
+    });
+
+    reconnect(realtime);
+    await waitFor(() => {
+      expect(requests).toBe(2);
+    });
+    act(() => {
+      realtime.deliver(FREED_SLOTS_QUEUE, { type: 'LIBERADO', offer: offer() });
+    });
+    expect(await alerts().findByText('Se liberó un cupo')).toBeInTheDocument();
+    answer();
+
+    await waitFor(() => {
+      expect(alerts().getAllByRole('button', { name: 'Tomar el cupo' })).toHaveLength(2);
+    });
+  });
+
+  it('si no logra pedir la lista, sigue mostrando los cupos que llegan en vivo', async () => {
+    server.use(http.get(`*${FREED_SLOTS_ENDPOINT}`, () => new HttpResponse(null, { status: 500 })));
+    const { realtime } = await openHomeScripted();
+
+    act(() => {
+      realtime.deliver(FREED_SLOTS_QUEUE, { type: 'LIBERADO', offer: offer() });
+    });
+
+    expect(await alerts().findByRole('button', { name: 'Tomar el cupo' })).toBeEnabled();
   });
 });

@@ -30,6 +30,8 @@ export type FreedSlotsAction =
   | { type: 'claim-failed'; id: string; error: string }
   /** Otra persona tomó el cupo (evento en vivo). */
   | { type: 'taken'; id: string }
+  /** El servidor ya no lo ofrece: se tomó o venció mientras no había conexión. */
+  | { type: 'closed'; id: string }
   | { type: 'dismiss'; id: string };
 
 /** Alertas a la vez: la más antigua sale para que no tapen la pantalla (como los avisos). */
@@ -73,6 +75,8 @@ export function freedSlotsReducer(
       return transition(state, action.id, 'claiming', { status: 'available', error: action.error });
     case 'taken':
       return transition(state, action.id, 'available', { status: 'lost', detail: undefined });
+    case 'closed':
+      return transition(state, action.id, 'available', { status: 'gone', detail: undefined });
     case 'dismiss':
       return state.filter(({ offer }) => offer.id !== action.id);
   }

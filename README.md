@@ -466,6 +466,12 @@ servidor sube la `version` de los cupos y la avisa por el canal del taller. En e
 - **Cola privada `/user/queue/inscripciones` (HU-FE-18):**
   `{ "type": "INSCRIPCION", "enrollment": <inscripción> }` cuando la persona se inscribe desde
   cualquier pestaña o equipo. Se queda la versión más nueva; al reconectar se vuelve a pedir.
+- **Cola privada `/user/queue/cupos-liberados` (HU-FE-08):**
+  `{ "type": "LIBERADO", "offer": <cupo> }` cuando se libera un cupo para la persona y
+  `{ "type": "TOMADO", "offerId": … }` cuando otra persona lo toma. Al entrar y al reconectar se
+  piden los que siguen abiertos (`GET /api/wellbeing/cupos`): aparecen los que se ofrecieron sin
+  conexión y los que se conocían y ya no están pasan a "Este cupo ya no está disponible". Tomarlo es
+  `POST /api/wellbeing/cupos/{id}/tomar` (`200` la cita · `409` otra persona se adelantó).
 - **Concurrencia en el cliente:** los eventos que llegan mientras carga una semana se reaplican sobre
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
