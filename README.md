@@ -83,12 +83,12 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 | Psicóloga | `laura.martinez@zeal.co`    | `/psicologo/agenda` |
 | Admin     | `talento.humano@nexura.co`  | `/admin/panel`      |
 
-### Contrato de autenticación (acordar con HU-BE-01)
+### Contrato de autenticación (acordar con HU-BE-01 y HU-BE-22)
 
 `POST /api/auth/login`
 
 ```json
-{ "email": "david.cajamarca@nexura.co", "password": "Zeal2026*" }
+{ "email": "david.cajamarca@nexura.co", "password": "Zeal2026*", "remember": false }
 ```
 
 **200 OK**
@@ -97,7 +97,7 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 {
   "accessToken": "<JWT con sub, role, iat y exp>",
   "tokenType": "Bearer",
-  "expiresIn": 3600,
+  "expiresIn": 900,
   "user": {
     "id": "usr-empleado-001",
     "fullName": "David Cajamarca",
@@ -116,9 +116,20 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 { "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
 ```
 
+El login y la renovación ponen el refresh token en una cookie `httpOnly`, `Secure` y
+`SameSite=Strict`: de sesión, o persistente si `remember` es `true`. Estas rutas viajan con
+esa cookie (`credentials: 'include'`) y sin `Authorization`.
+
+| Método y ruta            | Respuesta                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------- |
+| `POST /api/auth/refresh` | `200` como el login, con la cookie rotada · `401` sin cookie, vencida o revocada |
+| `POST /api/auth/logout`  | `204` revoca toda la familia de tokens y borra la cookie                         |
+
+Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-3).
+
 ### Contrato de disponibilidad (acordar con HU-BE-02)
 
-Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 403). Las reglas de
+Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 404). Las reglas de
 negocio viven en el backend; el frontend muestra el `message` del error tal cual.
 
 | Método y ruta                                                           | Respuesta                                                                |
@@ -253,7 +264,7 @@ externa). Marcar como leída es optimista: si el servidor falla, el cambio se de
 solo se puede cancelar una cita propia. El plazo mínimo para cancelar lo decide el
 servidor (en el simulador: 24 horas antes del inicio); el frontend solo muestra el `message`
 
-Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 403). Las reglas de
+Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 404). Las reglas de
 negocio viven en el backend; el frontend muestra el `message` del error tal cual.
 
 | Método y ruta                               | Respuesta                                                                           |
@@ -284,13 +295,13 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
 
 ### Contrato de la sala de la sesión (acordar con HU-BE-12)
 
-La sala es un sub-recurso de la reserva y la ven sus dos participantes (psicólogo y empleado); un rol
-empresarial recibe `403` (HU-BE-11) y cualquier otra persona `404`. Solo el psicólogo la activa, y
+La sala es un sub-recurso de la reserva y la ven sus dos participantes (psicólogo y empleado);
+cualquier otra persona, también un rol empresarial, recibe `404` (SEG-2). Solo el psicólogo la activa, y
 solo dentro de la ventana de ingreso (en el simulador: desde 10 minutos antes hasta el fin).
 
 | Método y ruta                                    | Respuesta                                                                   |
 | ------------------------------------------------ | --------------------------------------------------------------------------- |
-| `GET /api/wellbeing/reservas/{id}/sala`          | `200` sala · `403` rol empresarial · `404` no existe o no participa         |
+| `GET /api/wellbeing/reservas/{id}/sala`          | `200` sala · `404` no existe o no participa                                 |
 | `POST /api/wellbeing/reservas/{id}/sala/activar` | `200` sala `ACTIVA` (idempotente) · `409` aún no abre, ya cerró o cancelada |
 
 ```json
@@ -318,7 +329,7 @@ demás sesiones del administrador por tiempo real.
 
 | Método y ruta               | Respuesta                                                                             |
 | --------------------------- | ------------------------------------------------------------------------------------- |
-| `GET /api/admin/proyectos`  | `200` proyectos de la organización, más recientes primero · `403` rol sin `ADMIN`     |
+| `GET /api/admin/proyectos`  | `200` proyectos de la organización, más recientes primero · `404` rol sin `ADMIN`     |
 | `POST /api/admin/proyectos` | `201` proyecto creado · `400` datos inválidos · `409` título repetido con uno abierto |
 
 ```json
@@ -483,11 +494,11 @@ servidor sube la `version` de los cupos y la avisa por el canal del taller. En e
   la respuesta del servidor; una franja eliminada no reaparece por un evento atrasado; al
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
 - **Con el simulador:** el tiempo real se simula entre pestañas del mismo navegador. Para verlo,
-  inicia sesión como psicóloga con "Recordarme", abre `/psicologo/disponibilidad` en dos pestañas y
-  abre o elimina una franja en una de ellas. Para la videollamada, inicia sesión (sin "Recordarme")
-  como psicóloga en una pestaña y como empleado en otra durante una sesión en curso: la psicóloga
-  activa la sala desde su agenda y el empleado, que espera desde "Ir a la sala" en Mis citas, entra
-  en cuanto se activa.
+  inicia sesión como psicóloga, abre `/psicologo/disponibilidad` en dos pestañas y abre o elimina una
+  franja en una de ellas. Para la videollamada hacen falta dos sesiones a la vez: como la cookie de
+  refresh es una por navegador, inicia sesión como psicóloga en una ventana normal y como empleado
+  en una de incógnito durante una sesión en curso. La psicóloga activa la sala desde su agenda y el
+  empleado, que espera desde "Ir a la sala" en Mis citas, entra en cuanto se activa.
 
 ## Disponibilidad (HU-FE-19)
 
@@ -508,19 +519,26 @@ El backend corre en varias réplicas detrás de un balanceador; el cliente toler
   (aislamiento entre roles), también ante direcciones que no existen bajo ese prefijo (p. ej. un
   enlace al chat de un empleado abierto por el administrador). La autorización real la aplica
   siempre el backend.
-- **403 del servidor (HU-FE-11):** si lo que carga una pantalla responde 403, la pantalla se
-  reemplaza por "Permiso denegado", sin nada de su contenido y sin ofrecer reintento. Aplica a toda
-  carga hecha con `useFetch` o `useLiveFetch` (y a la semana de franjas): una pantalla nueva, como
-  el chat, lo hereda al usar esos hooks.
-- **Token:** se envía como `Authorization: Bearer <token>`. El frontend solo lee el claim `exp`
-  para cerrar la sesión al vencer; la firma la valida el servidor.
-- **Almacenamiento:** sin "Recordarme" la sesión vive en `sessionStorage` (se borra al cerrar la
-  pestaña); con "Recordarme", en `localStorage` y se sincroniza entre pestañas. Lo leído del
-  almacenamiento se valida y se descarta si está alterado o vencido.
-- **Cierre de sesión:** manual, por vencimiento del token o cuando el servidor responde 401.
-- **Pendiente para producción:** Web Storage es accesible desde JavaScript; si el backend emite el
-  token en una cookie `HttpOnly` + `SameSite`, el frontend puede dejar de guardarlo. Configurar
-  también una Content-Security-Policy en el servidor que sirva el build.
+- **Lo que el servidor oculta (SEG-2):** ante un recurso ajeno el servidor responde `404`, no `403`,
+  para no revelar que existe. Si la lista de una pantalla responde `404` (`listing` en `useFetch` y
+  `useLiveFetch`), la pantalla se reemplaza por "No encontramos esta página", sin nada de su
+  contenido ni reintento. Un `403` que aún llegue se muestra como "Permiso denegado".
+- **Token (SEG-3):** se envía como `Authorization: Bearer <token>` y vive solo en la memoria de la
+  pestaña: nada queda en `localStorage` ni en `sessionStorage`. El frontend solo lee el claim `exp`;
+  la firma la valida el servidor.
+- **Renovación:** el refresh token va en una cookie que JavaScript no puede leer. Se usa al recargar o
+  abrir otra pestaña, 30 segundos antes de que venza el token y ante un `401`: una consulta se repite
+  una vez con el token nuevo; un envío no se repite solo, se le pide a la persona intentarlo de nuevo.
+  Solo se renueva una vez a la vez, también entre pestañas (Web Locks): el servidor tomaría dos usos
+  de la misma cookie por un robo y revocaría la sesión. La conexión en tiempo real sigue abierta al
+  renovar y usa el último token al reconectarse.
+- **Cierre de sesión:** manual (se revoca en el servidor), o cuando el servidor rechaza la renovación
+  o la conexión en tiempo real. Si el servidor no responde, la sesión sigue y se vuelve a intentar:
+  quizá solo cayó una réplica. Las demás pestañas se enteran por `BroadcastChannel`, que nunca lleva
+  el token. Si no hay red al cerrar sesión, no se vuelve a entrar con la cookie y se revoca en la
+  próxima visita.
+- **Pendiente para producción:** configurar una Content-Security-Policy en el servidor que sirva el
+  build.
 
 ## Identidad visual
 
