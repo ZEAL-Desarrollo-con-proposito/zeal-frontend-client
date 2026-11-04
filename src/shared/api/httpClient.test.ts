@@ -9,6 +9,7 @@ import {
   MAX_RETRIES,
   request,
   RETRY_BASE_DELAY_MS,
+  SESSION_RENEWED_MESSAGE,
 } from './httpClient';
 
 const ENDPOINT = '/api/prueba';
@@ -103,9 +104,9 @@ describe('httpClient.request', () => {
       configureHttpAuth(null);
     });
 
-    it('envía el token y avisa a la sesión cuando el servidor responde 401', async () => {
-      const onUnauthorized = vi.fn();
-      configureHttpAuth({ accessToken: 'token-123', onUnauthorized });
+    it('envía el token y pide renovarlo cuando el servidor responde 401', async () => {
+      const renew = vi.fn(() => Promise.resolve(null));
+      configureHttpAuth({ accessToken: 'token-123', renew });
       server.use(
         http.get(`*${ENDPOINT}`, ({ request: incoming }) =>
           HttpResponse.json(
@@ -116,16 +117,90 @@ describe('httpClient.request', () => {
       );
 
       await expect(request(ENDPOINT)).rejects.toEqual(new ApiError(401, 'Bearer token-123'));
-      expect(onUnauthorized).toHaveBeenCalledOnce();
+      expect(renew).toHaveBeenCalledOnce();
     });
 
-    it('no avisa a la sesión ante errores distintos de 401', async () => {
-      const onUnauthorized = vi.fn();
-      configureHttpAuth({ accessToken: 'token-123', onUnauthorized });
+    it('no pide renovarlo ante errores distintos de 401', async () => {
+      const renew = vi.fn(() => Promise.resolve(null));
+      configureHttpAuth({ accessToken: 'token-123', renew });
       server.use(http.get(`*${ENDPOINT}`, () => new HttpResponse(null, { status: 403 })));
 
       await expect(request(ENDPOINT)).rejects.toBeInstanceOf(ApiError);
-      expect(onUnauthorized).not.toHaveBeenCalled();
+      expect(renew).not.toHaveBeenCalled();
+    });
+
+    it('una consulta rechazada por el token se repite una vez con el nuevo', async () => {
+      const renew = vi.fn(() => Promise.resolve('token-nuevo'));
+      configureHttpAuth({ accessToken: 'token-viejo', renew });
+      const seen: (string | null)[] = [];
+      server.use(
+        http.get(`*${ENDPOINT}`, ({ request: incoming }) => {
+          const authorization = incoming.headers.get('Authorization');
+          seen.push(authorization);
+          return authorization === 'Bearer token-nuevo'
+            ? HttpResponse.json({ ok: true })
+            : new HttpResponse(null, { status: 401 });
+        }),
+      );
+
+      await expect(request(ENDPOINT)).resolves.toEqual({ ok: true });
+      expect(seen).toEqual(['Bearer token-viejo', 'Bearer token-nuevo']);
+      expect(renew).toHaveBeenCalledOnce();
+    });
+
+    it('si también rechaza el token nuevo, entrega el error sin volver a renovar', async () => {
+      const renew = vi.fn(() => Promise.resolve('token-nuevo'));
+      configureHttpAuth({ accessToken: 'token-viejo', renew });
+      let requests = 0;
+      server.use(
+        http.get(`*${ENDPOINT}`, () => {
+          requests += 1;
+          return new HttpResponse(null, { status: 401 });
+        }),
+      );
+
+      await expect(request(ENDPOINT)).rejects.toMatchObject({ status: 401 });
+      expect(requests).toBe(2);
+      expect(renew).toHaveBeenCalledOnce();
+    });
+
+    it('un envío rechazado por el token no se repite solo: renueva y pide intentarlo de nuevo', async () => {
+      const renew = vi.fn(() => Promise.resolve('token-nuevo'));
+      configureHttpAuth({ accessToken: 'token-viejo', renew });
+      let requests = 0;
+      server.use(
+        http.post(`*${ENDPOINT}`, () => {
+          requests += 1;
+          return new HttpResponse(null, { status: 401 });
+        }),
+      );
+
+      await expect(request(ENDPOINT, { method: 'POST', body: {} })).rejects.toEqual(
+        new ApiError(401, SESSION_RENEWED_MESSAGE),
+      );
+      expect(requests).toBe(1);
+      expect(renew).toHaveBeenCalledOnce();
+    });
+
+    it('las peticiones de autenticación llevan la cookie, sin token y sin renovar ante un 401', async () => {
+      const renew = vi.fn(() => Promise.resolve('token-nuevo'));
+      configureHttpAuth({ accessToken: 'token-123', renew });
+      let authorization: string | null = 'sin leer';
+      let credentials = '';
+      server.use(
+        http.post(`*${ENDPOINT}`, ({ request: incoming }) => {
+          authorization = incoming.headers.get('Authorization');
+          credentials = incoming.credentials;
+          return new HttpResponse(null, { status: 401 });
+        }),
+      );
+
+      await expect(
+        request(ENDPOINT, { method: 'POST', withRefreshCookie: true }),
+      ).rejects.toMatchObject({ status: 401 });
+      expect(authorization).toBeNull();
+      expect(credentials).toBe('include');
+      expect(renew).not.toHaveBeenCalled();
     });
   });
 

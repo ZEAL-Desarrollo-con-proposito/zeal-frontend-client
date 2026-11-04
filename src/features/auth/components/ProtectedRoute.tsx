@@ -4,6 +4,7 @@ import type { LoginRedirectState } from '@/app/paths';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '../hooks/useAuth';
 import type { Role } from '../model/session';
+import { SessionRestoring } from './SessionRestoring';
 
 interface ProtectedRouteProps {
   role: Role;
@@ -13,10 +14,13 @@ interface ProtectedRouteProps {
 
 /** Deja pasar solo a una sesión activa del rol indicado; sin sesión, manda al login. */
 export function ProtectedRoute({ role, forbidden }: Readonly<ProtectedRouteProps>) {
-  const { session } = useAuth();
+  const { session, restoring } = useAuth();
   const location = useLocation();
 
   if (session === null) {
+    if (restoring) {
+      return <SessionRestoring />;
+    }
     const state: LoginRedirectState = { from: location.pathname };
     return <Navigate to={PATHS.login} replace state={state} />;
   }

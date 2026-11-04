@@ -1,59 +1,38 @@
 import type { Session } from '../model/session';
-import { isSession } from '../model/session';
 
-export const SESSION_STORAGE_KEY = 'zeal.session';
+/** Dónde guardaban la sesión las versiones anteriores, para borrarla de los navegadores. */
+const LEGACY_SESSION_KEY = 'zeal.session';
+
+let current: Session | null = null;
 
 /**
- * Persistencia de la sesión en el navegador.
- * - Sin "Recordarme": sessionStorage (se borra al cerrar la pestaña).
- * - Con "Recordarme": localStorage (sobrevive al cierre y se comparte entre pestañas).
- * Lo leído se valida antes de usarse: el almacenamiento puede estar alterado o vencido.
+ * La sesión vive solo en la memoria de la pestaña (HU-FE-21, escenario SEG-3): un script inyectado
+ * no encuentra el token en localStorage ni en sessionStorage. Al recargar o abrir otra pestaña se
+ * recupera con la cookie de refresh, que el navegador guarda fuera del alcance de JavaScript.
  */
 export const sessionStore = {
-  save(session: Session, remember: boolean): void {
-    this.clear();
-    try {
-      const storage = remember ? localStorage : sessionStorage;
-      storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-    } catch {
-      // Almacenamiento bloqueado o lleno: la sesión sigue viva en memoria para esta pestaña.
-    }
+  save: (session: Session): void => {
+    current = session;
   },
 
-  load(now: number = Date.now()): Session | null {
-    for (const storage of [sessionStorage, localStorage]) {
-      const session = readValidSession(storage, now);
-      if (session !== null) {
-        return session;
-      }
-    }
-    return null;
-  },
+  load: (now: number = Date.now()): Session | null =>
+    current !== null && current.expiresAt > now ? current : null,
 
-  clear(): void {
-    for (const storage of [sessionStorage, localStorage]) {
-      try {
-        storage.removeItem(SESSION_STORAGE_KEY);
-      } catch {
-        // Sin acceso al almacenamiento no hay nada que borrar.
-      }
-    }
+  /** Token vigente, aunque esté por vencer: la conexión en tiempo real lo pide al reconectarse. */
+  accessToken: (): string | null => current?.accessToken ?? null,
+
+  clear: (): void => {
+    current = null;
   },
 };
 
-function readValidSession(storage: Storage, now: number): Session | null {
-  try {
-    const raw = storage.getItem(SESSION_STORAGE_KEY);
-    if (raw === null) {
-      return null;
+/** Borra el token que una versión anterior haya dejado guardado en el navegador. */
+export function forgetLegacySession(): void {
+  for (const storage of [sessionStorage, localStorage]) {
+    try {
+      storage.removeItem(LEGACY_SESSION_KEY);
+    } catch {
+      // Sin acceso al almacenamiento no hay nada que borrar.
     }
-    const candidate: unknown = JSON.parse(raw);
-    if (isSession(candidate) && candidate.expiresAt > now) {
-      return candidate;
-    }
-    storage.removeItem(SESSION_STORAGE_KEY);
-    return null;
-  } catch {
-    return null;
   }
 }

@@ -92,6 +92,57 @@ describe('createStompRealtimeClient', () => {
     expect(config.webSocketFactory?.()).toEqual({ url: 'https://rt.zeal.test/ws' });
   });
 
+  describe('con la sesión (HU-FE-21)', () => {
+    /** Lo que hace la biblioteca justo antes de abrir cada conexión. */
+    function headersOfNextConnection() {
+      void fake().config.beforeConnect?.(fake() as never);
+      return (fake() as unknown as { connectHeaders: unknown }).connectHeaders;
+    }
+
+    it('cada reconexión usa el token vigente, no el de la primera conexión', () => {
+      let token = 'token-1';
+      createStompRealtimeClient('https://rt.zeal.test/ws', 'token-1', {
+        currentToken: () => token,
+        onRejected: () => undefined,
+      });
+
+      token = 'token-2';
+
+      expect(headersOfNextConnection()).toEqual({ Authorization: 'Bearer token-2' });
+    });
+
+    it('sin token vigente, o sin sesión que lo informe, usa el de la primera conexión', () => {
+      createStompRealtimeClient('https://rt.zeal.test/ws', 'token-1', {
+        currentToken: () => null,
+        onRejected: () => undefined,
+      });
+      expect(headersOfNextConnection()).toEqual({ Authorization: 'Bearer token-1' });
+
+      createStompRealtimeClient('https://rt.zeal.test/ws', 'token-3');
+      expect(headersOfNextConnection()).toEqual({ Authorization: 'Bearer token-3' });
+    });
+
+    it('si el servidor rechaza la conexión, avisa a quien maneja la sesión', () => {
+      const onRejected = vi.fn();
+      createStompRealtimeClient('https://rt.zeal.test/ws', 't', {
+        currentToken: () => 't',
+        onRejected,
+      });
+
+      fake().config.onStompError?.({} as never);
+
+      expect(onRejected).toHaveBeenCalledOnce();
+    });
+
+    it('sin sesión que avisar, un rechazo no falla', () => {
+      createStompRealtimeClient('https://rt.zeal.test/ws', 't');
+
+      expect(() => {
+        fake().config.onStompError?.({} as never);
+      }).not.toThrow();
+    });
+  });
+
   it('entrega los mensajes JSON y descarta los que no lo son', () => {
     const client = createStompRealtimeClient('https://rt.zeal.test/ws', 't');
     const listener = vi.fn();

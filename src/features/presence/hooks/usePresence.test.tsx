@@ -42,7 +42,7 @@ describe('usePresence', () => {
   beforeEach(() => {
     configureHttpAuth({
       accessToken: session.accessToken,
-      onUnauthorized: () => undefined,
+      renew: () => Promise.resolve(null),
     });
   });
 

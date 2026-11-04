@@ -26,10 +26,11 @@ function openAsOrbitaAdmin() {
   if (admin === undefined) {
     throw new Error('Falta la administradora de Órbita Labs');
   }
-  sessionStore.save(
-    { accessToken: createMockToken(admin), user: admin, expiresAt: Date.now() + 3_600_000 },
-    false,
-  );
+  sessionStore.save({
+    accessToken: createMockToken(admin),
+    user: admin,
+    expiresAt: Date.now() + 3_600_000,
+  });
   return renderRoute(ADMIN_PATHS.employees);
 }
 

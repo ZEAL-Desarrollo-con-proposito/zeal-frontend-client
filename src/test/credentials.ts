@@ -16,13 +16,10 @@ export function buildSession(role: Role, expiresInMs = 60 * 60 * 1000): Session 
   return { accessToken: createMockToken(user), user, expiresAt: Date.now() + expiresInMs };
 }
 
-/** Simula una sesión guardada por una visita anterior. */
-export function storeSession(
-  role: Role,
-  { remember = false, expiresInMs }: { remember?: boolean; expiresInMs?: number } = {},
-): Session {
+/** Simula una sesión ya abierta en la pestaña (en memoria), sin pasar por el login. */
+export function storeSession(role: Role, { expiresInMs }: { expiresInMs?: number } = {}): Session {
   const session = buildSession(role, expiresInMs);
-  sessionStore.save(session, remember);
+  sessionStore.save(session);
   return session;
 }
 

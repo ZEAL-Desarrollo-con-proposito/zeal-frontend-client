@@ -36,7 +36,7 @@ export function validateCredentials({ email, password }: Credentials): FieldErro
   return errors;
 }
 
-export type AuthenticatedHandler = (session: Session, remember: boolean) => void;
+export type AuthenticatedHandler = (session: Session) => void;
 
 /** Fallo del envío. `attempt` distingue intentos fallidos seguidos con el mismo mensaje. */
 export interface SubmitError {
@@ -63,11 +63,11 @@ export function useLoginForm(onAuthenticated: AuthenticatedHandler) {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const session = await login({
-        email: credentials.email.trim(),
-        password: credentials.password,
-      });
-      onAuthenticated(session, remember);
+      const session = await login(
+        { email: credentials.email.trim(), password: credentials.password },
+        remember,
+      );
+      onAuthenticated(session);
     } catch (error) {
       failedAttempts.current += 1;
       setSubmitError({ message: describeLoginError(error), attempt: failedAttempts.current });

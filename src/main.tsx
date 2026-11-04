@@ -37,7 +37,8 @@ async function createBackendAdapters(): Promise<RealtimeClientFactory> {
     return (accessToken) => createMockRealtimeClient(accessToken, onMessage);
   }
   const realtimeUrl = resolveRealtimeUrl(import.meta.env.VITE_REALTIME_URL);
-  return (accessToken) => createStompRealtimeClient(realtimeUrl, accessToken);
+  return (accessToken, credentials) =>
+    createStompRealtimeClient(realtimeUrl, accessToken, credentials);
 }
 
 const rootElement = document.getElementById('root');

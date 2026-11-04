@@ -87,7 +87,7 @@ describe('RealtimeProvider', () => {
       wrapper: wrapperWith('token-1', factory),
     });
 
-    expect(factory).toHaveBeenCalledWith('token-1');
+    expect(factory).toHaveBeenCalledWith('token-1', undefined);
     expect(result.current.status).toBe('connecting');
     act(() => {
       store.set('connected');

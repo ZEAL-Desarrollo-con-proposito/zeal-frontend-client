@@ -23,7 +23,18 @@ export interface RealtimeClient {
   onChange: (listener: () => void) => () => void;
 }
 
-export type RealtimeClientFactory = (accessToken: string) => RealtimeClient;
+/** Lo que la conexión necesita de la sesión, que puede renovar el token mientras sigue abierta. */
+export interface RealtimeCredentials {
+  /** Token vigente: cada reconexión usa el último. */
+  currentToken: () => string | null;
+  /** El servidor rechazó la conexión: quizá la sesión fue revocada (escenario SEG-3). */
+  onRejected: () => void;
+}
+
+export type RealtimeClientFactory = (
+  accessToken: string,
+  credentials?: RealtimeCredentials,
+) => RealtimeClient;
 
 /** Estado de conexión observable, compartido por los adaptadores. */
 export function createStatusStore() {

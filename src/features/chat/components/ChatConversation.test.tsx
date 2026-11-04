@@ -41,7 +41,7 @@ describe('ChatConversation', () => {
     freezeTime();
     configureHttpAuth({
       accessToken: session.accessToken,
-      onUnauthorized: () => undefined,
+      renew: () => Promise.resolve(null),
     });
   });
 
