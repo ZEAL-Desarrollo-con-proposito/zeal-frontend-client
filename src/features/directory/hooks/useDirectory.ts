@@ -10,6 +10,7 @@ export function useDirectory() {
   const directory = useLiveFetch({
     key: 'directorio',
     load: fetchDirectory,
+    listing: true,
     topic: SLOTS_TOPIC,
     isRelevant: isSlotEvent,
   });

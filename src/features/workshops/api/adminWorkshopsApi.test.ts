@@ -14,7 +14,7 @@ import type { NewWorkshop } from './adminWorkshopsApi';
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -67,8 +67,8 @@ describe('adminWorkshopsApi (contrato con HU-BE-15)', () => {
     await expect(failure(createWorkshop(NEW_WORKSHOP))).resolves.toMatchObject({ status: 401 });
 
     authenticateAs('PSICOLOGO');
-    await expect(failure(fetchAdminWorkshops())).resolves.toMatchObject({ status: 403 });
-    await expect(failure(createWorkshop(NEW_WORKSHOP))).resolves.toMatchObject({ status: 403 });
+    await expect(failure(fetchAdminWorkshops())).resolves.toMatchObject({ status: 404 });
+    await expect(failure(createWorkshop(NEW_WORKSHOP))).resolves.toMatchObject({ status: 404 });
   });
 
   it('publica un taller nuevo para la empresa del administrador', async () => {

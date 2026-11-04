@@ -32,7 +32,7 @@ describe('useAdminWorkshops', () => {
     realtime = scriptedRealtimeClient();
     configureHttpAuth({
       accessToken: buildSession('ADMIN').accessToken,
-      onUnauthorized: () => undefined,
+      renew: () => Promise.resolve(null),
     });
   });
 

@@ -21,9 +21,6 @@ export const workshopRoomHandlers = [
     if (user instanceof Response) {
       return user;
     }
-    if (user.role === 'PSICOLOGO') {
-      return errorBody(403, 'Forbidden', 'No tienes permiso para esta operación.');
-    }
     const db = readWorkshopsDb();
     const workshop = db.workshops.find(
       ({ id, organization }) => id === params.id && organization === user.organization,
@@ -33,7 +30,11 @@ export const workshopRoomHandlers = [
       db.enrollments.some(
         ({ workshopId, userId }) => workshopId === workshop.id && userId === user.id,
       );
-    if (workshop === undefined || (user.role === 'EMPLEADO' && !enrolled)) {
+    if (
+      workshop === undefined ||
+      user.role === 'PSICOLOGO' ||
+      (user.role === 'EMPLEADO' && !enrolled)
+    ) {
       return errorBody(404, 'Not Found', NOT_FOUND);
     }
     const startsAt = Date.parse(workshop.startsAt);

@@ -3,6 +3,8 @@ import type { AuthUser, Role } from '@/features/auth/model/session';
 import { readMockTokenSubject } from './mockToken';
 import { SEED_USERS } from './seedUsers';
 
+export const NOT_FOUND_MESSAGE = 'No encontramos lo que buscas.';
+
 export function errorBody(status: number, error: string, message: string) {
   return HttpResponse.json({ status, error, message }, { status });
 }
@@ -16,7 +18,8 @@ export function authenticate(request: Request): AuthUser | Response {
 }
 
 /**
- * Autoriza una petición como lo haría el backend: token válido (401) y rol permitido (403).
+ * Autoriza una petición como lo hará el backend (HU-BE-21, escenario SEG-2): token válido (401) y
+ * rol permitido; a cualquier otro rol le responde 404, para no revelar que el recurso existe.
  * Devuelve el usuario o la respuesta de error lista para retornar.
  */
 export function authorize(request: Request, role: Role): AuthUser | Response {
@@ -25,7 +28,7 @@ export function authorize(request: Request, role: Role): AuthUser | Response {
     return user;
   }
   if (user.role !== role) {
-    return errorBody(403, 'Forbidden', 'No tienes permiso para esta operación.');
+    return errorBody(404, 'Not Found', NOT_FOUND_MESSAGE);
   }
   return user;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useReducer, useRef, useState } from 'react';
 import type { ApiError } from '@/shared/api/errors';
-import { isForbidden } from '@/shared/api/errors';
+import { isAccessDenied, isForbidden } from '@/shared/api/errors';
 import type { DateRange } from '@/shared/lib/dates';
 import { addDays } from '@/shared/lib/dates';
 import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
@@ -17,6 +17,8 @@ interface WeeklySlotsOptions {
   load: (range: DateRange, signal: AbortSignal) => Promise<Slot[]>;
   /** Cambio que llegó en vivo (p. ej. un paciente reservó una franja). */
   onRealtimeEvent: (event: SlotEvent) => void;
+  /** Son las franjas propias, que siempre existen: un 404 significa que el servidor las oculta. */
+  listing?: boolean;
 }
 
 /**
@@ -24,7 +26,8 @@ interface WeeklySlotsOptions {
  * - cancela la petición anterior al cambiar de rango y descarta respuestas atrasadas;
  * - aplica los eventos del Real-Time Gateway (también los que llegan durante la carga);
  * - al recuperarse la conexión vuelve a pedir la semana para no perder cambios.
- * Un 403 no se reintenta: se lanza para que la ruta muestre "Permiso denegado".
+ * Un 403 (o un 404 con `listing`) no se reintenta: se lanza para que la ruta muestre otra pantalla
+ * en su lugar.
  */
 export function useWeeklySlots({
   from,
@@ -32,6 +35,7 @@ export function useWeeklySlots({
   psychologistId,
   load,
   onRealtimeEvent,
+  listing = false,
 }: WeeklySlotsOptions) {
   const [state, dispatch] = useReducer(slotsReducer, INITIAL_SLOTS_STATE);
   const [attempt, setAttempt] = useState(0);
@@ -52,7 +56,8 @@ export function useWeeklySlots({
         dispatch({ type: 'load-success', requestId, slots });
       },
       (error: unknown) => {
-        if (isForbidden(error)) {
+        const isDenied = listing ? isAccessDenied : isForbidden;
+        if (isDenied(error)) {
           setDenied(error);
           return;
         }
@@ -62,7 +67,7 @@ export function useWeeklySlots({
     return () => {
       controller.abort();
     };
-  }, [fromTime, toTime, attempt, recoveries]);
+  }, [fromTime, toTime, attempt, recoveries, listing]);
 
   useRealtimeSubscription(SLOTS_TOPIC, (payload) => {
     if (isSlotEvent(payload) && payload.slot.psychologistId === psychologistId) {

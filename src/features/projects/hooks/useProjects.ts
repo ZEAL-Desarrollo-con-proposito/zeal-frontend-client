@@ -45,7 +45,9 @@ export function useProjects() {
   const { session } = useAuth();
   const organization = session?.user.organization ?? '';
   const { recoveries } = useRealtimeStatus();
-  const catalog = useFetch(`proyectos/${String(recoveries)}`, fetchProjects);
+  const catalog = useFetch(`proyectos/${String(recoveries)}`, fetchProjects, {
+    listing: true,
+  });
   const [live, dispatch] = useReducer(catalogReducer, {
     knownIds: new Set<string>(),
     liveProjects: [],

@@ -21,6 +21,7 @@ export function useMyAppointments() {
   const resource = useLiveFetch({
     key: 'mis-citas',
     load: fetchMyAppointments,
+    listing: true,
     topic: SLOTS_TOPIC,
     isRelevant: (payload) => isSlotEvent(payload) && payload.type === 'ACTUALIZADA',
   });

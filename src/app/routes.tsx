@@ -22,7 +22,7 @@ import { EmployeesPage } from '@/features/organization/pages/EmployeesPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
 import { NAVIGATION } from './navigation';
-import { ForbiddenBoundary } from './pages/ForbiddenBoundary';
+import { AccessBoundary } from './pages/AccessBoundary';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -125,7 +125,7 @@ export const routes: RouteObject[] = [
       { path: PATHS.login, element: <LoginPage /> },
       ...ROLES.map((role) => ({
         element: <ProtectedRoute role={role} forbidden={<ForbiddenPage />} />,
-        errorElement: <ForbiddenBoundary />,
+        errorElement: <AccessBoundary />,
         children: [
           {
             element: <AppLayout />,

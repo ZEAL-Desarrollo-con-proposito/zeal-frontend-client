@@ -13,6 +13,7 @@ export function useAgendaResource<T>(
   return useLiveFetch({
     key,
     load,
+    listing: true,
     topic: SLOTS_TOPIC,
     isRelevant: (payload) =>
       isSlotEvent(payload) &&

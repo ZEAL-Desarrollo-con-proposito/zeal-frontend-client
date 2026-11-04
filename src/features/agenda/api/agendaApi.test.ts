@@ -13,7 +13,7 @@ const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -59,7 +59,7 @@ describe('agendaApi.fetchAgenda', () => {
   it('solo entrega la agenda a un psicólogo autenticado', async () => {
     await expect(fetchAgenda(WEEK)).rejects.toMatchObject({ status: 401 });
     authenticateAs('EMPLEADO');
-    await expect(fetchAgenda(WEEK)).rejects.toMatchObject({ status: 403 });
+    await expect(fetchAgenda(WEEK)).rejects.toMatchObject({ status: 404 });
   });
 
   it('exige el rango de fechas', async () => {
