@@ -28,7 +28,7 @@ const baseAppointment: Appointment = {
 function authenticateAsEmployee() {
   configureHttpAuth({
     accessToken: buildSession('EMPLEADO').accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 

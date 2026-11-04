@@ -12,7 +12,7 @@ import { fetchProject, fetchProjects } from './projectsApi';
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -37,9 +37,9 @@ describe('adminProjectsApi', () => {
     await expect(fetchAdminProjects()).rejects.toMatchObject({ status: 401 });
     authenticateAs('EMPLEADO');
     await expect(fetchAdminProjects()).rejects.toEqual(
-      new ApiError(403, 'No tienes permiso para esta operación.'),
+      new ApiError(404, 'No encontramos lo que buscas.'),
     );
-    await expect(createProject(VALID)).rejects.toMatchObject({ status: 403 });
+    await expect(createProject(VALID)).rejects.toMatchObject({ status: 404 });
   });
 
   it('lista las convocatorias de la empresa (también las cerradas), la más reciente primero', async () => {

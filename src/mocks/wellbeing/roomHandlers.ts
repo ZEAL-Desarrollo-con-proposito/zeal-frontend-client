@@ -66,10 +66,7 @@ export const roomHandlers = [
     if (user instanceof Response) {
       return user;
     }
-    // HU-BE-11: los roles empresariales nunca acceden a las sesiones de bienestar.
-    if (user.role === 'ADMIN') {
-      return errorBody(403, 'Forbidden', 'No tienes permiso para esta operación.');
-    }
+    // HU-BE-11 y SEG-2: los roles empresariales no participan en ninguna sesión: 404, como cualquiera.
     const { room } = findRoom(params.id, user.id);
     if (room === null) {
       return errorBody(404, 'Not Found', 'Esta sesión no existe o no es tuya.');

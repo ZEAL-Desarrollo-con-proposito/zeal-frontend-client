@@ -18,7 +18,7 @@ const ANDRES = 'usr-psicologo-002';
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -130,7 +130,7 @@ describe('bookingApi.bookSlot', () => {
     configureHttpAuth(null);
     await expect(bookSlot(slotId)).rejects.toMatchObject({ status: 401 });
     authenticateAs('PSICOLOGO');
-    await expect(bookSlot(slotId)).rejects.toMatchObject({ status: 403 });
+    await expect(bookSlot(slotId)).rejects.toMatchObject({ status: 404 });
   });
 
   it('envía el bloque elegido y valida la respuesta', async () => {

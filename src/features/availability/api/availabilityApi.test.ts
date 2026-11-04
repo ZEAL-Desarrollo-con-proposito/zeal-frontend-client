@@ -19,7 +19,7 @@ const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -52,7 +52,7 @@ describe('availabilityApi.fetchMySlots', () => {
 
     authenticateAs('EMPLEADO');
     await expect(fetchMySlots(WEEK)).rejects.toEqual(
-      new ApiError(403, 'No tienes permiso para esta operación.'),
+      new ApiError(404, 'No encontramos lo que buscas.'),
     );
   });
 

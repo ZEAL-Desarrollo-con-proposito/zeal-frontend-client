@@ -23,7 +23,7 @@ const IMPOSTOR = 'taller-impostor';
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -33,7 +33,7 @@ function authenticateAsMariana() {
   if (mariana === undefined) {
     throw new Error('Falta la empleada semilla Mariana Torres');
   }
-  configureHttpAuth({ accessToken: createMockToken(mariana), onUnauthorized: () => undefined });
+  configureHttpAuth({ accessToken: createMockToken(mariana), renew: () => Promise.resolve(null) });
 }
 
 async function failure(promise: Promise<unknown>): Promise<unknown> {
@@ -143,9 +143,9 @@ describe('workshopsApi (contrato con HU-BE-18)', () => {
     await expect(failure(fetchWorkshops())).resolves.toMatchObject({ status: 401 });
 
     authenticateAs('PSICOLOGO');
-    await expect(failure(fetchWorkshops())).resolves.toMatchObject({ status: 403 });
-    await expect(failure(enrollInWorkshop(IMPOSTOR))).resolves.toMatchObject({ status: 403 });
-    await expect(failure(fetchMyEnrollments())).resolves.toMatchObject({ status: 403 });
+    await expect(failure(fetchWorkshops())).resolves.toMatchObject({ status: 404 });
+    await expect(failure(enrollInWorkshop(IMPOSTOR))).resolves.toMatchObject({ status: 404 });
+    await expect(failure(fetchMyEnrollments())).resolves.toMatchObject({ status: 404 });
   });
 
   it('valida las respuestas y codifica el taller en la ruta', async () => {

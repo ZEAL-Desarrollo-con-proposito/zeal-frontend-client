@@ -22,7 +22,7 @@ import {
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -32,7 +32,7 @@ function authenticateAsMariana() {
   if (mariana === undefined) {
     throw new Error('Falta la empleada semilla Mariana Torres');
   }
-  configureHttpAuth({ accessToken: createMockToken(mariana), onUnauthorized: () => undefined });
+  configureHttpAuth({ accessToken: createMockToken(mariana), renew: () => Promise.resolve(null) });
 }
 
 async function failure(promise: Promise<unknown>): Promise<unknown> {
@@ -85,9 +85,9 @@ describe('projectsApi (contrato con HU-BE-16)', () => {
     await expect(failure(fetchProjects())).resolves.toMatchObject({ status: 401 });
 
     authenticateAs('PSICOLOGO');
-    await expect(failure(fetchProjects())).resolves.toMatchObject({ status: 403 });
+    await expect(failure(fetchProjects())).resolves.toMatchObject({ status: 404 });
     await expect(failure(fetchProject('proyecto-observabilidad'))).resolves.toMatchObject({
-      status: 403,
+      status: 404,
     });
   });
 
@@ -168,9 +168,9 @@ describe('postulaciones (contrato con HU-BE-17)', () => {
 
     authenticateAs('PSICOLOGO');
     await expect(failure(applyToProject('proyecto-guardia-datos'))).resolves.toMatchObject({
-      status: 403,
+      status: 404,
     });
-    await expect(failure(fetchMyApplications())).resolves.toMatchObject({ status: 403 });
+    await expect(failure(fetchMyApplications())).resolves.toMatchObject({ status: 404 });
   });
 
   it('lista solo las postulaciones propias, las más recientes primero', async () => {

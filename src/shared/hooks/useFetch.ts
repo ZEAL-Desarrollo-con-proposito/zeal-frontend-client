@@ -1,7 +1,15 @@
 import { useEffect, useEffectEvent, useReducer, useRef, useState } from 'react';
-import { isForbidden } from '@/shared/api/errors';
+import { isAccessDenied, isForbidden } from '@/shared/api/errors';
 
 export type LoadStatus = 'loading' | 'ready' | 'error';
+
+export interface FetchOptions {
+  /**
+   * Es la lista de una pantalla, que siempre existe para quien tiene acceso: un 404 significa que
+   * el servidor la oculta (SEG-2) y se trata igual que un 403. Sin esto, un 404 lo decide la pantalla.
+   */
+  listing?: boolean;
+}
 
 interface FetchState<T> {
   requestId: number;
@@ -31,10 +39,14 @@ export function fetchReducer<T>(state: FetchState<T>, action: FetchAction<T>): F
 /**
  * Carga datos del servidor para una clave (p. ej. un rango de fechas). Al cambiar la clave
  * cancela la petición anterior; `reload` vuelve a pedirlos (reintento o aviso en tiempo real).
- * Un 403 no se reintenta: se lanza para que la ruta muestre "Permiso denegado" en lugar de la
- * pantalla, sin nada de su contenido.
+ * Un 403 no se reintenta: se lanza para que la ruta muestre otra pantalla en lugar de esta, sin
+ * nada de su contenido.
  */
-export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<T>) {
+export function useFetch<T>(
+  key: string,
+  load: (signal: AbortSignal) => Promise<T>,
+  { listing = false }: FetchOptions = {},
+) {
   const [state, dispatch] = useReducer(fetchReducer<T>, {
     requestId: 0,
     status: 'loading',
@@ -63,7 +75,7 @@ export function useFetch<T>(key: string, load: (signal: AbortSignal) => Promise<
     };
   }, [key, attempt]);
 
-  if (isForbidden(state.error)) {
+  if (listing ? isAccessDenied(state.error) : isForbidden(state.error)) {
     throw state.error;
   }
 

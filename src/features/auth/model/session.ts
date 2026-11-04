@@ -52,12 +52,3 @@ export function isAuthUser(value: unknown): value is AuthUser {
 export function isLoginResponse(value: unknown): value is LoginResponse {
   return isRecord(value) && isNonEmptyString(value.accessToken) && isAuthUser(value.user);
 }
-
-export function isSession(value: unknown): value is Session {
-  return (
-    isLoginResponse(value) &&
-    'expiresAt' in value &&
-    typeof value.expiresAt === 'number' &&
-    Number.isFinite(value.expiresAt)
-  );
-}

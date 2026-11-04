@@ -18,7 +18,9 @@ import styles from './EmployeesPage.module.css';
 export function EmployeesPage() {
   const user = useCurrentUser();
   const [query, setQuery] = useState('');
-  const { status, data, reload } = useFetch('empleados', fetchEmployees);
+  const { status, data, reload } = useFetch('empleados', fetchEmployees, {
+    listing: true,
+  });
   useDocumentTitle('Empleados');
   const visible = data === null ? [] : filterEmployees(data, query);
 

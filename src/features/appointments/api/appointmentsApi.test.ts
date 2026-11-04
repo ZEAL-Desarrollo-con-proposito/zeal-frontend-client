@@ -24,7 +24,7 @@ function cancelPathFor(id: string): string {
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -83,7 +83,7 @@ describe('appointmentsApi.fetchMyAppointments', () => {
   it('solo las entrega a un empleado autenticado y valida la respuesta', async () => {
     await expect(fetchMyAppointments()).rejects.toMatchObject({ status: 401 });
     authenticateAs('PSICOLOGO');
-    await expect(fetchMyAppointments()).rejects.toMatchObject({ status: 403 });
+    await expect(fetchMyAppointments()).rejects.toMatchObject({ status: 404 });
 
     server.use(http.get(`*${MY_APPOINTMENTS_ENDPOINT}`, () => HttpResponse.json([{ id: 1 }])));
     await expect(fetchMyAppointments()).rejects.toBeInstanceOf(InvalidResponseError);

@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ApiError } from '@/shared/api/errors';
-import { isForbidden } from '@/shared/api/errors';
+import { isAccessDenied } from '@/shared/api/errors';
 import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
 import { fetchAdminProjects } from '../api/adminProjectsApi';
 import type { AdminProject } from '../model/adminProject';
@@ -18,7 +18,7 @@ interface AdminProjectsOptions {
  * - suma las que otros administradores publican (cola privada)
  * - una publicada aquí se muestra al instante, sin esperar a su evento;
  * - al recuperarse la conexión vuelve a pedir la lista para no perder cambios.
- * Un 403 no se reintenta: se lanza para que la ruta muestre "Permiso denegado".
+ * Un 403 o un 404 no se reintentan: se lanzan para que la ruta muestre otra pantalla en su lugar.
  */
 export function useAdminProjects({ onRemotePublished }: AdminProjectsOptions = {}) {
   const [state, dispatch] = useReducer(adminProjectsReducer, INITIAL_ADMIN_PROJECTS_STATE);
@@ -40,7 +40,7 @@ export function useAdminProjects({ onRemotePublished }: AdminProjectsOptions = {
         dispatch({ type: 'load-success', requestId, projects });
       },
       (error: unknown) => {
-        if (isForbidden(error)) {
+        if (isAccessDenied(error)) {
           setDenied(error);
           return;
         }

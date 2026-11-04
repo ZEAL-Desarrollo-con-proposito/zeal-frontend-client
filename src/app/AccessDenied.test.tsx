@@ -1,5 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
+import { PSYCHOLOGISTS_ENDPOINT } from '@/features/directory/api/directoryApi';
 import type { Role } from '@/features/auth/model/session';
 import { sessionStore } from '@/features/auth/storage/sessionStore';
 import { server } from '@/mocks/server';
@@ -8,13 +10,11 @@ import { renderRoute } from '@/test/renderRoute';
 import { EMPLOYEE_PATHS, PSYCHOLOGIST_PATHS, ROLE_HOME_PATH, sessionRoomPath } from './paths';
 
 const DENIED_TITLE = 'Esta sección no está disponible para tu rol';
+const NOT_FOUND_TITLE = 'No encontramos esta página';
 
 /** Sesión alterada en el navegador: dice ser de `role`, pero el token es del administrador. */
 function storeTamperedSession(role: Role) {
-  sessionStore.save(
-    { ...buildSession(role), accessToken: buildSession('ADMIN').accessToken },
-    false,
-  );
+  sessionStore.save({ ...buildSession(role), accessToken: buildSession('ADMIN').accessToken });
 }
 
 /** Rutas del API que se pidieron durante la prueba. */
@@ -76,25 +76,40 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     },
   );
 
-  it('si el servidor responde 403, reemplaza la pantalla sin mostrar nada de su contenido', async () => {
+  it('si el servidor oculta el recurso con 404 (SEG-2), reemplaza la pantalla sin confirmar que existe', async () => {
     storeTamperedSession('EMPLEADO');
     const { router, user } = renderRoute(EMPLOYEE_PATHS.wellbeing);
 
-    await expectDeniedWithFocus();
+    const heading = await screen.findByRole('heading', { name: NOT_FOUND_TITLE });
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
     expect(screen.queryByText(/Laura Martínez/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: DENIED_TITLE })).not.toBeInTheDocument();
 
     // Al salir, la aplicación vuelve a su estructura normal.
-    await user.click(screen.getByRole('link', { name: 'Ir a mi inicio' }));
+    await user.click(screen.getByRole('link', { name: 'Volver al inicio' }));
     expect(router.state.location.pathname).toBe(ROLE_HOME_PATH.EMPLEADO);
     expect(await screen.findByRole('complementary', { name: 'Barra lateral' })).toBeInTheDocument();
   });
 
-  it('también cuando el 403 llega al cargar la semana de franjas', async () => {
+  it('también cuando el 404 llega al cargar la semana de franjas', async () => {
     storeTamperedSession('PSICOLOGO');
     renderRoute(PSYCHOLOGIST_PATHS.availability);
 
-    expect(await deniedHeading()).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: NOT_FOUND_TITLE })).toBeInTheDocument();
+  });
+
+  it('si el servidor todavía responde 403, muestra "Permiso denegado" sin nada del contenido', async () => {
+    server.use(
+      http.get(`*${PSYCHOLOGISTS_ENDPOINT}`, () => new HttpResponse(null, { status: 403 })),
+    );
+    storeSession('EMPLEADO');
+    renderRoute(EMPLOYEE_PATHS.wellbeing);
+
+    await expectDeniedWithFocus();
+    expect(screen.queryByText(/Laura Martínez/)).not.toBeInTheDocument();
   });
 
   it('una dirección inexistente dentro del propio rol sigue siendo "no encontrada"', () => {
@@ -104,9 +119,11 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     expect(screen.getByRole('heading', { name: 'No encontramos esta página' })).toHaveFocus();
   });
 
-  it('sin sesión, un enlace a una conversación manda primero al login', () => {
+  it('sin sesión, un enlace a una conversación manda primero al login', async () => {
     const { router } = renderRoute('/empleado/mensajes/conversacion-1');
 
-    expect(router.state.location.pathname).toBe('/login');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/login');
+    });
   });
 });

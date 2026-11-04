@@ -1,51 +1,61 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildSession } from '@/test/credentials';
-import { SESSION_STORAGE_KEY, sessionStore } from './sessionStore';
+import { forgetLegacySession, sessionStore } from './sessionStore';
 
 describe('sessionStore', () => {
-  it('guarda en sessionStorage sin "Recordarme" y en localStorage con "Recordarme"', () => {
+  afterEach(() => {
+    sessionStore.clear();
+  });
+
+  it('guarda la sesión solo en memoria: nada queda en el almacenamiento del navegador', () => {
     const session = buildSession('EMPLEADO');
 
-    sessionStore.save(session, false);
-    expect(sessionStorage.getItem(SESSION_STORAGE_KEY)).not.toBeNull();
-    expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    sessionStore.save(session);
 
-    sessionStore.save(session, true);
-    expect(sessionStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(SESSION_STORAGE_KEY)).not.toBeNull();
     expect(sessionStore.load()).toEqual(session);
+    expect(sessionStore.accessToken()).toBe(session.accessToken);
+    expect(localStorage).toHaveLength(0);
+    expect(sessionStorage).toHaveLength(0);
   });
 
-  it('descarta y borra una sesión vencida', () => {
-    const session = buildSession('ADMIN', 1000);
-    sessionStore.save(session, true);
+  it('no entrega una sesión vencida, aunque conserva su token para la reconexión', () => {
+    const session = buildSession('EMPLEADO', 60_000);
+    sessionStore.save(session);
 
     expect(sessionStore.load(session.expiresAt)).toBeNull();
-    expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(sessionStore.accessToken()).toBe(session.accessToken);
   });
 
-  it('descarta una sesión alterada', () => {
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: 'x', user: {} }));
-    localStorage.setItem(SESSION_STORAGE_KEY, '{no es json');
+  it('sin sesión no hay nada que entregar', () => {
+    sessionStore.save(buildSession('ADMIN'));
+
+    sessionStore.clear();
 
     expect(sessionStore.load()).toBeNull();
-    expect(sessionStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(sessionStore.accessToken()).toBeNull();
+  });
+});
+
+describe('forgetLegacySession', () => {
+  it('borra el token que una versión anterior dejó guardado en el navegador', () => {
+    localStorage.setItem('zeal.session', 'token-viejo');
+    sessionStorage.setItem('zeal.session', 'token-viejo');
+    localStorage.setItem('otra-clave', 'se-queda');
+
+    forgetLegacySession();
+
+    expect(localStorage.getItem('zeal.session')).toBeNull();
+    expect(sessionStorage.getItem('zeal.session')).toBeNull();
+    expect(localStorage.getItem('otra-clave')).toBe('se-queda');
   });
 
-  it('sigue funcionando si el navegador bloquea el almacenamiento', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('Bloqueado', 'SecurityError');
-    });
+  it('no falla si el navegador bloquea el almacenamiento', () => {
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new DOMException('Bloqueado', 'SecurityError');
     });
 
     expect(() => {
-      sessionStore.save(buildSession('EMPLEADO'), true);
+      forgetLegacySession();
     }).not.toThrow();
-    expect(() => {
-      sessionStore.clear();
-    }).not.toThrow();
-    expect(sessionStore.load()).toBeNull();
   });
 });

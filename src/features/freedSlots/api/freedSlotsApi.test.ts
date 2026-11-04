@@ -25,7 +25,7 @@ describe('freedSlotsApi.claimFreedSlot', () => {
     freezeTime();
     configureHttpAuth({
       accessToken: buildSession('EMPLEADO').accessToken,
-      onUnauthorized: () => undefined,
+      renew: () => Promise.resolve(null),
     });
   });
 

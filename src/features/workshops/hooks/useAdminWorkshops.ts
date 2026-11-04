@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ApiError } from '@/shared/api/errors';
-import { isForbidden } from '@/shared/api/errors';
+import { isAccessDenied } from '@/shared/api/errors';
 import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
 import { fetchAdminWorkshops } from '../api/adminWorkshopsApi';
 import type { Workshop } from '../model/workshop';
@@ -15,7 +15,7 @@ interface AdminWorkshopsOptions {
 
 /**
  * Talleres publicados de la organización, al día en tiempo real:
- * Un 403 no se reintenta: se lanza para que la ruta muestre "Permiso denegado".
+ * Un 403 o un 404 no se reintentan: se lanzan para que la ruta muestre otra pantalla en su lugar.
  */
 export function useAdminWorkshops({ onRemotePublished }: AdminWorkshopsOptions = {}) {
   const [state, dispatch] = useReducer(adminWorkshopsReducer, INITIAL_ADMIN_WORKSHOPS_STATE);
@@ -37,7 +37,7 @@ export function useAdminWorkshops({ onRemotePublished }: AdminWorkshopsOptions =
         dispatch({ type: 'load-success', requestId, workshops });
       },
       (error: unknown) => {
-        if (isForbidden(error)) {
+        if (isAccessDenied(error)) {
           setDenied(error);
           return;
         }

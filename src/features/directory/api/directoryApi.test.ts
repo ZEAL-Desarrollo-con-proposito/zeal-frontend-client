@@ -18,7 +18,7 @@ const WEEK = { from: new Date(2026, 8, 21), to: new Date(2026, 8, 25) };
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -50,7 +50,7 @@ describe('directoryApi.fetchDirectory', () => {
   it('solo lo entrega a un empleado autenticado', async () => {
     await expect(fetchDirectory()).rejects.toMatchObject({ status: 401 });
     authenticateAs('PSICOLOGO');
-    await expect(fetchDirectory()).rejects.toMatchObject({ status: 403 });
+    await expect(fetchDirectory()).rejects.toMatchObject({ status: 404 });
   });
 
   it('rechaza una respuesta que no cumple el contrato', async () => {

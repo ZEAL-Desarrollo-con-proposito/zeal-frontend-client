@@ -1,7 +1,7 @@
 import type { StompSubscription } from '@stomp/stompjs';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import type { RealtimeClient, RealtimeListener } from './realtimeClient';
+import type { RealtimeClient, RealtimeCredentials, RealtimeListener } from './realtimeClient';
 import { createStatusStore } from './realtimeClient';
 
 export const RECONNECT_DELAY_MS = 5_000;
@@ -10,6 +10,10 @@ export const HEARTBEAT_MS = 10_000;
 interface Subscription {
   destination: string;
   listener: RealtimeListener;
+}
+
+function bearer(token: string): { Authorization: string } {
+  return { Authorization: `Bearer ${token}` };
 }
 
 function parseBody(body: string): { ok: true; payload: unknown } | { ok: false } {
@@ -23,9 +27,14 @@ function parseBody(body: string): { ok: true; payload: unknown } | { ok: false }
 /**
  * Adaptador del Real-Time Gateway: STOMP sobre SockJS con el token en la cabecera CONNECT,
  * reconexión automática y heartbeats. STOMP no conserva suscripciones entre conexiones, así que
- * se vuelven a crear en cada reconexión.
+ * se vuelven a crear en cada reconexión, con el token vigente en ese momento: el de la primera
+ * conexión pudo vencer. Si el servidor rechaza la conexión, avisa a quien maneja la sesión.
  */
-export function createStompRealtimeClient(url: string, accessToken: string): RealtimeClient {
+export function createStompRealtimeClient(
+  url: string,
+  accessToken: string,
+  credentials?: RealtimeCredentials,
+): RealtimeClient {
   const store = createStatusStore();
   const subscriptions = new Map<number, Subscription>();
   const handles = new Map<number, StompSubscription>();
@@ -33,7 +42,13 @@ export function createStompRealtimeClient(url: string, accessToken: string): Rea
 
   const client = new Client({
     webSocketFactory: () => new SockJS(url),
-    connectHeaders: { Authorization: `Bearer ${accessToken}` },
+    connectHeaders: bearer(accessToken),
+    beforeConnect: () => {
+      client.connectHeaders = bearer(credentials?.currentToken() ?? accessToken);
+    },
+    onStompError: () => {
+      credentials?.onRejected();
+    },
     reconnectDelay: RECONNECT_DELAY_MS,
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,

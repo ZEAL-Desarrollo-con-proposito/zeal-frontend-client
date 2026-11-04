@@ -17,8 +17,8 @@ export function trackSubscriptions(factory: RealtimeClientFactory) {
   const active = new Map<string, number>();
   const count = (destination: string) => active.get(destination) ?? 0;
 
-  const tracked: RealtimeClientFactory = (accessToken) => {
-    const client = factory(accessToken);
+  const tracked: RealtimeClientFactory = (accessToken, credentials) => {
+    const client = factory(accessToken, credentials);
     return {
       ...client,
       subscribe: (destination, listener) => {

@@ -18,7 +18,7 @@ describe('workshopRoomApi', () => {
   it('a quien no está inscrito el servidor no le entrega la sala', async () => {
     configureHttpAuth({
       accessToken: buildSession('EMPLEADO').accessToken,
-      onUnauthorized: () => undefined,
+      renew: () => Promise.resolve(null),
     });
     const error = await fetchWorkshopRoom('taller-impostor').catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(ApiError);

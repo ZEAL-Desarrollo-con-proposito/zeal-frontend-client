@@ -16,7 +16,7 @@ const at = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute).toI
 function authenticateAs(role: Role) {
   configureHttpAuth({
     accessToken: buildSession(role).accessToken,
-    onUnauthorized: () => undefined,
+    renew: () => Promise.resolve(null),
   });
 }
 
@@ -72,7 +72,7 @@ describe('roomApi (contrato con HU-BE-12)', () => {
     });
 
     authenticateAs('ADMIN');
-    await expect(failure(fetchRoom('reserva-16'))).resolves.toMatchObject({ status: 403 });
+    await expect(failure(fetchRoom('reserva-16'))).resolves.toMatchObject({ status: 404 });
 
     configureHttpAuth(null);
     await expect(failure(fetchRoom('reserva-16'))).resolves.toMatchObject({ status: 401 });
@@ -106,7 +106,7 @@ describe('roomApi (contrato con HU-BE-12)', () => {
     await expect(failure(activateRoom('reserva-107'))).resolves.toMatchObject({ status: 404 });
 
     authenticateAs('EMPLEADO');
-    await expect(failure(activateRoom('reserva-16'))).resolves.toMatchObject({ status: 403 });
+    await expect(failure(activateRoom('reserva-16'))).resolves.toMatchObject({ status: 404 });
   });
 
   it('codifica la reserva en la ruta y valida la respuesta', async () => {

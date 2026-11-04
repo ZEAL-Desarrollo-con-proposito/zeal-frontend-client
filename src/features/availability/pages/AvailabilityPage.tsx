@@ -26,6 +26,7 @@ export function AvailabilityPage() {
     to: weekEnd,
     psychologistId: user.id,
     load: fetchMySlots,
+    listing: true,
     onRealtimeEvent: (event) => {
       if (event.type === 'ACTUALIZADA') {
         setAnnouncement(

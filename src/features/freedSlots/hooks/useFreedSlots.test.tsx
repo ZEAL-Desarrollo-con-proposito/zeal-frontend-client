@@ -13,7 +13,7 @@ describe('useFreedSlots.claim', () => {
     freezeTime();
     configureHttpAuth({
       accessToken: buildSession('EMPLEADO').accessToken,
-      onUnauthorized: () => undefined,
+      renew: () => Promise.resolve(null),
     });
   });
 
