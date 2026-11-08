@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import type { LoginRedirectState } from '@/app/paths';
 import { PATHS } from '@/app/paths';
+import { LoadingStatus } from '@/shared/ui/LoadingStatus/LoadingStatus';
 import { useAuth } from '../hooks/useAuth';
 import type { Role } from '../model/session';
-import { SessionRestoring } from './SessionRestoring';
 
 interface ProtectedRouteProps {
   role: Role;
@@ -19,7 +19,8 @@ export function ProtectedRoute({ role, forbidden }: Readonly<ProtectedRouteProps
 
   if (session === null) {
     if (restoring) {
-      return <SessionRestoring />;
+      // Al recargar, la sesión se recupera con la cookie de refresh.
+      return <LoadingStatus fullScreen>Recuperando tu sesión…</LoadingStatus>;
     }
     const state: LoginRedirectState = { from: location.pathname };
     return <Navigate to={PATHS.login} replace state={state} />;
