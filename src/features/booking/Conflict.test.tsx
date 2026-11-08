@@ -12,7 +12,7 @@ const at = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute).toI
 
 async function openLaura() {
   storeSession('EMPLEADO');
-  const rendered = renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
+  const rendered = await renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
   await screen.findByRole('heading', { level: 1, name: 'Laura Martínez' });
   await wednesday().findByRole('button', { name: '14:00 – 14:50' });
   return rendered;
@@ -48,7 +48,7 @@ function lauraSlotAt(db: WellbeingDb, start: string) {
   return slot;
 }
 
-async function tryToBook(user: ReturnType<typeof renderRoute>['user'], time: string) {
+async function tryToBook(user: Awaited<ReturnType<typeof renderRoute>>['user'], time: string) {
   await user.click(wednesday().getByRole('button', { name: time }));
   await user.click(await panel().findByRole('button', { name: 'Agendar cita' }));
   await user.click(dialog().getByRole('button', { name: 'Confirmar cita' }));

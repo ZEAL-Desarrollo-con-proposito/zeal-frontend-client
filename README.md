@@ -44,7 +44,28 @@ no usan esperas fijas (HU-DT-04):
   (`subscribedTo`, de `renderRoute`);
 - para comprobar que algo _no_ pasó, publican al final un aviso de control y esperan a verlo: el
   canal entrega en orden, así que lo anterior ya se procesó;
-- `setupUser()` escribe sin pausa real entre tecla y tecla.
+- `setupUser()` escribe sin pausa real entre tecla y tecla;
+- `await renderRoute(...)` devuelve la pantalla ya a la vista (su código se carga bajo demanda);
+  para ver el aviso de carga de una sección, `renderApp(...)` renderiza sin esperar.
+
+## Carga bajo demanda (HU-FE-24)
+
+El paquete inicial solo trae el inicio de sesión, la estructura y las pantallas de estado. Cada
+sección es un paquete aparte (`src/app/sections/`) que se descarga la primera vez que alguien la
+abre, con `React.lazy` y `Suspense` (`src/app/lazyPages.ts`):
+
+| Paquete        | Pantallas                                                             |
+| -------------- | --------------------------------------------------------------------- |
+| `employee`     | Bienestar, perfil del psicólogo, citas, mensajes, proyectos, talleres |
+| `psychologist` | Agenda, disponibilidad y mensajes                                     |
+| `admin`        | Empleados, proyectos y talleres de la empresa                         |
+| `rooms`        | Salas de video (sesión 1:1 y taller)                                  |
+
+Nadie descarga las pantallas de un rol que no es el suyo. Al entrar directo a una sección se ve
+"Cargando la sección…" (anunciado a lectores de pantalla) dentro de la estructura; al cambiar de
+sección, la pantalla anterior sigue a la vista hasta que llega la nueva. El SDK de video
+(`livekit-client`, ≈520 kB) solo se descarga dentro de la sala de un taller: es la única excepción
+al límite de 500 kB por paquete (`vite.config.ts`).
 
 ## Estructura
 

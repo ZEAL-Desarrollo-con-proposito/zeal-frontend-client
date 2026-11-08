@@ -17,10 +17,10 @@ const DAVID = 'usr-empleado-001';
 const GUARDIA = 'proyecto-guardia-datos';
 const GUARDIA_TITLE = 'Data Platform · Turno de guardia';
 
-function openAsEmployee(path: string = EMPLOYEE_PATHS.projects, scripted = false) {
+async function openAsEmployee(path: string = EMPLOYEE_PATHS.projects, scripted = false) {
   storeSession('EMPLEADO');
   const realtime = scriptedRealtimeClient();
-  const view = renderRoute(path, scripted ? () => realtime.client : undefined);
+  const view = await renderRoute(path, scripted ? () => realtime.client : undefined);
   return { ...view, realtime };
 }
 
@@ -85,7 +85,7 @@ describe('Postularse a una convocatoria (HU-FE-17)', () => {
   });
 
   it('con cupo, queda aceptada: lo informa, ocupa el cupo y aparece en Mis postulaciones', async () => {
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const guardia = await cardOf(GUARDIA_TITLE);
     expect(await myApplications().findByText(/Aún no te has postulado/)).toBeInTheDocument();
 
@@ -107,7 +107,7 @@ describe('Postularse a una convocatoria (HU-FE-17)', () => {
 
   it('mientras el servidor procesa, el botón muestra que envía y no manda dos postulaciones', async () => {
     const server = holdApplications();
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const guardia = await cardOf(GUARDIA_TITLE);
     const button = guardia.getByRole('button', { name: `Postularme a ${GUARDIA_TITLE}` });
 
@@ -128,7 +128,7 @@ describe('Postularse a una convocatoria (HU-FE-17)', () => {
 
   it('si otra persona tomó el último cupo un instante antes, queda en lista de espera', async () => {
     setProject(GUARDIA, { occupied: 3 });
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const guardia = await cardOf(GUARDIA_TITLE);
     expect(guardia.getByText('Queda 1 de 4 cupos')).toBeInTheDocument();
 
@@ -144,7 +144,7 @@ describe('Postularse a una convocatoria (HU-FE-17)', () => {
   });
 
   it('si el servidor la rechaza, muestra su mensaje y deja volver a intentarlo', async () => {
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const guardia = await cardOf(GUARDIA_TITLE);
     setProject(GUARDIA, { closesAt: new Date(2026, 8, 23, 9).toISOString() });
 
@@ -157,7 +157,7 @@ describe('Postularse a una convocatoria (HU-FE-17)', () => {
   });
 
   it('una postulación hecha en otra pestaña aparece al instante', async () => {
-    openAsEmployee();
+    await openAsEmployee();
     const accesibilidad = await cardOf('Accesibilidad en producto');
     await myApplications().findByText(/Aún no te has postulado/);
 
@@ -176,7 +176,7 @@ describe('Postularse a una convocatoria (HU-FE-17)', () => {
   });
 
   it('al recuperar la conexión vuelve a pedir sus postulaciones', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime } = await openAsEmployee(EMPLOYEE_PATHS.projects, true);
     await myApplications().findByText(/Aún no te has postulado/);
     server.use(
       http.get(`*${MY_APPLICATIONS_ENDPOINT}`, () => HttpResponse.json([LIVE_APPLICATION])),
@@ -199,7 +199,7 @@ describe('Mis postulaciones (HU-FE-17)', () => {
   });
 
   it('se llega desde el encabezado y muestra que carga', async () => {
-    openAsEmployee();
+    await openAsEmployee();
 
     // Antes de que responda el servidor (que no puede contestar dentro del mismo turno).
     expect(screen.getByRole('link', { name: 'Mis postulaciones' })).toHaveAttribute(
@@ -219,7 +219,7 @@ describe('Mis postulaciones (HU-FE-17)', () => {
         once: true,
       }),
     );
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
 
     const alert = await myApplications().findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar tus postulaciones.');
@@ -235,7 +235,7 @@ describe('Postularse desde el detalle (HU-FE-17)', () => {
   });
 
   it('el panel "Tu postulación" envía la postulación y muestra el resultado', async () => {
-    const { user } = openAsEmployee(projectPath(GUARDIA));
+    const { user } = await openAsEmployee(projectPath(GUARDIA));
     const panel = within(await screen.findByRole('region', { name: 'Tu postulación' }));
 
     await user.click(await panel.findByRole('button', { name: `Postularme a ${GUARDIA_TITLE}` }));

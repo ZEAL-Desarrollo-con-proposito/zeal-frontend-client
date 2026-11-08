@@ -13,7 +13,7 @@ const OPEN_SLOT = 'Eliminar franja del miércoles, 23 de septiembre, 10:00 – 1
 
 async function openAvailability() {
   storeSession('PSICOLOGO');
-  const rendered = renderRoute(PSYCHOLOGIST_PATHS.availability);
+  const rendered = await renderRoute(PSYCHOLOGIST_PATHS.availability);
   await wednesday().findAllByRole('listitem');
   return rendered;
 }

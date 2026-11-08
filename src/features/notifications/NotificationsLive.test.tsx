@@ -23,9 +23,9 @@ const REMINDER = {
   link: '/empleado/mis-citas',
 } as const;
 
-function openHome(realtimeFactory?: () => RealtimeClient) {
+async function openHome(realtimeFactory?: () => RealtimeClient) {
   storeSession('EMPLEADO');
-  return renderRoute(ROLE_HOME_PATH.EMPLEADO, realtimeFactory);
+  return await renderRoute(ROLE_HOME_PATH.EMPLEADO, realtimeFactory);
 }
 
 async function bellWithUnread(count: number) {
@@ -55,7 +55,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
   });
 
   it('una notificación nueva aparece al instante con un aviso y suma al contador', async () => {
-    const { user } = openHome();
+    const { user } = await openHome();
     await bellWithUnread(1);
 
     act(() => {
@@ -76,7 +76,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
   });
 
   it('solo recibe las suyas: la notificación de otra persona no llega', async () => {
-    openHome();
+    await openHome();
     await bellWithUnread(1);
 
     act(() => {
@@ -89,7 +89,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
   });
 
   it('si la misma notificación llega dos veces, se anuncia y se cuenta una sola vez', async () => {
-    openHome();
+    await openHome();
     await bellWithUnread(1);
     const event = { type: 'NUEVA', notification: liveNotification('repetida') };
 
@@ -109,7 +109,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
   });
 
   it('lo marcado como leído en otra pestaña se refleja al instante', async () => {
-    openHome();
+    await openHome();
     await bellWithUnread(1);
 
     await act(() =>
@@ -136,7 +136,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
         { once: true },
       ),
     );
-    openHome();
+    await openHome();
     await screen.findByRole('button', { name: 'Notificaciones' });
 
     act(() => {
@@ -152,7 +152,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
   });
 
   it('ignora mensajes mal formados en la cola', async () => {
-    openHome();
+    await openHome();
     await bellWithUnread(1);
 
     act(() => {
@@ -168,7 +168,7 @@ describe('Notificaciones en tiempo real por la cola privada (HU-FE-06)', () => {
 
   it('al reconectarse recupera lo que llegó sin conexión', async () => {
     const { client, store } = controlledRealtimeClient();
-    openHome(() => client);
+    await openHome(() => client);
     await bellWithUnread(1);
 
     act(() => {

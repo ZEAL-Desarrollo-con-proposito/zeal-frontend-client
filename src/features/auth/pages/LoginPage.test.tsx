@@ -26,7 +26,7 @@ describe('Pantalla de inicio de sesión', () => {
     ['PSICOLOGO', 'Mi agenda'],
     ['ADMIN', 'Hola, Talento'],
   ])('lleva al usuario %s a su pantalla de llegada', async (role, greeting) => {
-    const { router, user } = renderRoute('/login');
+    const { router, user } = await renderRoute('/login');
 
     await user.type(emailField(), `  ${seedUser(role).email.toUpperCase()} `);
     await user.type(passwordField(), DEMO_PASSWORD);
@@ -37,7 +37,7 @@ describe('Pantalla de inicio de sesión', () => {
   });
 
   it('valida los campos obligatorios y enfoca el primero con error', async () => {
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await user.click(submitButton());
 
@@ -48,7 +48,7 @@ describe('Pantalla de inicio de sesión', () => {
   });
 
   it('rechaza un correo con formato inválido y enfoca la contraseña si solo ella falta', async () => {
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await user.type(emailField(), 'correo-sin-dominio');
     await user.click(submitButton());
@@ -76,7 +76,7 @@ describe('Pantalla de inicio de sesión', () => {
         return HttpResponse.json({ status: 500, message: 'Error' }, { status: 500 });
       }),
     );
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await user.type(emailField(), seedUser('EMPLEADO').email);
     await user.type(passwordField(), DEMO_PASSWORD);
@@ -91,7 +91,7 @@ describe('Pantalla de inicio de sesión', () => {
   });
 
   it('muestra el error de la respuesta 401, borra la contraseña y la enfoca', async () => {
-    const { router, user } = renderRoute('/login');
+    const { router, user } = await renderRoute('/login');
     const email = seedUser('EMPLEADO').email;
 
     await user.type(emailField(), email);
@@ -109,7 +109,7 @@ describe('Pantalla de inicio de sesión', () => {
   });
 
   it('vuelve a mostrar el error en cada intento fallido y lo oculta al corregir', async () => {
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await user.type(emailField(), seedUser('EMPLEADO').email);
     await user.type(passwordField(), 'primer-intento');
@@ -138,7 +138,7 @@ describe('Pantalla de inicio de sesión', () => {
     ],
   ])('explica el fallo %s y conserva la contraseña', async (_case, resolver, message) => {
     server.use(http.post(`*${LOGIN_ENDPOINT}`, resolver));
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await user.type(emailField(), seedUser('EMPLEADO').email);
     await user.type(passwordField(), DEMO_PASSWORD);
@@ -149,7 +149,7 @@ describe('Pantalla de inicio de sesión', () => {
   });
 
   it('permite marcar "Recordarme"', async () => {
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
     const remember = screen.getByRole('checkbox', { name: 'Recordarme' });
 
     await user.click(remember);
@@ -158,7 +158,7 @@ describe('Pantalla de inicio de sesión', () => {
   });
 
   it('explica que la recuperación de contraseña y el SSO no hacen parte del MVP', async () => {
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await user.click(screen.getByRole('button', { name: '¿Olvidaste tu contraseña?' }));
     expect(screen.getByRole('status')).toHaveTextContent('recuperación de contraseña');

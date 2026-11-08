@@ -7,7 +7,7 @@ import { ROLE_HOME_PATH } from '../paths';
 describe('Sección aún sin pantalla', () => {
   it('explica qué contendrá la sección y ofrece volver al inicio', async () => {
     storeSession('ADMIN');
-    const { router, user } = renderRoute('/admin/reportes');
+    const { router, user } = await renderRoute('/admin/reportes');
 
     expect(screen.getByRole('heading', { level: 1, name: 'Reportes' })).toBeInTheDocument();
     expect(

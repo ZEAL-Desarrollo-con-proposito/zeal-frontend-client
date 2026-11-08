@@ -8,6 +8,12 @@ process.env.TZ = 'America/Bogota';
 // Puerto 3000 definido en la guía de arquitectura (Paso 4: puertos locales).
 const FRONTEND_PORT = 3000;
 
+// Las secciones se cargan bajo demanda (HU-FE-24) y ningún paquete de la aplicación llega a 500 kB.
+// La única excepción es el SDK de video (livekit-client, ≈520 kB): es un solo módulo de terceros,
+// no se puede dividir y solo se descarga al entrar a la sala de un taller. El aviso sigue activo
+// para cualquier otro paquete que crezca más de la cuenta.
+const CHUNK_SIZE_WARNING_KB = 550;
+
 export default defineConfig({
   plugins: [react()],
   // sockjs-client referencia la variable `global` de Node; en el navegador equivale a globalThis.
@@ -19,6 +25,7 @@ export default defineConfig({
   },
   server: { port: FRONTEND_PORT, strictPort: true },
   preview: { port: FRONTEND_PORT, strictPort: true },
+  build: { chunkSizeWarningLimit: CHUNK_SIZE_WARNING_KB },
   test: {
     environment: 'jsdom',
     // Procesos aislados: el tiempo real simulado (BroadcastChannel) no cruza archivos de prueba.

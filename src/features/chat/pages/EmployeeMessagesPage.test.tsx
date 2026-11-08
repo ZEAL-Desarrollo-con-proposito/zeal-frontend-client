@@ -12,9 +12,9 @@ import { conversationId } from '../model/chatMessage';
 
 const CONVERSATION = conversationId('usr-empleado-001', 'usr-psicologo-001');
 
-function abrirMensajes() {
+async function abrirMensajes() {
   storeSession('EMPLEADO');
-  return renderRoute(EMPLOYEE_PATHS.messages);
+  return await renderRoute(EMPLOYEE_PATHS.messages);
 }
 
 describe('Mensajes del empleado (HU-FE-09)', () => {
@@ -22,8 +22,8 @@ describe('Mensajes del empleado (HU-FE-09)', () => {
     freezeTime();
   });
 
-  it('es la pantalla de llegada y explica la privacidad de la conversación', () => {
-    abrirMensajes();
+  it('es la pantalla de llegada y explica la privacidad de la conversación', async () => {
+    await abrirMensajes();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mensajes' })).toBeInTheDocument();
     expect(
@@ -31,14 +31,14 @@ describe('Mensajes del empleado (HU-FE-09)', () => {
     ).toBeInTheDocument();
   });
 
-  it('mientras pide sus citas avisa que está cargando', () => {
-    abrirMensajes();
+  it('mientras pide sus citas avisa que está cargando', async () => {
+    await abrirMensajes();
 
     expect(screen.getByText('Cargando…')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('abre la conversación con la psicóloga de su cita más próxima', async () => {
-    abrirMensajes();
+    await abrirMensajes();
 
     expect(
       await screen.findByRole('region', { name: 'Chat con Laura Martínez' }),
@@ -56,7 +56,7 @@ describe('Mensajes del empleado (HU-FE-09)', () => {
       sentAt: new Date(2026, 8, 23, 8).toISOString(),
     });
 
-    abrirMensajes();
+    await abrirMensajes();
 
     expect(await screen.findByText('¿Cómo amaneciste?')).toBeInTheDocument();
     expect(screen.getByRole('log', { name: 'Mensajes con Laura Martínez' })).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('Mensajes del empleado (HU-FE-09)', () => {
   it('invita a reservar una cita cuando todavía no tiene con quién hablar', async () => {
     server.use(http.get(`*${MY_APPOINTMENTS_ENDPOINT}`, () => HttpResponse.json([])));
 
-    abrirMensajes();
+    await abrirMensajes();
 
     expect(await screen.findByText('Aún no tienes una conversación abierta.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ir a Bienestar' })).toHaveAttribute(
@@ -80,7 +80,7 @@ describe('Mensajes del empleado (HU-FE-09)', () => {
         HttpResponse.json({ message: 'Sin servicio' }, { status: 500 }),
       ),
     );
-    const { user } = abrirMensajes();
+    const { user } = await abrirMensajes();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cargar tus citas.');
 

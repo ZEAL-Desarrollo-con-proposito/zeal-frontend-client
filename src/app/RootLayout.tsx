@@ -1,22 +1,25 @@
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { Outlet } from 'react-router';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { sessionStore } from '@/features/auth/storage/sessionStore';
 import { RealtimeProvider } from '@/shared/realtime/RealtimeProvider';
+import { LoadingStatus } from '@/shared/ui/LoadingStatus/LoadingStatus';
 import { ToastProvider } from '@/shared/ui/Toast/ToastProvider';
 
 /**
  * Raíz de la aplicación: la sesión, su conexión en tiempo real y los avisos emergentes envuelven
- * todas las rutas.
+ * todas las rutas. Las pantallas a pantalla completa (las salas de video) se descargan al abrirlas.
  */
 export function RootLayout() {
   return (
     <AuthProvider>
       <ToastProvider>
         <SessionRealtime>
-          <Outlet />
+          <Suspense fallback={<LoadingStatus fullScreen>Cargando la pantalla…</LoadingStatus>}>
+            <Outlet />
+          </Suspense>
         </SessionRealtime>
       </ToastProvider>
     </AuthProvider>

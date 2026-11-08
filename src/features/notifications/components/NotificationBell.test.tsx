@@ -9,9 +9,9 @@ import { storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import { MARK_ALL_READ_ENDPOINT, NOTIFICATIONS_ENDPOINT } from '../api/notificationsApi';
 
-function openHome() {
+async function openHome() {
   storeSession('EMPLEADO');
-  return renderRoute(ROLE_HOME_PATH.EMPLEADO);
+  return await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 }
 
 function bell() {
@@ -37,7 +37,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
   });
 
   it('muestra cuántas notificaciones no leídas hay', async () => {
-    openHome();
+    await openHome();
 
     const button = await bellWithUnread(1);
     expect(button).toHaveAttribute('aria-expanded', 'false');
@@ -45,7 +45,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
   });
 
   it('abre la lista con las no leídas marcadas y cuándo llegaron', async () => {
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     expect(bell()).toHaveAttribute('aria-expanded', 'true');
@@ -58,7 +58,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
   });
 
   it('al abrir una notificación la marca como leída y lleva a su destino', async () => {
-    const { router, user } = openHome();
+    const { router, user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.click(panel().getByRole('button', { name: /Laura Martínez abrió nuevos bloques/ }));
@@ -71,7 +71,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
   });
 
   it('abrir una ya leída solo lleva a su destino', async () => {
-    const { router, user } = openHome();
+    const { router, user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.click(panel().getByRole('button', { name: /Te damos la bienvenida a ZEAL/ }));
@@ -96,7 +96,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
         ]),
       ),
     );
-    const { router, user } = openHome();
+    const { router, user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.click(panel().getByRole('button', { name: /Recordatorio/ }));
@@ -106,7 +106,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
   });
 
   it('marca todas como leídas', async () => {
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.click(panel().getByRole('button', { name: 'Marcar todas como leídas' }));
@@ -124,7 +124,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
         once: true,
       }),
     );
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.click(panel().getByRole('button', { name: 'Marcar todas como leídas' }));
@@ -145,7 +145,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
         { once: true },
       ),
     );
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.click(panel().getByRole('button', { name: /Laura Martínez abrió nuevos bloques/ }));
@@ -155,7 +155,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
   });
 
   it('se cierra con Escape (el foco vuelve a la campana), al tocar fuera o con la campana', async () => {
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(await bellWithUnread(1));
 
     await user.keyboard('{Escape}');
@@ -193,7 +193,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
       link: null,
     }));
     server.use(http.get(`*${NOTIFICATIONS_ENDPOINT}`, () => HttpResponse.json(many)));
-    openHome();
+    await openHome();
 
     const button = await bellWithUnread(12);
     expect(within(button).getByText('9+')).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
 
   it('avisa si no hay notificaciones', async () => {
     server.use(http.get(`*${NOTIFICATIONS_ENDPOINT}`, () => HttpResponse.json([])));
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(await bellWithUnread(0));
 
     expect(panel().getByText('No tienes notificaciones.')).toBeInTheDocument();
@@ -221,7 +221,7 @@ describe('Campana de notificaciones (HU-FE-06)', () => {
         { once: true },
       ),
     );
-    const { user } = openHome();
+    const { user } = await openHome();
     await user.click(bell());
     expect(panel().getByText('Cargando notificaciones…')).toBeInTheDocument();
 

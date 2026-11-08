@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { EMPLOYEE_PATHS } from '@/app/paths';
 import { publishToUser } from '@/mocks/realtime';
@@ -19,10 +19,10 @@ const IMPOSTOR_TITLE = 'Síndrome del impostor en tu primer empleo';
 const MALESTAR = 'taller-malestar-agil';
 const MALESTAR_TITLE = 'Gestión del malestar en equipos ágiles';
 
-function openAsEmployee(path: string = EMPLOYEE_PATHS.workshops, scripted = false) {
+async function openAsEmployee(path: string = EMPLOYEE_PATHS.workshops, scripted = false) {
   storeSession('EMPLEADO');
   const realtime = scriptedRealtimeClient();
-  const view = renderRoute(path, scripted ? () => realtime.client : undefined);
+  const view = await renderRoute(path, scripted ? () => realtime.client : undefined);
   return { ...view, realtime };
 }
 
@@ -96,7 +96,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
   });
 
   it('pide confirmación; al confirmar toma el cupo, lo informa y lo muestra en la tarjeta', async () => {
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const impostor = await cardOf(IMPOSTOR_TITLE);
 
     await user.click(impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE)));
@@ -124,7 +124,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
   });
 
   it('el taller destacado también se inscribe desde su bloque', async () => {
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const hero = within(await screen.findByRole('article', { name: MALESTAR_TITLE }));
 
     await user.click(hero.getByRole('button', enrollButton(MALESTAR_TITLE)));
@@ -141,7 +141,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
         requests += 1;
       }
     });
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const impostor = await cardOf(IMPOSTOR_TITLE);
     const button = impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE));
 
@@ -158,7 +158,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
 
   it('mientras el servidor procesa, muestra que inscribe y no envía dos veces', async () => {
     const pending = holdEnrollments();
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const impostor = await cardOf(IMPOSTOR_TITLE);
     await user.click(impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE)));
 
@@ -180,7 +180,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
   });
 
   it('si otra persona tomó el último cupo un instante antes, lo dice sin sobreasignar', async () => {
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const impostor = await cardOf(IMPOSTOR_TITLE);
     await user.click(impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE)));
 
@@ -201,7 +201,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
   });
 
   it('si el taller se llena con la confirmación abierta, lo avisa y ya no deja confirmar', async () => {
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
     const impostor = await cardOf(IMPOSTOR_TITLE);
     await user.click(impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE)));
 
@@ -215,7 +215,7 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
 
   it('muestra como inscritos los talleres donde ya tiene cupo', async () => {
     enrolledBefore(MALESTAR);
-    openAsEmployee();
+    await openAsEmployee();
 
     const hero = within(await screen.findByRole('article', { name: MALESTAR_TITLE }));
 
@@ -234,12 +234,14 @@ describe('Mis talleres (HU-FE-18)', () => {
   }
 
   it('se llega desde el catálogo y, sin inscripciones, invita a elegir un taller', async () => {
-    const { user, router } = openAsEmployee();
+    const { user, router } = await openAsEmployee();
 
     await user.click(screen.getByRole('link', { name: 'Mis talleres' }));
 
     expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.myWorkshops);
-    expect(screen.getByRole('heading', { level: 1, name: 'Mis talleres' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Mis talleres' }),
+    ).toBeInTheDocument();
     expect(
       await myWorkshops().findByRole('heading', { name: 'Aún no te has inscrito a ningún taller' }),
     ).toBeInTheDocument();
@@ -251,7 +253,7 @@ describe('Mis talleres (HU-FE-18)', () => {
   it('lista sus talleres del más próximo al más lejano, con cuándo empiezan', async () => {
     enrolledBefore(IMPOSTOR);
     enrolledBefore(MALESTAR);
-    openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
+    await openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
 
     const items = await myWorkshops().findAllByRole('listitem');
 
@@ -265,7 +267,7 @@ describe('Mis talleres (HU-FE-18)', () => {
   });
 
   it('una inscripción hecha en otra pestaña aparece al instante', async () => {
-    openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
+    await openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
     await myWorkshops().findByRole('heading', { name: 'Aún no te has inscrito a ningún taller' });
 
     act(() => {
@@ -292,18 +294,23 @@ describe('Mis talleres (HU-FE-18)', () => {
         ]),
       ),
     );
-    openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
+    await openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
 
     expect(await myWorkshops().findByText('En curso')).toBeInTheDocument();
   });
 
   it('mientras carga lo indica y, si falla, permite reintentar', async () => {
     server.use(
-      http.get(`*${MY_ENROLLMENTS_ENDPOINT}`, () => HttpResponse.json({}, { status: 500 }), {
-        once: true,
-      }),
+      http.get(
+        `*${MY_ENROLLMENTS_ENDPOINT}`,
+        async () => {
+          await delay();
+          return HttpResponse.json({}, { status: 500 });
+        },
+        { once: true },
+      ),
     );
-    const { user } = openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
+    const { user } = await openAsEmployee(EMPLOYEE_PATHS.myWorkshops);
 
     expect(myWorkshops().getByText('Cargando tus talleres…')).toBeInTheDocument();
     const alert = await myWorkshops().findByRole('alert');
@@ -317,7 +324,7 @@ describe('Mis talleres (HU-FE-18)', () => {
   });
 
   it('al recuperar la conexión vuelve a pedir sus inscripciones', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.myWorkshops, true);
+    const { realtime } = await openAsEmployee(EMPLOYEE_PATHS.myWorkshops, true);
     await myWorkshops().findByRole('heading', { name: 'Aún no te has inscrito a ningún taller' });
     server.use(http.get(`*${MY_ENROLLMENTS_ENDPOINT}`, () => HttpResponse.json([LIVE_ENROLLMENT])));
 

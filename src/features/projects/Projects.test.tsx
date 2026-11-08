@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { EMPLOYEE_PATHS, projectPath, ROLE_HOME_PATH } from '@/app/paths';
 import { readProjectsDb, updateOccupiedSpots, writeProjectsDb } from '@/mocks/projects/db';
@@ -15,10 +15,10 @@ import { projectTopic } from './model/spotsEvent';
 
 const GUARDIA = 'proyecto-guardia-datos';
 
-function openAsEmployee(path: string = EMPLOYEE_PATHS.projects, scripted = false) {
+async function openAsEmployee(path: string = EMPLOYEE_PATHS.projects, scripted = false) {
   storeSession('EMPLEADO');
   const realtime = scriptedRealtimeClient();
-  const view = renderRoute(path, scripted ? () => realtime.client : undefined);
+  const view = await renderRoute(path, scripted ? () => realtime.client : undefined);
   return { ...view, realtime };
 }
 
@@ -55,7 +55,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
 
   it('se llega desde el menú y muestra cada convocatoria con sus cupos y su cierre', async () => {
     storeSession('EMPLEADO');
-    const { user, router } = renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    const { user, router } = await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 
     await user.click(
       within(screen.getByRole('complementary', { name: 'Barra lateral' })).getByRole('link', {
@@ -65,7 +65,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
 
     expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.projects);
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Convocatorias internas' }),
+      await screen.findByRole('heading', { level: 1, name: 'Convocatorias internas' }),
     ).toBeInTheDocument();
     const guardia = await cardOf('Data Platform · Turno de guardia');
     expect(guardia.getByText('Datos · Rotación trimestral')).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('una convocatoria sin cupos no deja postularse', async () => {
-    openAsEmployee();
+    await openAsEmployee();
 
     const full = await cardOf('Squad de Observabilidad');
 
@@ -91,7 +91,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('el contador cambia en vivo y, al llegar a cero, la postulación se deshabilita', async () => {
-    const { subscribedTo } = openAsEmployee();
+    const { subscribedTo } = await openAsEmployee();
     const guardia = await cardOf('Data Platform · Turno de guardia');
     await subscribedTo(projectTopic(GUARDIA));
 
@@ -116,7 +116,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('descarta los avisos atrasados y los de otra convocatoria', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = await openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const guardia = await cardOf('Data Platform · Turno de guardia');
     await subscribedTo(projectTopic(GUARDIA));
 
@@ -131,7 +131,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('al recuperar la conexión vuelve a pedir el catálogo para no perder cambios', async () => {
-    const { realtime } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime } = await openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const guardia = await cardOf('Data Platform · Turno de guardia');
 
     act(() => {
@@ -147,8 +147,13 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('muestra que carga, y explica cuando no hay convocatorias abiertas', async () => {
-    server.use(http.get(`*${PROJECTS_ENDPOINT}`, () => HttpResponse.json([])));
-    openAsEmployee();
+    server.use(
+      http.get(`*${PROJECTS_ENDPOINT}`, async () => {
+        await delay();
+        return HttpResponse.json([]);
+      }),
+    );
+    await openAsEmployee();
 
     expect(screen.getByRole('region', { name: 'Convocatorias abiertas' })).toHaveAttribute(
       'aria-busy',
@@ -165,7 +170,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
         once: true,
       }),
     );
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar las convocatorias.');
@@ -175,7 +180,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('muestra al instante una convocatoria que la empresa publica en vivo', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = await openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
     expect(await cardOf('Data Platform · Turno de guardia')).toBeTruthy();
     expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(4);
@@ -191,7 +196,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('no duplica lo que ya trajo del servidor ni el mismo aviso dos veces', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = await openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
     await cardOf('Data Platform · Turno de guardia');
     await subscribedTo(target);
@@ -216,7 +221,7 @@ describe('Catálogo de convocatorias (HU-FE-16)', () => {
   });
 
   it('ignora los mensajes mal formados del canal de la organización', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(EMPLOYEE_PATHS.projects, true);
+    const { realtime, subscribedTo } = await openAsEmployee(EMPLOYEE_PATHS.projects, true);
     const target = organizationProjectsTopic(seedUser('EMPLEADO').organization);
     await cardOf('Data Platform · Turno de guardia');
     await subscribedTo(target);
@@ -238,7 +243,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
   });
 
   it('muestra de qué se trata, qué se necesita y qué suma al ZEAL Path', async () => {
-    const { user, router } = openAsEmployee();
+    const { user, router } = await openAsEmployee();
     const guardia = await cardOf('Data Platform · Turno de guardia');
 
     await user.click(
@@ -270,7 +275,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
   });
 
   it('sus cupos también cambian en vivo hasta agotarse', async () => {
-    const { subscribedTo } = openAsEmployee(projectPath(GUARDIA));
+    const { subscribedTo } = await openAsEmployee(projectPath(GUARDIA));
     const spots = within(await screen.findByRole('region', { name: 'Tu postulación' }));
     await subscribedTo(projectTopic(GUARDIA));
 
@@ -289,7 +294,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
       guardia.closesAt = new Date(2026, 8, 23, 8).toISOString();
     }
     writeProjectsDb(db);
-    openAsEmployee(projectPath(GUARDIA));
+    await openAsEmployee(projectPath(GUARDIA));
 
     const spots = within(await screen.findByRole('region', { name: 'Tu postulación' }));
 
@@ -298,7 +303,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
   });
 
   it('avisa si la convocatoria no existe y ofrece volver al catálogo', async () => {
-    const { user, router } = openAsEmployee(projectPath('no-existe'));
+    const { user, router } = await openAsEmployee(projectPath('no-existe'));
 
     expect(
       await screen.findByRole('heading', { name: 'No encontramos esta convocatoria' }),
@@ -314,7 +319,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
         once: true,
       }),
     );
-    const { user } = openAsEmployee(projectPath(GUARDIA));
+    const { user } = await openAsEmployee(projectPath(GUARDIA));
 
     expect(
       screen.getByText('Convocatoria', { selector: '[aria-current="page"]' }),
@@ -330,7 +335,7 @@ describe('Detalle de una convocatoria (HU-FE-16)', () => {
 
   it('el administrador no ve las convocatorias del empleado', async () => {
     storeSession('ADMIN');
-    renderRoute(projectPath(GUARDIA));
+    await renderRoute(projectPath(GUARDIA));
 
     expect(
       await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),

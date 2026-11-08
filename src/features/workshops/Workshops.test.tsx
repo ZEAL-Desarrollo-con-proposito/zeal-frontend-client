@@ -17,10 +17,13 @@ const IMPOSTOR = 'taller-impostor';
 const IMPOSTOR_TITLE = 'Síndrome del impostor en tu primer empleo';
 const MALESTAR_TITLE = 'Gestión del malestar en equipos ágiles';
 
-function openAsEmployee(scripted = false) {
+async function openAsEmployee(scripted = false) {
   storeSession('EMPLEADO');
   const realtime = scriptedRealtimeClient();
-  const view = renderRoute(EMPLOYEE_PATHS.workshops, scripted ? () => realtime.client : undefined);
+  const view = await renderRoute(
+    EMPLOYEE_PATHS.workshops,
+    scripted ? () => realtime.client : undefined,
+  );
   return { ...view, realtime };
 }
 
@@ -58,7 +61,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
 
   it('se llega desde el menú: el próximo taller destacado y el resto con sus cupos', async () => {
     storeSession('EMPLEADO');
-    const { user, router } = renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    const { user, router } = await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 
     await user.click(
       within(screen.getByRole('complementary', { name: 'Barra lateral' })).getByRole('link', {
@@ -68,7 +71,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
 
     expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.workshops);
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Talleres comunitarios' }),
+      await screen.findByRole('heading', { level: 1, name: 'Talleres comunitarios' }),
     ).toBeInTheDocument();
     const hero = await featured();
     expect(hero.getByText('Empieza en 45 min')).toBeInTheDocument();
@@ -90,7 +93,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('un taller lleno no deja inscribirse y dice por qué', async () => {
-    openAsEmployee();
+    await openAsEmployee();
 
     const full = await cardOf('Límites sanos y desconexión digital');
 
@@ -102,7 +105,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('los cupos cambian en vivo: al llenarse se deshabilita y si se libera vuelve a ofrecerse', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(true);
+    const { realtime, subscribedTo } = await openAsEmployee(true);
     const impostor = await cardOf(IMPOSTOR_TITLE);
     await subscribedTo(workshopTopic(IMPOSTOR));
 
@@ -122,7 +125,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('descarta los avisos atrasados, los de otro taller y los que no son del contrato', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(true);
+    const { realtime, subscribedTo } = await openAsEmployee(true);
     const impostor = await cardOf(IMPOSTOR_TITLE);
     await subscribedTo(workshopTopic(IMPOSTOR));
 
@@ -137,7 +140,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('al recuperar la conexión vuelve a pedir los talleres para no perder cambios', async () => {
-    const { realtime } = openAsEmployee(true);
+    const { realtime } = await openAsEmployee(true);
     const impostor = await cardOf(IMPOSTOR_TITLE);
 
     act(() => {
@@ -153,7 +156,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
   });
 
   it('un taller que publica el administrador aparece al instante, sin repetirse', async () => {
-    const { realtime, subscribedTo } = openAsEmployee(true);
+    const { realtime, subscribedTo } = await openAsEmployee(true);
     await cardOf(IMPOSTOR_TITLE);
     const published = workshop({ id: 'taller-en-vivo', title: 'Taller recién publicado' });
     const topic = organizationWorkshopsTopic(SEED_ORGANIZATION);
@@ -172,7 +175,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
 
   it('el enlace a un taller lo destaca (p. ej. desde el aviso de uno recién publicado)', async () => {
     storeSession('EMPLEADO');
-    renderRoute(workshopPath('taller-descanso-real'));
+    await renderRoute(workshopPath('taller-descanso-real'));
 
     const hero = await featured('Descanso real: dormir en semana de release');
 
@@ -182,7 +185,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
 
   it('si el taller empieza con la página abierta, se cierran sus inscripciones', async () => {
     controlClock();
-    openAsEmployee();
+    await openAsEmployee();
     const hero = await featured();
 
     jumpTo(new Date(2026, 8, 23, 10, 5));
@@ -193,7 +196,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
 
   it('sin talleres en la próxima hora, el destacado no lleva aviso de inicio', async () => {
     server.use(http.get(`*${WORKSHOPS_ENDPOINT}`, () => HttpResponse.json([workshop()])));
-    openAsEmployee();
+    await openAsEmployee();
 
     const hero = await featured('Respiración para días intensos');
 
@@ -204,7 +207,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
 
   it('sin talleres próximos lo explica', async () => {
     server.use(http.get(`*${WORKSHOPS_ENDPOINT}`, () => HttpResponse.json([])));
-    openAsEmployee();
+    await openAsEmployee();
 
     expect(
       await screen.findByRole('heading', { name: 'No hay talleres próximos' }),
@@ -217,7 +220,7 @@ describe('Catálogo de talleres (HU-FE-18)', () => {
         once: true,
       }),
     );
-    const { user } = openAsEmployee();
+    const { user } = await openAsEmployee();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar los talleres.');

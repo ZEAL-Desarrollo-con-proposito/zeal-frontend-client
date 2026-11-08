@@ -21,7 +21,7 @@ const EXPIRED_NOTICE = 'Tu sesión expiró por seguridad. Vuelve a iniciar sesi�
 const RESTORING = 'Recuperando tu sesión…';
 
 async function loginAs(
-  user: ReturnType<typeof renderRoute>['user'],
+  user: Awaited<ReturnType<typeof renderRoute>>['user'],
   email: string,
   { remember = false } = {},
 ) {
@@ -73,7 +73,7 @@ function otherTab() {
 
 describe('sesión en memoria (HU-FE-21)', () => {
   it('no deja el token en el almacenamiento del navegador', async () => {
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await loginAs(user, seedUser('EMPLEADO').email, { remember: true });
 
@@ -94,7 +94,7 @@ describe('sesión en memoria (HU-FE-21)', () => {
           return HttpResponse.json({ message: 'Correo o contraseña incorrectos' }, { status: 401 });
         }),
       );
-      const { user } = renderRoute('/login');
+      const { user } = await renderRoute('/login');
 
       await loginAs(user, seedUser('ADMIN').email, { remember });
 
@@ -107,7 +107,7 @@ describe('sesión en memoria (HU-FE-21)', () => {
   it('al recargar recupera la sesión con la cookie de refresh, sin pasar por el login', async () => {
     startRefreshFamily(seedUser('PSICOLOGO').id, true);
 
-    const { router } = renderRoute(ROLE_HOME_PATH.PSICOLOGO);
+    const { router } = await renderRoute(ROLE_HOME_PATH.PSICOLOGO);
 
     expect(screen.getByText(RESTORING)).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Mi agenda' })).toBeInTheDocument();
@@ -117,27 +117,27 @@ describe('sesión en memoria (HU-FE-21)', () => {
   it('desde el login también la recupera y lleva a la pantalla del rol', async () => {
     startRefreshFamily(seedUser('PSICOLOGO').id, false);
 
-    const { router } = renderRoute('/login');
+    const { router } = await renderRoute('/login');
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(ROLE_HOME_PATH.PSICOLOGO);
     });
   });
 
-  it('con la sesión ya en memoria no vuelve a pedir el login', () => {
+  it('con la sesión ya en memoria no vuelve a pedir el login', async () => {
     storeSession('PSICOLOGO');
 
-    const { router } = renderRoute('/login');
+    const { router } = await renderRoute('/login');
 
     expect(router.state.location.pathname).toBe(ROLE_HOME_PATH.PSICOLOGO);
     expect(screen.getByRole('heading', { name: 'Mi agenda' })).toBeInTheDocument();
   });
 
-  it('borra el token que una versión anterior dejó guardado', () => {
+  it('borra el token que una versión anterior dejó guardado', async () => {
     localStorage.setItem('zeal.session', 'token-viejo');
     sessionStorage.setItem('zeal.session', 'token-viejo');
 
-    renderRoute('/login');
+    await renderRoute('/login');
 
     expect(localStorage.getItem('zeal.session')).toBeNull();
     expect(sessionStorage.getItem('zeal.session')).toBeNull();
@@ -146,7 +146,7 @@ describe('sesión en memoria (HU-FE-21)', () => {
 
 describe('manejo de la sesión y rutas protegidas', () => {
   it('manda al login a quien abre una ruta protegida sin sesión', async () => {
-    const { router, user } = renderRoute(ROLE_HOME_PATH.ADMIN);
+    const { router, user } = await renderRoute(ROLE_HOME_PATH.ADMIN);
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/login');
@@ -162,7 +162,7 @@ describe('manejo de la sesión y rutas protegidas', () => {
 
   it('niega el acceso a las rutas de otro rol y ofrece volver al inicio propio', async () => {
     storeSession('EMPLEADO');
-    const { router, user } = renderRoute(ROLE_HOME_PATH.ADMIN);
+    const { router, user } = await renderRoute(ROLE_HOME_PATH.ADMIN);
 
     expect(
       screen.getByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
@@ -185,7 +185,7 @@ describe('cerrar sesión', () => {
       revoked += new URL(incoming.url).pathname === LOGOUT_ENDPOINT ? 1 : 0;
     });
     storeSession('EMPLEADO');
-    const { router, user } = renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    const { router, user } = await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
 
@@ -203,7 +203,7 @@ describe('cerrar sesión', () => {
   it('sin conexión, no vuelve a entrar con la cookie al recargar', async () => {
     server.use(http.post(`*${LOGOUT_ENDPOINT}`, () => HttpResponse.error()));
     startRefreshFamily(seedUser('EMPLEADO').id, true);
-    const first = renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    const first = await renderRoute(ROLE_HOME_PATH.EMPLEADO);
     await screen.findByRole('heading', { name: 'Hola, David' });
 
     await first.user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
@@ -213,7 +213,7 @@ describe('cerrar sesión', () => {
     first.unmount();
     server.resetHandlers();
 
-    const { router } = renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    const { router } = await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/login');
@@ -238,7 +238,7 @@ describe('cerrar sesión', () => {
       }),
     );
     storeSession('EMPLEADO', { expiresInMs: 50 });
-    const { router, user } = renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    const { router, user } = await renderRoute(ROLE_HOME_PATH.EMPLEADO);
     await waitFor(() => {
       expect(held.reached).toBe(true);
     });
@@ -261,7 +261,7 @@ describe('renovar la sesión', () => {
   it('antes de vencer pide un token nuevo y la persona sigue en su pantalla', async () => {
     server.use(http.post(`*${REFRESH_ENDPOINT}`, renewedSessionFor('PSICOLOGO')));
     const session = storeSession('PSICOLOGO', { expiresInMs: 50 });
-    const { router } = renderRoute(ROLE_HOME_PATH.PSICOLOGO);
+    const { router } = await renderRoute(ROLE_HOME_PATH.PSICOLOGO);
 
     await waitFor(() => {
       expect(sessionStore.accessToken()).not.toBe(session.accessToken);
@@ -274,7 +274,7 @@ describe('renovar la sesión', () => {
   it('si el servidor rechaza la renovación, cierra la sesión y lo avisa en el login', async () => {
     const tab = otherTab();
     storeSession('PSICOLOGO', { expiresInMs: 50 });
-    const { router } = renderRoute(ROLE_HOME_PATH.PSICOLOGO);
+    const { router } = await renderRoute(ROLE_HOME_PATH.PSICOLOGO);
 
     expect(await screen.findByText(EXPIRED_NOTICE)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login');
@@ -303,7 +303,7 @@ describe('renovar la sesión', () => {
       }),
     );
     const session = storeSession('PSICOLOGO', { expiresInMs: 50 });
-    const { router } = renderRoute(ROLE_HOME_PATH.PSICOLOGO);
+    const { router } = await renderRoute(ROLE_HOME_PATH.PSICOLOGO);
 
     await waitFor(() => {
       expect(retries).toHaveLength(1);
@@ -330,7 +330,7 @@ describe('renovar la sesión', () => {
         return HttpResponse.json({ message: 'Token revocado' }, { status: 401 });
       }),
     );
-    renderRoute(ROLE_HOME_PATH.EMPLEADO);
+    await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 
     await act(async () => {
       await request('/api/protegido').catch(() => undefined);
@@ -357,7 +357,7 @@ describe('conexión en tiempo real de la sesión', () => {
     const { created, factory } = connectionSpy();
     server.use(http.post(`*${REFRESH_ENDPOINT}`, renewedSessionFor('PSICOLOGO')));
     const session = storeSession('PSICOLOGO', { expiresInMs: 50 });
-    renderRoute(ROLE_HOME_PATH.PSICOLOGO, factory);
+    await renderRoute(ROLE_HOME_PATH.PSICOLOGO, factory);
 
     await waitFor(() => {
       expect(sessionStore.accessToken()).not.toBe(session.accessToken);
@@ -371,7 +371,7 @@ describe('conexión en tiempo real de la sesión', () => {
   it('si el servidor rechaza la conexión y la sesión fue revocada, la sesión termina', async () => {
     const { created, factory } = connectionSpy();
     storeSession('EMPLEADO');
-    const { router } = renderRoute(ROLE_HOME_PATH.EMPLEADO, factory);
+    const { router } = await renderRoute(ROLE_HOME_PATH.EMPLEADO, factory);
 
     act(() => {
       created[0]?.credentials?.onRejected();
@@ -384,7 +384,7 @@ describe('conexión en tiempo real de la sesión', () => {
   it('otra persona que inicia sesión abre su propia conexión', async () => {
     const { created, factory } = connectionSpy();
     storeSession('EMPLEADO');
-    const { user } = renderRoute(ROLE_HOME_PATH.EMPLEADO, factory);
+    const { user } = await renderRoute(ROLE_HOME_PATH.EMPLEADO, factory);
 
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     await loginAs(user, seedUser('ADMIN').email);
@@ -399,7 +399,7 @@ describe('varias pestañas', () => {
   it('cuando otra pestaña cierra la sesión, esta también', async () => {
     const tab = otherTab();
     storeSession('ADMIN');
-    const { router } = renderRoute(ROLE_HOME_PATH.ADMIN);
+    const { router } = await renderRoute(ROLE_HOME_PATH.ADMIN);
 
     tab.say({ type: 'ended', expired: false });
 
@@ -412,7 +412,7 @@ describe('varias pestañas', () => {
   it('cuando la sesión venció en otra pestaña, esta también lo avisa', async () => {
     const tab = otherTab();
     storeSession('ADMIN');
-    renderRoute(ROLE_HOME_PATH.ADMIN);
+    await renderRoute(ROLE_HOME_PATH.ADMIN);
 
     tab.say({ type: 'ended', expired: true });
 
@@ -421,7 +421,7 @@ describe('varias pestañas', () => {
 
   it('cuando otra pestaña inicia sesión, esta la recupera con la misma cookie', async () => {
     const tab = otherTab();
-    const { router } = renderRoute('/login');
+    const { router } = await renderRoute('/login');
     await initialRestoreFinished();
 
     startRefreshFamily(seedUser('ADMIN').id, false);
@@ -434,7 +434,7 @@ describe('varias pestañas', () => {
 
   it('si no logra recuperarla, sigue en el login sin avisar nada', async () => {
     const tab = otherTab();
-    const { router } = renderRoute('/login');
+    const { router } = await renderRoute('/login');
     await initialRestoreFinished();
     let answered = false;
     server.use(
@@ -455,7 +455,7 @@ describe('varias pestañas', () => {
 
   it('al iniciar sesión avisa a las demás pestañas', async () => {
     const tab = otherTab();
-    const { user } = renderRoute('/login');
+    const { user } = await renderRoute('/login');
 
     await loginAs(user, seedUser('EMPLEADO').email);
 

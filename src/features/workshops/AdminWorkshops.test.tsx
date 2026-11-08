@@ -21,11 +21,11 @@ const form = () => within(screen.getByRole('region', { name: 'Publicar taller' }
 const announcements = () => screen.getByRole('status', { name: 'Avisos de talleres' });
 const cardOf = (title: string) => within(list().getByRole('listitem', { name: title }));
 
-type View = ReturnType<typeof renderRoute>;
+type View = Awaited<ReturnType<typeof renderRoute>>;
 
 async function openWorkshops() {
   storeSession('ADMIN');
-  const view = renderRoute(ADMIN_PATHS.workshops);
+  const view = await renderRoute(ADMIN_PATHS.workshops);
   await screen.findByRole('list', { name: 'Talleres publicados' });
   return view;
 }
@@ -133,7 +133,7 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
   it('explica el estado vacío', async () => {
     writeWorkshopsDb({ workshops: [], enrollments: [], sequence: 0 });
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.workshops);
+    await renderRoute(ADMIN_PATHS.workshops);
 
     expect(await screen.findByText('Todavía no has publicado talleres')).toBeInTheDocument();
   });
@@ -141,7 +141,7 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
   it('permite reintentar si la carga falla', async () => {
     const bringBack = takeDown(ADMIN_WORKSHOPS_ENDPOINT);
     storeSession('ADMIN');
-    const { user } = renderRoute(ADMIN_PATHS.workshops);
+    const { user } = await renderRoute(ADMIN_PATHS.workshops);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cargar los talleres.');
     bringBack();
@@ -150,9 +150,9 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
     expect(await screen.findByRole('list', { name: 'Talleres publicados' })).toBeInTheDocument();
   });
 
-  it('un empleado no accede a la pantalla de talleres del administrador', () => {
+  it('un empleado no accede a la pantalla de talleres del administrador', async () => {
     storeSession('EMPLEADO');
-    renderRoute(ADMIN_PATHS.workshops);
+    await renderRoute(ADMIN_PATHS.workshops);
 
     expect(screen.queryByRole('region', { name: 'Publicar taller' })).not.toBeInTheDocument();
   });
@@ -167,7 +167,7 @@ describe('Talleres del administrador · lista (HU-FE-15)', () => {
       ),
     );
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.workshops);
+    await renderRoute(ADMIN_PATHS.workshops);
 
     expect(
       await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
@@ -439,7 +439,7 @@ describe('Talleres del administrador · en tiempo real', () => {
   it('vuelve a pedir la lista al recuperar la conexión', async () => {
     const { client, store } = controlledRealtimeClient();
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.workshops, () => client);
+    await renderRoute(ADMIN_PATHS.workshops, () => client);
     await screen.findByRole('list', { name: 'Talleres publicados' });
 
     // Mientras no había conexión otra sesión publicó un taller y el aviso se perdió.

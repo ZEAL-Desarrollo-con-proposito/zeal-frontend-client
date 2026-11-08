@@ -10,9 +10,9 @@ function desktopSidebar() {
   return within(screen.getByRole('complementary', { name: 'Barra lateral' }));
 }
 
-function renderAs(role: Role, path: string = ROLE_HOME_PATH[role]) {
+async function renderAs(role: Role, path: string = ROLE_HOME_PATH[role]) {
   storeSession(role);
-  return renderRoute(path);
+  return await renderRoute(path);
 }
 
 describe('Layout base con menú por rol', () => {
@@ -32,8 +32,8 @@ describe('Layout base con menú por rol', () => {
       ['Panel', 'Empleados', 'Proyectos', 'Talleres', 'Reportes', 'Organización'],
       'Nexura S.A.S. · Admin',
     ],
-  ])('muestra el menú de %s con su pantalla de llegada activa', (role, labels, detail) => {
-    renderAs(role);
+  ])('muestra el menú de %s con su pantalla de llegada activa', async (role, labels, detail) => {
+    await renderAs(role);
     const sidebar = desktopSidebar();
 
     const links = sidebar.getAllByRole('link');
@@ -43,13 +43,14 @@ describe('Layout base con menú por rol', () => {
   });
 
   it('navega entre secciones y mueve el indicador activo', async () => {
-    const { router, user } = renderAs('EMPLEADO');
+    const { router, user } = await renderAs('EMPLEADO');
     const sidebar = desktopSidebar();
 
     await user.click(sidebar.getByRole('link', { name: 'Mis citas' }));
 
     expect(router.state.location.pathname).toBe('/empleado/mis-citas');
-    expect(screen.getByRole('heading', { level: 1, name: 'Mis citas' })).toBeInTheDocument();
+    // La sección se carga bajo demanda: mientras llega, la pantalla anterior sigue a la vista.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mis citas' })).toBeInTheDocument();
     expect(sidebar.getByRole('link', { name: 'Mis citas' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -58,7 +59,7 @@ describe('Layout base con menú por rol', () => {
   });
 
   it('indica en la barra superior y en la pestaña dónde está la persona', async () => {
-    const { user, unmount } = renderAs('EMPLEADO');
+    const { user, unmount } = await renderAs('EMPLEADO');
     const topbar = within(screen.getByRole('banner'));
 
     expect(topbar.getByText('Inicio')).toBeInTheDocument();
@@ -66,15 +67,15 @@ describe('Layout base con menú por rol', () => {
 
     await user.click(desktopSidebar().getByRole('link', { name: 'Talleres' }));
 
-    expect(topbar.getByText('Talleres')).toBeInTheDocument();
+    expect(await topbar.findByText('Talleres')).toBeInTheDocument();
     expect(document.title).toBe('Talleres · ZEAL');
 
     unmount();
     expect(document.title).toBe('ZEAL — Cuidado de la salud mental en el trabajo');
   });
 
-  it('muestra la identidad del usuario y un enlace para saltar al contenido', () => {
-    renderAs('PSICOLOGO');
+  it('muestra la identidad del usuario y un enlace para saltar al contenido', async () => {
+    await renderAs('PSICOLOGO');
 
     expect(screen.getAllByRole('img', { name: 'Laura Martínez' })).toHaveLength(2);
     expect(screen.getByRole('link', { name: 'Saltar al contenido' })).toHaveAttribute(
@@ -86,7 +87,7 @@ describe('Layout base con menú por rol', () => {
 
   describe('menú móvil', () => {
     it('se abre, enfoca su botón de cierre y se cierra con Escape devolviendo el foco', async () => {
-      const { user } = renderAs('ADMIN');
+      const { user } = await renderAs('ADMIN');
       const menuButton = screen.getByRole('button', { name: 'Abrir menú' });
 
       await user.click(menuButton);
@@ -105,7 +106,7 @@ describe('Layout base con menú por rol', () => {
     });
 
     it('ignora otras teclas y se cierra con el botón o tocando el fondo', async () => {
-      const { user } = renderAs('ADMIN');
+      const { user } = await renderAs('ADMIN');
 
       await user.click(screen.getByRole('button', { name: 'Abrir menú' }));
       await user.keyboard('{Shift}');
@@ -132,7 +133,7 @@ describe('Layout base con menú por rol', () => {
       ['se cierra al deslizarlo hacia la izquierda', [150, 90, 20], false],
       ['sigue abierto tras un arrastre corto', [196, 192, 190], true],
     ])('%s', async (_case, positions, staysOpen) => {
-      const { user } = renderAs('EMPLEADO');
+      const { user } = await renderAs('EMPLEADO');
       await user.click(screen.getByRole('button', { name: 'Abrir menú' }));
       const dialog = screen.getByRole('dialog', { name: 'Menú' });
       const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, isPrimary: true };
@@ -151,7 +152,7 @@ describe('Layout base con menú por rol', () => {
     });
 
     it('se cierra al elegir una sección', async () => {
-      const { router, user } = renderAs('EMPLEADO');
+      const { router, user } = await renderAs('EMPLEADO');
 
       await user.click(screen.getByRole('button', { name: 'Abrir menú' }));
       const dialog = screen.getByRole('dialog', { name: 'Menú' });

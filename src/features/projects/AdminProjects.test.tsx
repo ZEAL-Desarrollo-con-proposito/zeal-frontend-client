@@ -25,11 +25,11 @@ const form = () => within(screen.getByRole('region', { name: 'Publicar proyecto'
 const announcements = () => screen.getByRole('status', { name: 'Avisos de proyectos' });
 const cardOf = (title: string) => within(list().getByRole('listitem', { name: title }));
 
-type View = ReturnType<typeof renderRoute>;
+type View = Awaited<ReturnType<typeof renderRoute>>;
 
 async function openProjects() {
   storeSession('ADMIN');
-  const view = renderRoute(ADMIN_PATHS.projects);
+  const view = await renderRoute(ADMIN_PATHS.projects);
   await screen.findByRole('list', { name: 'Proyectos publicados' });
   return view;
 }
@@ -95,7 +95,7 @@ describe('Proyectos del administrador · lista (HU-FE-14)', () => {
       JSON.stringify({ ...(db ?? {}), projects: [], applications: [], sequence: 0 }),
     );
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.projects);
+    await renderRoute(ADMIN_PATHS.projects);
 
     expect(await screen.findByText('Todavía no has publicado proyectos')).toBeInTheDocument();
   });
@@ -103,7 +103,7 @@ describe('Proyectos del administrador · lista (HU-FE-14)', () => {
   it('permite reintentar si la carga falla', async () => {
     const bringBack = takeDown(ADMIN_PROJECTS_ENDPOINT);
     storeSession('ADMIN');
-    const { user } = renderRoute(ADMIN_PATHS.projects);
+    const { user } = await renderRoute(ADMIN_PATHS.projects);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cargar los proyectos.');
     bringBack();
@@ -112,9 +112,9 @@ describe('Proyectos del administrador · lista (HU-FE-14)', () => {
     expect(await screen.findByRole('list', { name: 'Proyectos publicados' })).toBeInTheDocument();
   });
 
-  it('un empleado no accede a la pantalla de proyectos del administrador', () => {
+  it('un empleado no accede a la pantalla de proyectos del administrador', async () => {
     storeSession('EMPLEADO');
-    renderRoute(ADMIN_PATHS.projects);
+    await renderRoute(ADMIN_PATHS.projects);
 
     expect(screen.queryByRole('region', { name: 'Publicar proyecto' })).not.toBeInTheDocument();
   });
@@ -129,7 +129,7 @@ describe('Proyectos del administrador · lista (HU-FE-14)', () => {
       ),
     );
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.projects);
+    await renderRoute(ADMIN_PATHS.projects);
 
     expect(
       await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
@@ -142,7 +142,7 @@ describe('Proyectos del administrador · lista (HU-FE-14)', () => {
     const db = readProjectsDb();
     writeProjectsDb({ ...db, projects: db.projects.slice(0, 1) });
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.projects);
+    await renderRoute(ADMIN_PATHS.projects);
 
     expect(await screen.findByText('1 proyecto publicado en total')).toBeInTheDocument();
     expect(list().getAllByRole('listitem')).toHaveLength(1);
@@ -358,7 +358,7 @@ describe('Proyectos del administrador · en tiempo real', () => {
   it('vuelve a pedir la lista al recuperar la conexión', async () => {
     const { client, store } = controlledRealtimeClient();
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.projects, () => client);
+    await renderRoute(ADMIN_PATHS.projects, () => client);
     await screen.findByRole('list', { name: 'Proyectos publicados' });
 
     // Mientras no había conexión otra sesión publicó un proyecto y el aviso se perdió.

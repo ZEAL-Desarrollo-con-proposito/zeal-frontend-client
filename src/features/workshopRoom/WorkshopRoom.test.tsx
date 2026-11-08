@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN_PATHS, EMPLOYEE_PATHS, workshopRoomPath } from '@/app/paths';
 import type { Role } from '@/features/auth/model/session';
@@ -119,7 +119,7 @@ function chatArrives(message: Partial<GroupChatMessage> & { id: string; text: st
 }
 
 async function joinWith(participants: GroupParticipant[]) {
-  const view = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+  const view = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
   await view.user.click(await joinButton());
   serverSends({ status: 'connected', participants });
   await live().findByText(`${String(participants.length)} personas en la sala`);
@@ -130,9 +130,9 @@ function chatPanel() {
   return within(screen.getByRole('region', { name: 'Chat del taller' }));
 }
 
-function openAs(role: Role, path: string) {
+async function openAs(role: Role, path: string) {
   storeSession(role);
-  return renderRoute(path);
+  return await renderRoute(path);
 }
 
 function lobby() {
@@ -172,7 +172,7 @@ describe('Sala del taller (videollamada grupal)', () => {
   });
 
   it('la persona inscrita entra desde Mis talleres, ve a todos y controla su micrófono y cámara', async () => {
-    const { user, router } = openAs('EMPLEADO', EMPLOYEE_PATHS.myWorkshops);
+    const { user, router } = await openAs('EMPLEADO', EMPLOYEE_PATHS.myWorkshops);
 
     await user.click(
       await screen.findByRole('link', { name: `Entrar a la sala de ${LIVE_TITLE}` }),
@@ -218,7 +218,7 @@ describe('Sala del taller (videollamada grupal)', () => {
   });
 
   it('la empresa anfitriona abre la sala desde su panel de talleres', async () => {
-    const { user } = openAs('ADMIN', ADMIN_PATHS.workshops);
+    const { user } = await openAs('ADMIN', ADMIN_PATHS.workshops);
 
     await user.click(await screen.findByRole('link', { name: `Abrir la sala de ${LIVE_TITLE}` }));
 
@@ -234,7 +234,7 @@ describe('Sala del taller (videollamada grupal)', () => {
   });
 
   it('un taller que ya terminó no tiene sala', async () => {
-    openAs('EMPLEADO', workshopRoomPath('EMPLEADO', DONE));
+    await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', DONE));
 
     expect(await screen.findByText('Este taller ya terminó')).toBeInTheDocument();
     expect(lobby().queryByRole('button')).not.toBeInTheDocument();
@@ -243,7 +243,7 @@ describe('Sala del taller (videollamada grupal)', () => {
   it('quien no está inscrito no encuentra la sala', async () => {
     const db = readWorkshopsDb();
     writeWorkshopsDb({ ...db, enrollments: [] });
-    const { user, router } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user, router } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     expect(await screen.findByText('No encontramos esta sala')).toBeInTheDocument();
     // La flecha del encabezado solo tiene aria-label; el botón del mensaje muestra el texto.
@@ -253,11 +253,16 @@ describe('Sala del taller (videollamada grupal)', () => {
 
   it('si la sala no carga se puede reintentar', async () => {
     server.use(
-      http.get(`*${workshopRoomEndpoint(LIVE)}`, () => HttpResponse.json({}, { status: 500 }), {
-        once: true,
-      }),
+      http.get(
+        `*${workshopRoomEndpoint(LIVE)}`,
+        async () => {
+          await delay();
+          return HttpResponse.json({}, { status: 500 });
+        },
+        { once: true },
+      ),
     );
-    const { user } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     expect(screen.getByText('Cargando la sala…')).toBeInTheDocument();
     expect(await screen.findByText('No pudimos abrir la sala')).toBeInTheDocument();
@@ -267,7 +272,7 @@ describe('Sala del taller (videollamada grupal)', () => {
 
   it('si el video no conecta, avisa y deja reintentar', async () => {
     video.connect.mockRejectedValueOnce(new Error('sin red'));
-    const { user } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     await user.click(await joinButton());
 
@@ -289,7 +294,7 @@ describe('Sala del taller (videollamada grupal)', () => {
         };
       });
     });
-    const { user, router } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user, router } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     await user.click(await joinButton());
 
@@ -311,7 +316,7 @@ describe('Sala del taller (videollamada grupal)', () => {
 
   it('muestra "Conectando…" mientras el servidor de video responde', async () => {
     video.connect.mockReturnValue(new Promise(() => undefined));
-    const { user } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     await user.click(await joinButton());
 
@@ -320,7 +325,7 @@ describe('Sala del taller (videollamada grupal)', () => {
 
   it('si el navegador bloquea la cámara, la persona sigue en la sala y sabe cómo dar el permiso', async () => {
     video.setMedia.mockRejectedValueOnce(new DOMException('Permiso denegado', 'NotAllowedError'));
-    const { user } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     await user.click(await joinButton());
     serverSends({ status: 'connected', participants: [SELF, HOST] });
@@ -340,7 +345,7 @@ describe('Sala del taller (videollamada grupal)', () => {
   });
 
   it('avisa la reconexión y, si el servidor cierra la llamada, permite volver a entrar', async () => {
-    const { user } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
 
     await user.click(await joinButton());
     serverSends({ status: 'reconnecting', participants: [SELF] });
@@ -351,7 +356,7 @@ describe('Sala del taller (videollamada grupal)', () => {
   });
 
   it('al cerrar la página se sale de la llamada', async () => {
-    const { user, unmount } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user, unmount } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
     await user.click(await joinButton());
     serverSends({ status: 'connected', participants: [SELF] });
     await live().findByText('1 persona en la sala');
@@ -434,7 +439,7 @@ describe('La sala abre y cierra sola con el reloj', () => {
   });
 
   it('antes de la hora muestra cuándo abre y se habilita sin recargar', async () => {
-    openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LATER));
+    await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LATER));
 
     expect(await screen.findByText('La sala abre a las 10:50')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Entrar a la sala' })).not.toBeInTheDocument();
@@ -445,7 +450,7 @@ describe('La sala abre y cierra sola con el reloj', () => {
   });
 
   it('cuando el taller termina, la llamada se cierra', async () => {
-    const { user } = openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
+    const { user } = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
     await user.click(await joinButton());
     serverSends({ status: 'connected', participants: [SELF, HOST] });
     await live().findByText('2 personas en la sala');
@@ -457,7 +462,7 @@ describe('La sala abre y cierra sola con el reloj', () => {
   });
 
   it('Mis talleres muestra la entrada solo mientras la sala está abierta', async () => {
-    openAs('EMPLEADO', EMPLOYEE_PATHS.myWorkshops);
+    await openAs('EMPLEADO', EMPLOYEE_PATHS.myWorkshops);
 
     expect(
       await screen.findByRole('link', { name: `Entrar a la sala de ${LIVE_TITLE}` }),

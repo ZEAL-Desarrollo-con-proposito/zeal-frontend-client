@@ -22,9 +22,13 @@ const RESERVATION = 'reserva-16';
 const LAURA = 'usr-psicologo-001';
 const wednesdayAt = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute);
 
-function openAs(role: Role, path: string, realtimeFactory?: (token: string) => RealtimeClient) {
+async function openAs(
+  role: Role,
+  path: string,
+  realtimeFactory?: (token: string) => RealtimeClient,
+) {
   storeSession(role);
-  return renderRoute(path, realtimeFactory);
+  return await renderRoute(path, realtimeFactory);
 }
 
 /** La otra persona de la llamada, conectada al Real-Time Gateway simulado con su propia sesión. */
@@ -99,7 +103,7 @@ async function joinAsPsychologist() {
   const camera = installCamera();
   const peers = installPeerConnection();
   const david = counterpart('EMPLEADO');
-  const view = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+  const view = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
   await view.user.click(await screen.findByRole('button', { name: 'Activar sala' }));
   await screen.findByRole('region', { name: 'Videollamada' });
   const [local] = camera.granted;
@@ -230,7 +234,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     installCamera();
     installPeerConnection();
     await activateAsPsychologist();
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
     await screen.findByRole('region', { name: 'Videollamada' });
 
@@ -268,7 +272,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
         onChange: store.onChange,
       };
     };
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION), factory);
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION), factory);
     await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
     await david.next('LISTO');
 
@@ -299,7 +303,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
         { once: true },
       ),
     );
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
 
     await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
     expect(lobby().getByRole('button', { name: 'Activando…' })).toBeDisabled();
@@ -312,7 +316,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
   it('si no hay permiso para la cámara, explica cómo darlo y deja reintentar', async () => {
     installCamera(new DOMException('Permiso denegado', 'NotAllowedError'));
     installPeerConnection();
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
 
     await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
 
@@ -328,7 +332,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
   it('mientras enciende la cámara bloquea el botón; si se va antes, la apaga igual', async () => {
     const camera = installCamera('pending');
     installPeerConnection();
-    const { user, router } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user, router } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
     expect(await screen.findByRole('button', { name: 'Encendiendo tu cámara…' })).toBeDisabled();
 
@@ -348,7 +352,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
   it('un permiso que llega tarde, cuando ya salió, se ignora', async () => {
     const camera = installCamera('pending');
     installPeerConnection();
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
     await screen.findByRole('button', { name: 'Encendiendo tu cámara…' });
     await user.click(screen.getByRole('link', { name: 'Volver a mi agenda' }));
@@ -365,7 +369,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     installCamera();
     installPeerConnection();
     await activateAsPsychologist();
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
 
     expect(await screen.findByRole('heading', { name: 'La sala está activa' })).toBeInTheDocument();
     expect(
@@ -402,7 +406,7 @@ describe('Chat dentro de la sesión 1:1', () => {
 describe('Sala de la sesión · vestíbulo', () => {
   it('antes de la hora dice cuándo abre, y se habilita y se cierra sola', async () => {
     controlClock(wednesdayAt(9, 55));
-    openAs('PSICOLOGO', sessionRoomPath('reserva-18'));
+    await openAs('PSICOLOGO', sessionRoomPath('reserva-18'));
 
     expect(
       await screen.findByRole('heading', { name: 'La sala abre a las 10:50' }),
@@ -425,7 +429,7 @@ describe('Sala de la sesión · vestíbulo', () => {
     ['reserva-15', 'Esta sesión ya finalizó', 'Finalizada'],
   ])('no ofrece videollamada para %s: "%s"', async (id, title, badge) => {
     freezeTime();
-    openAs('PSICOLOGO', sessionRoomPath(id));
+    await openAs('PSICOLOGO', sessionRoomPath(id));
 
     expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
     expect(screen.getByText(badge)).toBeInTheDocument();
@@ -434,7 +438,7 @@ describe('Sala de la sesión · vestíbulo', () => {
 
   it('se entera al instante si el paciente cancela mientras se espera', async () => {
     freezeTime();
-    openAs('PSICOLOGO', sessionRoomPath('reserva-18'));
+    await openAs('PSICOLOGO', sessionRoomPath('reserva-18'));
     await screen.findByRole('heading', { name: 'La sala abre a las 10:50' });
 
     cancelReservationAt(wednesdayAt(11));
@@ -449,7 +453,7 @@ describe('Sala de la sesión · vestíbulo', () => {
 
   it('muestra que carga y, si la sesión no existe o no es propia, permite volver', async () => {
     freezeTime();
-    const { router, user } = openAs('PSICOLOGO', sessionRoomPath('reserva-999'));
+    const { router, user } = await openAs('PSICOLOGO', sessionRoomPath('reserva-999'));
 
     expect(screen.getByRole('heading', { level: 1, name: 'Sala de sesión' })).toBeInTheDocument();
     expect(screen.getByText('Cargando la sesión…')).toHaveAttribute('aria-busy', 'true');
@@ -470,7 +474,7 @@ describe('Sala de la sesión · vestíbulo', () => {
         once: true,
       }),
     );
-    const { user } = openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos abrir la sala');
@@ -491,7 +495,7 @@ describe('Sala de la sesión · empleado (HU-FE-12)', () => {
     const camera = installCamera('pending');
     const peers = installPeerConnection();
     const laura = counterpart('PSICOLOGO');
-    const { user } = openAs('EMPLEADO', employeeRoomPath(RESERVATION));
+    const { user } = await openAs('EMPLEADO', employeeRoomPath(RESERVATION));
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Sesión 1:1 · Laura Martínez' }),
@@ -532,7 +536,7 @@ describe('Sala de la sesión · empleado (HU-FE-12)', () => {
     installCamera();
     installPeerConnection();
     await activateAsPsychologist();
-    const { user, router } = openAs('EMPLEADO', employeeRoomPath(RESERVATION));
+    const { user, router } = await openAs('EMPLEADO', employeeRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
     // El empleado ve la misma conversación con su psicóloga dentro de la llamada.
     expect(
@@ -548,7 +552,7 @@ describe('Sala de la sesión · empleado (HU-FE-12)', () => {
     installCamera();
     const peers = installPeerConnection();
     await activateAsPsychologist();
-    const { user } = openAs('EMPLEADO', employeeRoomPath(RESERVATION));
+    const { user } = await openAs('EMPLEADO', employeeRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
     await screen.findByRole('region', { name: 'Videollamada' });
     const david = 'usr-empleado-001';

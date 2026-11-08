@@ -41,10 +41,10 @@ const PROJECT: ProjectDetail = {
   closesAt: new Date(2026, 8, 26, 14, 20).toISOString(),
 };
 
-function openAsEmployee() {
+async function openAsEmployee() {
   storeSession('EMPLEADO');
   const realtime = scriptedRealtimeClient();
-  const view = renderRoute(EMPLOYEE_PATHS.projects, () => realtime.client);
+  const view = await renderRoute(EMPLOYEE_PATHS.projects, () => realtime.client);
   return { ...view, realtime };
 }
 
@@ -58,7 +58,7 @@ describe('OpenCallAnnouncer (HU-FE-15, Task 373)', () => {
   });
 
   it('anuncia un taller recién publicado y enlaza a su detalle', async () => {
-    const { realtime } = openAsEmployee();
+    const { realtime } = await openAsEmployee();
     await screen.findByRole('listitem', { name: 'Data Platform · Turno de guardia' });
 
     act(() => {
@@ -92,7 +92,7 @@ describe('OpenCallAnnouncer (HU-FE-15, Task 373)', () => {
   });
 
   it('anuncia un proyecto abierto con sus cupos y su enlace', async () => {
-    const { realtime } = openAsEmployee();
+    const { realtime } = await openAsEmployee();
     await screen.findByRole('listitem', { name: 'Data Platform · Turno de guardia' });
 
     act(() => {
@@ -121,7 +121,7 @@ describe('OpenCallAnnouncer (HU-FE-15, Task 373)', () => {
   });
 
   it('ignora lo que ya empezó, lo lleno y los mensajes mal formados', async () => {
-    const { realtime } = openAsEmployee();
+    const { realtime } = await openAsEmployee();
     await screen.findByRole('listitem', { name: 'Data Platform · Turno de guardia' });
     const workshopsTopic = organizationWorkshopsTopic(ORGANIZATION);
     const projectsTopic = organizationProjectsTopic(ORGANIZATION);

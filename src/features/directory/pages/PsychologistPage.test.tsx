@@ -17,9 +17,9 @@ const LAURA = psychologistPath(SEED_PSYCHOLOGIST_ID);
 const WEDNESDAY = 'Bloques del miércoles, 23 de septiembre';
 const wednesdayAt = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute);
 
-function openProfile(path = LAURA) {
+async function openProfile(path = LAURA) {
   storeSession('EMPLEADO');
-  return renderRoute(path);
+  return await renderRoute(path);
 }
 
 /** Lista de bloques de un día, una vez que la semana terminó de cargar. */
@@ -82,7 +82,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   });
 
   it('muestra quién es, en qué acompaña y cuándo tiene su próximo bloque', async () => {
-    openProfile();
+    await openProfile();
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Laura Martínez' }),
@@ -112,7 +112,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   });
 
   it('muestra por día los bloques libres y los ocupados, sin los que ya pasaron', async () => {
-    openProfile();
+    await openProfile();
 
     expect(await freeBlocks(WEDNESDAY)).toEqual([
       '10:00 – 10:50',
@@ -129,7 +129,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   });
 
   it('navega entre semanas', async () => {
-    const { router, user } = openProfile();
+    const { router, user } = await openProfile();
     await freeBlocks(WEDNESDAY);
 
     await user.click(screen.getByRole('button', { name: 'Semana siguiente' }));
@@ -144,7 +144,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   });
 
   it('ofrece ver la semana siguiente cuando esta no tiene bloques libres', async () => {
-    const { user } = openProfile(psychologistPath('usr-psicologo-003'));
+    const { user } = await openProfile(psychologistPath('usr-psicologo-003'));
 
     expect(await screen.findByText('No hay bloques libres esta semana.')).toBeInTheDocument();
     expect(await takenBlocks('Bloques del jueves, 24 de septiembre')).toHaveLength(3);
@@ -163,7 +163,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
 
   it('retira un bloque que empieza mientras se mira la semana', async () => {
     controlClock(wednesdayAt(9, 55));
-    openProfile();
+    await openProfile();
     expect(await freeBlocks(WEDNESDAY)).toContain('10:00 – 10:50');
 
     jumpTo(wednesdayAt(10));
@@ -176,7 +176,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   });
 
   it('vuelve al directorio con los filtros con los que se abrió el perfil', async () => {
-    const { router, user } = openProfile(`${EMPLOYEE_PATHS.wellbeing}?tema=Burnout`);
+    const { router, user } = await openProfile(`${EMPLOYEE_PATHS.wellbeing}?tema=Burnout`);
 
     await user.click(
       await screen.findByRole('link', { name: 'Ver disponibilidad de Laura Martínez' }),
@@ -197,7 +197,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
   });
 
   it('avisa si el psicólogo no está en el directorio', async () => {
-    const { router, user } = openProfile(psychologistPath('nadie'));
+    const { router, user } = await openProfile(psychologistPath('nadie'));
 
     expect(
       await screen.findByRole('heading', { name: 'No encontramos a este psicólogo' }),
@@ -214,7 +214,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
         once: true,
       }),
     );
-    const { user } = openProfile();
+    const { user } = await openProfile();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar el perfil.');
@@ -235,7 +235,7 @@ describe('Perfil del psicólogo · bloques de la semana (HU-FE-04)', () => {
         { once: true },
       ),
     );
-    const { user } = openProfile();
+    const { user } = await openProfile();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar los bloques de la semana.');
@@ -252,7 +252,7 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
   });
 
   it('marca como ocupado al instante un bloque que otra persona reservó, y lo avisa', async () => {
-    openProfile();
+    await openProfile();
     await freeBlocks(WEDNESDAY);
     const slot = lauraSlotAt(wednesdayAt(14));
 
@@ -275,7 +275,7 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
   });
 
   it('muestra un bloque nuevo y retira uno eliminado, con el perfil al día', async () => {
-    openProfile();
+    await openProfile();
     await freeBlocks(WEDNESDAY);
 
     serverPublishes({
@@ -308,7 +308,7 @@ describe('Perfil del psicólogo · en tiempo real (RT-2)', () => {
   });
 
   it('no avisa cambios de otros psicólogos ni de otras semanas', async () => {
-    openProfile();
+    await openProfile();
     await freeBlocks(WEDNESDAY);
     const nextWeek = lauraSlotAt(new Date(2026, 8, 28, 9));
 

@@ -5,22 +5,26 @@ import { Navigate } from 'react-router';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { ROLES } from '@/features/auth/model/session';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
-import { AgendaPage } from '@/features/agenda/pages/AgendaPage';
-import { AppointmentsPage } from '@/features/appointments/pages/AppointmentsPage';
-import { AvailabilityPage } from '@/features/availability/pages/AvailabilityPage';
-import { DirectoryPage } from '@/features/directory/pages/DirectoryPage';
-import { PsychologistPage } from '@/features/directory/pages/PsychologistPage';
-import { AdminProjectsPage } from '@/features/projects/pages/AdminProjectsPage';
-import { ProjectDetailPage } from '@/features/projects/pages/ProjectDetailPage';
-import { ProjectsPage } from '@/features/projects/pages/ProjectsPage';
-import { AdminWorkshopsPage } from '@/features/workshops/pages/AdminWorkshopsPage';
-import { SessionRoomPage } from '@/features/sessionRoom/pages/SessionRoomPage';
-import { MyWorkshopsPage } from '@/features/workshops/pages/MyWorkshopsPage';
-import { WorkshopsPage } from '@/features/workshops/pages/WorkshopsPage';
-import { WorkshopRoomPage } from '@/features/workshopRoom/pages/WorkshopRoomPage';
-import { EmployeesPage } from '@/features/organization/pages/EmployeesPage';
 import { AppLayout } from './layout/AppLayout';
 import type { PageHandle } from './layout/pageHandle';
+import {
+  AdminProjectsPage,
+  AdminWorkshopsPage,
+  AgendaPage,
+  AppointmentsPage,
+  AvailabilityPage,
+  DirectoryPage,
+  EmployeeMessagesPage,
+  EmployeesPage,
+  MyWorkshopsPage,
+  ProjectDetailPage,
+  ProjectsPage,
+  PsychologistMessagesPage,
+  PsychologistPage,
+  SessionRoomPage,
+  WorkshopRoomPage,
+  WorkshopsPage,
+} from './lazyPages';
 import { NAVIGATION } from './navigation';
 import { AccessBoundary } from './pages/AccessBoundary';
 import { ForbiddenPage } from './pages/ForbiddenPage';
@@ -37,8 +41,6 @@ import {
   ROLE_HOME_PATH,
 } from './paths';
 import { RootLayout } from './RootLayout';
-import { EmployeeMessagesPage } from '@/features/chat/pages/EmployeeMessagesPage';
-import { PsychologistMessagesPage } from '@/features/chat/pages/PsychologistMessagesPage';
 
 /** Secciones del menú que ya tienen su pantalla; el resto muestra su estado vacío. */
 const SECTION_PAGES: Partial<Record<string, ReactElement>> = {

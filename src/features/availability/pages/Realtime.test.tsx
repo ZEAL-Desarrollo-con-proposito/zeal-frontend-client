@@ -24,7 +24,7 @@ function announcements() {
 
 async function openAvailability(realtimeFactory?: () => RealtimeClient) {
   storeSession('PSICOLOGO');
-  const rendered = renderRoute(PSYCHOLOGIST_PATHS.availability, realtimeFactory);
+  const rendered = await renderRoute(PSYCHOLOGIST_PATHS.availability, realtimeFactory);
   await wednesday().findAllByRole('listitem');
   return rendered;
 }
@@ -190,7 +190,7 @@ describe('Mi disponibilidad · en tiempo real (RT-2)', () => {
   it('la franja creada aquí no se duplica cuando llega su propio evento', async () => {
     server.use(http.get(`*${MY_SLOTS_ENDPOINT}`, () => HttpResponse.json([]), { once: false }));
     storeSession('PSICOLOGO');
-    const { user } = renderRoute(PSYCHOLOGIST_PATHS.availability);
+    const { user } = await renderRoute(PSYCHOLOGIST_PATHS.availability);
     const form = within(await screen.findByRole('region', { name: 'Abrir franja' }));
 
     await user.selectOptions(form.getByLabelText('Desde'), '12:00');

@@ -16,7 +16,7 @@ const WITHDRAWN = 'El psicólogo retiró el bloque que elegiste. Elige otro bloq
 
 async function openLaura() {
   storeSession('EMPLEADO');
-  const rendered = renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
+  const rendered = await renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
   await screen.findByRole('heading', { level: 1, name: 'Laura Martínez' });
   await wednesday().findByRole('button', { name: '14:00 – 14:50' });
   return rendered;
