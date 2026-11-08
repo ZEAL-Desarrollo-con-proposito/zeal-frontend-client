@@ -31,7 +31,17 @@ function writeCookie(family: string, version: number, remember: boolean): void {
   document.cookie = `${COOKIE_NAME}=${family}.${String(version)}.${String(remember)}; Path=/; SameSite=Strict${lifetime}`;
 }
 
-function readCookie(): { family: string; version: number; remember: boolean } | null {
+export interface RefreshCookie {
+  family: string;
+  version: number;
+  remember: boolean;
+}
+
+/**
+ * La cookie que viaja con una petición: el handler la lee al recibirla, antes de la latencia
+ * simulada, como el servidor real lee la de la petición y no la que el navegador tenga después.
+ */
+export function readRefreshCookie(): RefreshCookie | null {
   const value = document.cookie
     .split('; ')
     .find((cookie) => cookie.startsWith(`${COOKIE_NAME}=`))
@@ -53,9 +63,11 @@ export function startRefreshFamily(userId: string, remember: boolean): void {
   writeCookie(family, 1, remember);
 }
 
-/** Gasta la cookie y entrega otra. Devuelve de quién es; `null` si no sirve (y la revoca si se reutilizó). */
-export function rotateRefreshCookie(): string | null {
-  const cookie = readCookie();
+/**
+ * Gasta la cookie de la petición y entrega otra. Devuelve de quién es; `null` si no sirve (y la
+ * revoca si se reutilizó).
+ */
+export function rotateRefreshCookie(cookie: RefreshCookie | null): string | null {
   const families = readFamilies();
   const family = cookie === null ? undefined : families[cookie.family];
   if (cookie === null || family === undefined) {
@@ -72,10 +84,16 @@ export function rotateRefreshCookie(): string | null {
   return family.userId;
 }
 
-export function revokeRefreshFamily(): void {
-  const cookie = readCookie();
-  if (cookie !== null) {
-    writeFamilies(withoutFamily(readFamilies(), cookie.family));
+/**
+ * Revoca la familia de la cookie de la petición y la borra del navegador. Si mientras tanto se
+ * abrió otra sesión (otra cookie), esa no se toca.
+ */
+export function revokeRefreshFamily(cookie: RefreshCookie | null): void {
+  if (cookie === null) {
+    return;
   }
-  forgetRefreshCookie();
+  writeFamilies(withoutFamily(readFamilies(), cookie.family));
+  if (readRefreshCookie()?.family === cookie.family) {
+    forgetRefreshCookie();
+  }
 }

@@ -8,7 +8,12 @@ import { presenceHandlers } from './presenceHandlers';
 import { adminProjectHandlers } from './projects/adminHandlers';
 import { applicationHandlers } from './projects/applicationHandlers';
 import { projectHandlers } from './projects/handlers';
-import { revokeRefreshFamily, rotateRefreshCookie, startRefreshFamily } from './refreshSession';
+import {
+  readRefreshCookie,
+  revokeRefreshFamily,
+  rotateRefreshCookie,
+  startRefreshFamily,
+} from './refreshSession';
 import { findSeedUser, SEED_USERS } from './seedUsers';
 import { adminWorkshopHandlers } from './workshops/adminHandlers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
@@ -55,8 +60,9 @@ const authHandlers = [
   }),
 
   http.post(`*${REFRESH_ENDPOINT}`, async () => {
+    const cookie = readRefreshCookie();
     await delay();
-    const userId = rotateRefreshCookie();
+    const userId = rotateRefreshCookie(cookie);
     const user = SEED_USERS.find(({ id }) => id === userId);
     return user === undefined
       ? errorBody(401, 'Unauthorized', 'Tu sesión venció. Vuelve a iniciar sesión.')
@@ -64,8 +70,9 @@ const authHandlers = [
   }),
 
   http.post(`*${LOGOUT_ENDPOINT}`, async () => {
+    const cookie = readRefreshCookie();
     await delay();
-    revokeRefreshFamily();
+    revokeRefreshFamily(cookie);
     return new HttpResponse(null, { status: 204 });
   }),
 ];
