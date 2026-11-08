@@ -70,6 +70,26 @@ describe('httpClient.request', () => {
     });
   });
 
+  it.each([
+    [true, { keepalive: true }],
+    [false, {}],
+  ])(
+    'con keepalive=%s la petición puede terminar aunque se cierre la pestaña',
+    async (expected, options) => {
+      let keepalive: boolean | null = null;
+      server.use(
+        http.post(`*${ENDPOINT}`, ({ request: incoming }) => {
+          keepalive = incoming.keepalive;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      await request(ENDPOINT, { method: 'POST', body: {}, ...options });
+
+      expect(keepalive).toBe(expected);
+    },
+  );
+
   it('usa el mensaje del servidor cuando la respuesta es un error', async () => {
     server.use(
       http.get(`*${ENDPOINT}`, () =>

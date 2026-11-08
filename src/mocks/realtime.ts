@@ -18,9 +18,19 @@ interface Envelope {
   userId?: string;
 }
 
-function post(envelope: Envelope): void {
+/**
+ * Como el servidor real (HU-BE-24): cada evento lleva la hora en que se emitió, con la que el
+ * cliente mide cuánto tarda en pintarlo. Si ya la trae (una prueba que la fija), se respeta.
+ */
+function stamped(payload: unknown): unknown {
+  return typeof payload === 'object' && payload !== null && !('emittedAt' in payload)
+    ? { ...payload, emittedAt: new Date().toISOString() }
+    : payload;
+}
+
+function post({ payload, ...envelope }: Envelope): void {
   const channel = new BroadcastChannel(MOCK_REALTIME_CHANNEL);
-  channel.postMessage(envelope);
+  channel.postMessage({ ...envelope, payload: stamped(payload) });
   channel.close();
 }
 

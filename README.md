@@ -461,7 +461,58 @@ La inscripción trae `id`, `workshopId`, `workshopTitle`, `startsAt`, `durationM
 servidor sube la `version` de los cupos y la avisa por el canal del taller. En el cliente,
 `/empleado/talleres?taller={id}` (el enlace del aviso de un taller nuevo) lo muestra destacado.
 
+### Contrato de telemetría (acordar con HU-BE-25, tarea 461)
+
+El navegador reporta en `POST /api/telemetria` (con `Authorization: Bearer <token>`) mediciones
+sin datos personales. Respuestas: `204` · `400` cuerpo inválido · `401` sin sesión · `413` más de
+16 kB. Si falla no se reintenta: esa ventana de mediciones se descarta.
+
+**Latencia de los avisos en vivo (HU-FE-24, escenario REND-1):** cada evento trae la hora en que
+el servidor lo emitió (`emittedAt`, ver [Tiempo real](#tiempo-real-rt-2)); el cliente mide desde
+ahí hasta el primer cuadro que pinta después de procesarlo y lo agrega en un histograma:
+
+```json
+{
+  "type": "LATENCIA_EN_VIVO",
+  "series": [
+    {
+      "event": "organizaciones/talleres:PUBLICADO",
+      "count": 4,
+      "sumMs": 730,
+      "maxMs": 410,
+      "le": {
+        "50": 0,
+        "100": 1,
+        "250": 3,
+        "500": 4,
+        "1000": 4,
+        "2500": 4,
+        "5000": 4,
+        "10000": 4,
+        "+Inf": 4
+      }
+    }
+  ]
+}
+```
+
+- `event`: los recursos del destino sin sus ids (convención recurso/{id}/subrecurso) y el tipo del
+  evento; un tipo fuera del contrato se agrupa como `OTRO`.
+- `le`: cuántas mediciones quedaron en cada límite o por debajo, acumulado como en Prometheus: el
+  servidor suma los histogramas de todos los navegadores y saca el p95 con `histogram_quantile`
+  (la meta de REND-1 es 500 ms o menos).
+- Se envía cada 30 s si llegó algún evento y, con `keepalive`, en cuanto la pestaña se oculta o se
+  cierra. Una pestaña oculta no mide (no pinta hasta que la persona vuelve); un evento que escuchan
+  dos pantallas se mide una vez.
+- La medición usa el reloj del equipo: si va detrás del servidor y da negativa, se descarta; si va
+  adelante, el desfase se suma. Los equipos sincronizan la hora por red (NTP), así que el desfase
+  suele ser de milisegundos.
+
 ## Tiempo real (RT-2)
+
+- **Hora de emisión (HU-FE-24):** todo evento que publica el servidor trae `emittedAt`, el
+  instante ISO-8601 (UTC) en que lo emitió, además de sus campos. El cliente lo usa para medir la
+  latencia hasta el pintado (ver [Contrato de telemetría](#contrato-de-telemetría-acordar-con-hu-be-25-tarea-461)).
 
 - **Conexión:** STOMP sobre SockJS contra el Real-Time Gateway (`VITE_REALTIME_URL`, por defecto
   `http://localhost:8083/ws`), con `Authorization: Bearer <token>` en el frame `CONNECT`,

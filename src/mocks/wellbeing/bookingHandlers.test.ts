@@ -190,7 +190,9 @@ describe('cupos liberados en el simulador (HU-BE-08)', () => {
     expect((await claim(offer.id)).status).toBe(200);
 
     await vi.waitFor(() => {
-      expect(heard).toEqual([{ type: 'TOMADO', offerId: offer.id }]);
+      expect(heard).toEqual([
+        { type: 'TOMADO', offerId: offer.id, emittedAt: expect.any(String) as string },
+      ]);
     });
     client.disconnect();
   });

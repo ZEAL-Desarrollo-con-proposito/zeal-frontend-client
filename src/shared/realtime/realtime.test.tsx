@@ -148,7 +148,11 @@ describe('tiempo real simulado', () => {
     publishMockEvent('/topic/otros', 1);
 
     await waitFor(() => {
-      expect(franjas).toHaveBeenCalledWith({ type: 'CREADA' });
+      // Como el servidor real, el simulador sella cada evento con la hora en que lo emitió.
+      expect(franjas).toHaveBeenCalledWith({
+        type: 'CREADA',
+        emittedAt: expect.any(String) as string,
+      });
     });
     expect(otros).not.toHaveBeenCalled();
     expect(client.getStatus()).toBe('connected');
@@ -156,5 +160,23 @@ describe('tiempo real simulado', () => {
     client.disconnect();
     client.disconnect();
     expect(client.getStatus()).toBe('idle');
+  });
+
+  it('respeta la hora de emisión que ya trae un evento y no toca lo que no es objeto', async () => {
+    const client = createMockRealtimeClient();
+    const franjas = vi.fn();
+    client.subscribe('/topic/franjas', franjas);
+    client.connect();
+
+    publishMockEvent('/topic/franjas', { type: 'CREADA', emittedAt: '2026-09-23T14:20:00.000Z' });
+    publishMockEvent('/topic/franjas', 'texto');
+
+    await waitFor(() => {
+      expect(franjas.mock.calls).toEqual([
+        [{ type: 'CREADA', emittedAt: '2026-09-23T14:20:00.000Z' }],
+        ['texto'],
+      ]);
+    });
+    client.disconnect();
   });
 });
