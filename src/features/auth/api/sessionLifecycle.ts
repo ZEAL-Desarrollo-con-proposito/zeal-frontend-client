@@ -16,7 +16,7 @@ function oneTabAtATime(task: () => Promise<Session>): Promise<Session> {
 
 /**
  * Renueva la sesión. Solo una renovación a la vez: si dos pestañas (o dos peticiones) gastaran la
- * misma cookie, el servidor lo tomaría por un token robado y revocaría la sesión (escenario SEG-3).
+ * misma cookie, el servidor lo tomaría por un token robado y revocaría la sesión (escenario SEG-4).
  */
 export function renewSession(): Promise<Session> {
   renewal ??= oneTabAtATime(refreshSession).finally(() => {

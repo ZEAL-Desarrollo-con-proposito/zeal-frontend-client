@@ -18,7 +18,7 @@ export function authenticate(request: Request): AuthUser | Response {
 }
 
 /**
- * Autoriza una petición como lo hará el backend (HU-BE-21, escenario SEG-2): token válido (401) y
+ * Autoriza una petición como lo hará el backend (HU-BE-21, escenario SEG-3): token válido (401) y
  * rol permitido; a cualquier otro rol le responde 404, para no revelar que el recurso existe.
  * Devuelve el usuario o la respuesta de error lista para retornar.
  */

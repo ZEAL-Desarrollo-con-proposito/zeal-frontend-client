@@ -66,7 +66,7 @@ export const roomHandlers = [
     if (user instanceof Response) {
       return user;
     }
-    // HU-BE-11 y SEG-2: los roles empresariales no participan en ninguna sesión: 404, como cualquiera.
+    // HU-BE-11 y SEG-3: los roles empresariales no participan en ninguna sesión: 404, como cualquiera.
     const { room } = findRoom(params.id, user.id);
     if (room === null) {
       return errorBody(404, 'Not Found', 'Esta sesión no existe o no es tuya.');
