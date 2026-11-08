@@ -16,7 +16,7 @@ const WEDNESDAY = 'Bloques del miércoles, 23 de septiembre';
 
 async function openLaura() {
   storeSession('EMPLEADO');
-  const rendered = renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
+  const rendered = await renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
   await screen.findByRole('heading', { level: 1, name: 'Laura Martínez' });
   await within(await screen.findByRole('list', { name: WEDNESDAY })).findByRole('button', {
     name: '10:00 – 10:50',
@@ -40,7 +40,7 @@ function summaryValue(label: string) {
   return panel().getByText(label).nextElementSibling?.textContent;
 }
 
-async function confirmBooking(user: ReturnType<typeof renderRoute>['user'], time: string) {
+async function confirmBooking(user: Awaited<ReturnType<typeof renderRoute>>['user'], time: string) {
   await user.click(wednesdayBlock(time));
   await user.click(await panel().findByRole('button', { name: 'Agendar cita' }));
   await user.click(dialog().getByRole('button', { name: 'Confirmar cita' }));
@@ -251,7 +251,7 @@ describe('Agendar cita · resumen al alcance', () => {
       ),
     );
     storeSession('EMPLEADO');
-    const { user } = renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
+    const { user } = await renderRoute(psychologistPath(SEED_PSYCHOLOGIST_ID));
     const wednesday = within(await screen.findByRole('list', { name: WEDNESDAY }));
 
     await user.click(await wednesday.findByRole('button', { name: '10:00 – 10:50' }));

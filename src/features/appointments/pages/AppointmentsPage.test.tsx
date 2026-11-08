@@ -12,9 +12,9 @@ import { MY_APPOINTMENTS_ENDPOINT } from '../api/appointmentsApi';
 
 const DAVID = 'usr-empleado-001';
 
-function openAppointments(search = '') {
+async function openAppointments(search = '') {
   storeSession('EMPLEADO');
-  return renderRoute(`${EMPLOYEE_PATHS.appointments}${search}`);
+  return await renderRoute(`${EMPLOYEE_PATHS.appointments}${search}`);
 }
 
 async function tab(name: RegExp) {
@@ -74,7 +74,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('muestra la próxima cita destacada y las siguientes, con su estado', async () => {
-    openAppointments();
+    await openAppointments();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mis citas' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Cargando tus citas' })).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('cambia de pestaña, lo guarda en la URL y muestra el historial más reciente primero', async () => {
-    const { router, user } = openAppointments();
+    const { router, user } = await openAppointments();
 
     await user.click(await tab(/^Historial/));
 
@@ -114,7 +114,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('se recorre con el teclado como un grupo de pestañas', async () => {
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
     const upcoming = await tab(/^Próximas/);
     await user.click(upcoming);
 
@@ -144,18 +144,18 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('abre la pestaña que indica la URL', async () => {
-    openAppointments('?vista=historial');
+    await openAppointments('?vista=historial');
     expect(await tab(/^Historial/)).toHaveAttribute('aria-selected', 'true');
   });
 
   it('usa Próximas si la pestaña de la URL no existe', async () => {
-    openAppointments('?vista=otra');
+    await openAppointments('?vista=otra');
     expect(await tab(/^Próximas/)).toHaveAttribute('aria-selected', 'true');
   });
 
   it('muestra las canceladas y ofrece reservar cuando no quedan citas próximas', async () => {
     cancelDavidAppointments();
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
 
     expect(await tab(/^Próximas · 0$/)).toHaveAttribute('aria-selected', 'true');
     expect(panel().getByText('No tienes citas próximas.')).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe('Mis citas (HU-FE-05)', () => {
 
   it('no muestra "Siguientes citas" cuando solo queda una', async () => {
     cancelDavidAppointments(1);
-    openAppointments();
+    await openAppointments();
 
     expect(await tab(/^Próximas · 1$/)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Próxima cita' })).toBeInTheDocument();
@@ -181,7 +181,7 @@ describe('Mis citas (HU-FE-05)', () => {
 
   it('sin citas, explica cómo empezar y lleva al directorio', async () => {
     server.use(http.get(`*${MY_APPOINTMENTS_ENDPOINT}`, () => HttpResponse.json([])));
-    openAppointments();
+    await openAppointments();
 
     const empty = within(await screen.findByRole('region', { name: 'Todavía no tienes citas' }));
     expect(
@@ -203,7 +203,7 @@ describe('Mis citas (HU-FE-05)', () => {
         once: true,
       }),
     );
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar tus citas.');
@@ -215,7 +215,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('muestra al instante una cita agendada desde otra pestaña', async () => {
-    openAppointments();
+    await openAppointments();
     await tab(/^Próximas · 10$/);
     const slot = readWellbeingDb().slots.find(
       (candidate) =>
@@ -242,7 +242,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('abre el diálogo de cancelar desde la tarjeta destacada', async () => {
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
     await tab(/^Próximas · 10$/);
 
     const next = within(screen.getByRole('region', { name: 'Próxima cita' }));
@@ -259,7 +259,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('abre el diálogo de cancelar desde una fila de Siguientes citas', async () => {
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
     await tab(/^Próximas · 10$/);
 
     const list = within(panel().getByRole('list', { name: 'Siguientes citas' }));
@@ -287,7 +287,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('al cerrar el diálogo con "Volver" no cancela la cita', async () => {
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
     await tab(/^Próximas · 10$/);
 
     const next = within(screen.getByRole('region', { name: 'Próxima cita' }));
@@ -303,7 +303,7 @@ describe('Mis citas (HU-FE-05)', () => {
   });
 
   it('al confirmar una cita no cancelable, explica la regla y deja reintentar', async () => {
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
     await tab(/^Próximas · 10$/);
 
     // La cita "En curso" (hoy a las 9:00) no se puede cancelar: faltan <24 h.
@@ -324,7 +324,7 @@ describe('Mis citas (HU-FE-05)', () => {
   it('al confirmar una cita cancelable, avisa y la pasa a Canceladas', async () => {
     moveNextAppointmentToFuture();
 
-    const { user } = openAppointments();
+    const { user } = await openAppointments();
     await tab(/^Próximas · 10$/);
 
     const next = within(screen.getByRole('region', { name: 'Próxima cita' }));

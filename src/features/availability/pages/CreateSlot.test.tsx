@@ -10,7 +10,7 @@ import { SLOTS_ENDPOINT } from '../api/availabilityApi';
 
 async function openAvailability() {
   storeSession('PSICOLOGO');
-  const rendered = renderRoute(PSYCHOLOGIST_PATHS.availability);
+  const rendered = await renderRoute(PSYCHOLOGIST_PATHS.availability);
   await wednesday().findAllByRole('listitem');
   return rendered;
 }

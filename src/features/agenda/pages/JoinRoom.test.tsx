@@ -9,9 +9,9 @@ const TODAY = 'Hoy · Miércoles, 23 de septiembre';
 const JOIN_DAVID = 'Entrar a la sala con David Cajamarca';
 const wednesdayAt = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute);
 
-function openAs(path: string) {
+async function openAs(path: string) {
   storeSession('PSICOLOGO');
-  return renderRoute(path);
+  return await renderRoute(path);
 }
 
 function nextSessionCard() {
@@ -30,7 +30,7 @@ async function rowAt(time: string) {
 describe('Entrar a la sala desde la agenda (HU-FE-03)', () => {
   it('ofrece entrar a la sala de la sesión en curso, desde la tarjeta y desde su fila', async () => {
     freezeTime();
-    const { router, user } = openAs(PSYCHOLOGIST_PATHS.agenda);
+    const { router, user } = await openAs(PSYCHOLOGIST_PATHS.agenda);
 
     const inProgress = await rowAt('9:00 – 9:50');
     expect(inProgress.getByRole('link', { name: JOIN_DAVID })).toHaveAttribute(
@@ -58,7 +58,7 @@ describe('Entrar a la sala desde la agenda (HU-FE-03)', () => {
 
   it('habilita el botón por sí solo cuando se abre la ventana de ingreso', async () => {
     controlClock(wednesdayAt(9, 55));
-    openAs(PSYCHOLOGIST_PATHS.agenda);
+    await openAs(PSYCHOLOGIST_PATHS.agenda);
 
     const button = await screen.findByRole('button', { name: 'Entrar a la sala' });
     expect(button).toBeDisabled();

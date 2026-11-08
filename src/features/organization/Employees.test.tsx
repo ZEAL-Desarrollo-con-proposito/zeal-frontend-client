@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { ADMIN_PATHS } from '@/app/paths';
 import { sessionStore } from '@/features/auth/storage/sessionStore';
@@ -21,7 +21,7 @@ function names() {
 }
 
 /** Inicia sesión como la administradora de Órbita Labs, la segunda empresa cliente. */
-function openAsOrbitaAdmin() {
+async function openAsOrbitaAdmin() {
   const admin = SEED_USERS.find(({ id }) => id === 'usr-admin-002');
   if (admin === undefined) {
     throw new Error('Falta la administradora de Órbita Labs');
@@ -31,13 +31,13 @@ function openAsOrbitaAdmin() {
     user: admin,
     expiresAt: Date.now() + 3_600_000,
   });
-  return renderRoute(ADMIN_PATHS.employees);
+  return await renderRoute(ADMIN_PATHS.employees);
 }
 
 describe('Empleados de la empresa', () => {
   it('la empresa ve a sus empleados en orden alfabético, solo con datos de contacto', async () => {
     storeSession('ADMIN');
-    const { user } = renderRoute(ADMIN_PATHS.workshops);
+    const { user } = await renderRoute(ADMIN_PATHS.workshops);
 
     await user.click(screen.getByRole('link', { name: 'Empleados' }));
 
@@ -58,7 +58,7 @@ describe('Empleados de la empresa', () => {
 
   it('busca por nombre o correo sin importar tildes ni mayúsculas', async () => {
     storeSession('ADMIN');
-    const { user } = renderRoute(ADMIN_PATHS.employees);
+    const { user } = await renderRoute(ADMIN_PATHS.employees);
     await screen.findByRole('list', { name: 'Empleados de la empresa' });
     const search = screen.getByRole('searchbox', { name: 'Buscar empleados' });
 
@@ -75,7 +75,7 @@ describe('Empleados de la empresa', () => {
   });
 
   it('otra empresa ve solo a los suyos', async () => {
-    openAsOrbitaAdmin();
+    await openAsOrbitaAdmin();
 
     await screen.findByRole('list', { name: 'Empleados de la empresa' });
     expect(names()).toEqual([
@@ -90,7 +90,7 @@ describe('Empleados de la empresa', () => {
   it('una empresa sin empleados en ZEAL lo dice', async () => {
     server.use(http.get(`*${EMPLOYEES_ENDPOINT}`, () => HttpResponse.json([])));
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.employees);
+    await renderRoute(ADMIN_PATHS.employees);
 
     expect(
       await screen.findByText('Aún no hay empleados de tu empresa en ZEAL.'),
@@ -105,19 +105,24 @@ describe('Empleados de la empresa', () => {
       ),
     );
     storeSession('ADMIN');
-    renderRoute(ADMIN_PATHS.employees);
+    await renderRoute(ADMIN_PATHS.employees);
 
     expect(await screen.findByText(/· 1 persona$/)).toBeInTheDocument();
   });
 
   it('si no carga, avisa y deja reintentar', async () => {
     server.use(
-      http.get(`*${EMPLOYEES_ENDPOINT}`, () => HttpResponse.json({}, { status: 500 }), {
-        once: true,
-      }),
+      http.get(
+        `*${EMPLOYEES_ENDPOINT}`,
+        async () => {
+          await delay();
+          return HttpResponse.json({}, { status: 500 });
+        },
+        { once: true },
+      ),
     );
     storeSession('ADMIN');
-    const { user } = renderRoute(ADMIN_PATHS.employees);
+    const { user } = await renderRoute(ADMIN_PATHS.employees);
 
     expect(screen.getByText('Cargando a tus empleados…')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -131,7 +136,7 @@ describe('Empleados de la empresa', () => {
 
   it('una persona empleada no puede ver el directorio', async () => {
     storeSession('EMPLEADO');
-    renderRoute(ADMIN_PATHS.employees);
+    await renderRoute(ADMIN_PATHS.employees);
 
     expect(await screen.findByText('Error 403 · Permiso denegado')).toBeInTheDocument();
   });

@@ -19,7 +19,7 @@ describe('Acceso a la sala desde Mis citas (HU-FE-12)', () => {
   });
 
   it('el día de la cita, la próxima cita lleva a su sala', async () => {
-    const { router, user } = renderRoute(EMPLOYEE_PATHS.appointments);
+    const { router, user } = await renderRoute(EMPLOYEE_PATHS.appointments);
     const card = within(await nextAppointment());
 
     const link = card.getByRole('link', { name: 'Ir a la sala con Laura Martínez' });
@@ -50,7 +50,7 @@ describe('Acceso a la sala desde Mis citas (HU-FE-12)', () => {
         ]),
       ),
     );
-    renderRoute(EMPLOYEE_PATHS.appointments);
+    await renderRoute(EMPLOYEE_PATHS.appointments);
 
     const card = within(await nextAppointment());
 

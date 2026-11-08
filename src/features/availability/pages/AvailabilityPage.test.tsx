@@ -8,9 +8,9 @@ import { storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import { MY_SLOTS_ENDPOINT } from '../api/availabilityApi';
 
-function openAvailability(search = '') {
+async function openAvailability(search = '') {
   storeSession('PSICOLOGO');
-  return renderRoute(`${PSYCHOLOGIST_PATHS.availability}${search}`);
+  return await renderRoute(`${PSYCHOLOGIST_PATHS.availability}${search}`);
 }
 
 function day(name: string) {
@@ -28,7 +28,7 @@ describe('Mi disponibilidad · calendario semanal', () => {
   });
 
   it('muestra la semana actual de lunes a viernes con las franjas de la psicóloga', async () => {
-    openAvailability();
+    await openAvailability();
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'Semana del 21 al 25 de septiembre' }),
@@ -43,7 +43,7 @@ describe('Mi disponibilidad · calendario semanal', () => {
   });
 
   it('navega entre semanas y lo refleja en la URL', async () => {
-    const { router, user } = openAvailability();
+    const { router, user } = await openAvailability();
     await day('Lunes, 21 de septiembre').findAllByRole('listitem');
 
     await user.click(screen.getByRole('button', { name: 'Semana siguiente' }));
@@ -60,7 +60,7 @@ describe('Mi disponibilidad · calendario semanal', () => {
   });
 
   it('abre directamente la semana indicada en la URL y avisa si no hay franjas', async () => {
-    const { user } = openAvailability('?semana=2026-09-14');
+    const { user } = await openAvailability('?semana=2026-09-14');
 
     expect(
       await screen.findByText('Aún no abres franjas esta semana. Elige un horario para empezar.'),
@@ -78,7 +78,7 @@ describe('Mi disponibilidad · calendario semanal', () => {
         once: true,
       }),
     );
-    const { user } = openAvailability();
+    const { user } = await openAvailability();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No pudimos cargar tu disponibilidad.',

@@ -43,9 +43,9 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     server.events.removeAllListeners();
   });
 
-  it('el menú del administrador no ofrece bienestar, citas ni mensajes', () => {
+  it('el menú del administrador no ofrece bienestar, citas ni mensajes', async () => {
     storeSession('ADMIN');
-    renderRoute(ROLE_HOME_PATH.ADMIN);
+    await renderRoute(ROLE_HOME_PATH.ADMIN);
 
     const sidebar = within(screen.getByRole('complementary', { name: 'Barra lateral' }));
     for (const label of ['Bienestar', 'Mis citas', 'Mensajes', 'Mi agenda', 'Disponibilidad']) {
@@ -63,7 +63,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     async (_case, path) => {
       const requests = recordRequests();
       storeSession('ADMIN');
-      const { router, user } = renderRoute(path);
+      const { router, user } = await renderRoute(path);
 
       await expectDeniedWithFocus();
       expect(
@@ -78,7 +78,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
 
   it('si el servidor oculta el recurso con 404 (SEG-3), reemplaza la pantalla sin confirmar que existe', async () => {
     storeTamperedSession('EMPLEADO');
-    const { router, user } = renderRoute(EMPLOYEE_PATHS.wellbeing);
+    const { router, user } = await renderRoute(EMPLOYEE_PATHS.wellbeing);
 
     const heading = await screen.findByRole('heading', { name: NOT_FOUND_TITLE });
     await waitFor(() => {
@@ -96,7 +96,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
 
   it('también cuando el 404 llega al cargar la semana de franjas', async () => {
     storeTamperedSession('PSICOLOGO');
-    renderRoute(PSYCHOLOGIST_PATHS.availability);
+    await renderRoute(PSYCHOLOGIST_PATHS.availability);
 
     expect(await screen.findByRole('heading', { name: NOT_FOUND_TITLE })).toBeInTheDocument();
   });
@@ -106,21 +106,21 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
       http.get(`*${PSYCHOLOGISTS_ENDPOINT}`, () => new HttpResponse(null, { status: 403 })),
     );
     storeSession('EMPLEADO');
-    renderRoute(EMPLOYEE_PATHS.wellbeing);
+    await renderRoute(EMPLOYEE_PATHS.wellbeing);
 
     await expectDeniedWithFocus();
     expect(screen.queryByText(/Laura Martínez/)).not.toBeInTheDocument();
   });
 
-  it('una dirección inexistente dentro del propio rol sigue siendo "no encontrada"', () => {
+  it('una dirección inexistente dentro del propio rol sigue siendo "no encontrada"', async () => {
     storeSession('EMPLEADO');
-    renderRoute('/empleado/seccion-que-no-existe');
+    await renderRoute('/empleado/seccion-que-no-existe');
 
     expect(screen.getByRole('heading', { name: 'No encontramos esta página' })).toHaveFocus();
   });
 
   it('sin sesión, un enlace a una conversación manda primero al login', async () => {
-    const { router } = renderRoute('/empleado/mensajes/conversacion-1');
+    const { router } = await renderRoute('/empleado/mensajes/conversacion-1');
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/login');

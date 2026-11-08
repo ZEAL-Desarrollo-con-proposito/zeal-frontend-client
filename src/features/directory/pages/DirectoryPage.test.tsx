@@ -12,9 +12,9 @@ import { storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import { PSYCHOLOGISTS_ENDPOINT } from '../api/directoryApi';
 
-function openDirectory(search = '') {
+async function openDirectory(search = '') {
   storeSession('EMPLEADO');
-  return renderRoute(`${EMPLOYEE_PATHS.wellbeing}${search}`);
+  return await renderRoute(`${EMPLOYEE_PATHS.wellbeing}${search}`);
 }
 
 async function cards() {
@@ -43,7 +43,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('muestra una tarjeta por psicólogo con su especialidad y su disponibilidad', async () => {
-    openDirectory();
+    await openDirectory();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Bienestar' })).toBeInTheDocument();
     expect(await cards()).toHaveLength(4);
@@ -66,7 +66,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('reserva el espacio del directorio mientras carga', async () => {
-    openDirectory();
+    await openDirectory();
 
     const results = screen.getByRole('region', { name: 'Psicólogos del directorio' });
     expect(results).toHaveAttribute('aria-busy', 'true');
@@ -75,7 +75,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('busca por nombre o especialidad sin importar las tildes', async () => {
-    const { router, user } = openDirectory();
+    const { router, user } = await openDirectory();
     await cards();
     const search = screen.getByRole('searchbox', {
       name: 'Buscar psicólogo por nombre o especialidad',
@@ -105,7 +105,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('filtra por tema y por disponibilidad de hoy', async () => {
-    const { router, user } = openDirectory();
+    const { router, user } = await openDirectory();
     await cards();
     const topics = within(screen.getByRole('group', { name: 'Filtrar por tema' }));
     expect(topics.getAllByRole('button').map((chip) => chip.textContent)).toEqual([
@@ -140,7 +140,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('nunca deja un callejón sin salida cuando nadie coincide', async () => {
-    const { router, user } = openDirectory('?tema=Duelo&hoy=1');
+    const { router, user } = await openDirectory('?tema=Duelo&hoy=1');
     await screen.findByRole('region', { name: 'Psicólogos del directorio' });
 
     expect(
@@ -161,7 +161,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('recupera los filtros de la URL al volver al directorio', async () => {
-    openDirectory('?q=laura&tema=Burnout&hoy=1');
+    await openDirectory('?q=laura&tema=Burnout&hoy=1');
 
     await waitFor(() => {
       expect(names()).toEqual(['Laura Martínez']);
@@ -175,7 +175,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('lleva al perfil conservando los filtros para el regreso', async () => {
-    const { router, user } = openDirectory('?tema=Duelo');
+    const { router, user } = await openDirectory('?tema=Duelo');
     await cards();
 
     await user.click(screen.getByRole('link', { name: 'Ver disponibilidad de Valeria Castro' }));
@@ -185,7 +185,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
   });
 
   it('lleva a Mis citas', async () => {
-    const { router, user } = openDirectory();
+    const { router, user } = await openDirectory();
 
     await user.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mis citas' }));
 
@@ -198,7 +198,7 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
         once: true,
       }),
     );
-    const { user } = openDirectory();
+    const { user } = await openDirectory();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar el directorio.');
@@ -211,13 +211,13 @@ describe('Bienestar · directorio de psicólogos (HU-FE-04)', () => {
 
   it('avisa si el directorio está vacío', async () => {
     server.use(http.get(`*${PSYCHOLOGISTS_ENDPOINT}`, () => HttpResponse.json([])));
-    openDirectory();
+    await openDirectory();
 
     expect(await screen.findByText('Aún no hay psicólogos en el directorio.')).toBeInTheDocument();
   });
 
   it('actualiza la disponibilidad en vivo cuando un psicólogo abre un bloque', async () => {
-    openDirectory();
+    await openDirectory();
     await cards();
     expect(card('Camila Duarte').getByText('Sin bloques')).toBeInTheDocument();
 

@@ -1,8 +1,12 @@
-.restoring {
+.status {
   display: grid;
   place-items: center;
-  min-height: 100dvh;
+  min-height: 12rem;
   padding: var(--space-4);
   font-size: 0.9375rem;
   color: var(--color-teal-700);
+}
+
+.fullScreen {
+  min-height: 100dvh;
 }

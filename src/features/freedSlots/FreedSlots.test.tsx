@@ -52,9 +52,9 @@ const WON_APPOINTMENT = {
   status: 'CONFIRMADA',
 };
 
-function openHome() {
+async function openHome() {
   storeSession('EMPLEADO');
-  return renderRoute(ROLE_HOME_PATH.EMPLEADO);
+  return await renderRoute(ROLE_HOME_PATH.EMPLEADO);
 }
 
 function alerts() {
@@ -62,7 +62,7 @@ function alerts() {
 }
 
 async function openHomeReady() {
-  const rendered = openHome();
+  const rendered = await openHome();
   await screen.findByRole('button', { name: /Notificaciones/ });
   return rendered;
 }
@@ -112,7 +112,7 @@ const conflict = () =>
     { status: 409 },
   );
 
-async function claimIt(user: ReturnType<typeof renderRoute>['user']) {
+async function claimIt(user: Awaited<ReturnType<typeof renderRoute>>['user']) {
   await user.click(await alerts().findByRole('button', { name: 'Tomar el cupo' }));
 }
 
@@ -163,7 +163,7 @@ describe('Cupo liberado · la alerta (HU-FE-08)', () => {
 
   it('no aparece para la psicóloga', async () => {
     storeSession('PSICOLOGO');
-    renderRoute(PSYCHOLOGIST_PATHS.agenda);
+    await renderRoute(PSYCHOLOGIST_PATHS.agenda);
     await screen.findByRole('button', { name: /Notificaciones/ });
 
     expect(screen.queryByRole('region', { name: 'Cupos liberados' })).not.toBeInTheDocument();
@@ -491,7 +491,7 @@ describe('Cupo liberado · al entrar y al recuperar la conexión (HU-FE-19)', ()
   async function openHomeScripted() {
     storeSession('EMPLEADO');
     const realtime = scriptedRealtimeClient();
-    const rendered = renderRoute(ROLE_HOME_PATH.EMPLEADO, () => realtime.client);
+    const rendered = await renderRoute(ROLE_HOME_PATH.EMPLEADO, () => realtime.client);
     await rendered.subscribedTo(FREED_SLOTS_QUEUE);
     return { ...rendered, realtime };
   }

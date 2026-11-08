@@ -16,9 +16,9 @@ import { AGENDA_ENDPOINT } from '../api/agendaApi';
 
 const TODAY = 'Hoy · Miércoles, 23 de septiembre';
 
-function openAgenda(search = '', realtimeFactory?: () => RealtimeClient) {
+async function openAgenda(search = '', realtimeFactory?: () => RealtimeClient) {
   storeSession('PSICOLOGO');
-  return renderRoute(`${PSYCHOLOGIST_PATHS.agenda}${search}`, realtimeFactory);
+  return await renderRoute(`${PSYCHOLOGIST_PATHS.agenda}${search}`, realtimeFactory);
 }
 
 function day(name: string) {
@@ -61,15 +61,15 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
     server.events.removeAllListeners();
   });
 
-  it('es la pantalla de llegada del psicólogo', () => {
-    openAgenda();
+  it('es la pantalla de llegada del psicólogo', async () => {
+    await openAgenda();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mi agenda' })).toBeInTheDocument();
     expect(screen.getByText('Hoy es miércoles, 23 de septiembre')).toBeInTheDocument();
   });
 
   it('lista cada reserva con el empleado, el día, la hora y su estado', async () => {
-    openAgenda();
+    await openAgenda();
 
     expect(await rowsOf(TODAY)).toHaveLength(4);
     expect(
@@ -88,7 +88,7 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
   });
 
   it('resume la semana y destaca la próxima sesión', async () => {
-    openAgenda();
+    await openAgenda();
     await rowsOf(TODAY);
 
     expect(kpi('Sesiones de la semana')).toBe('12');
@@ -102,7 +102,7 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
 
   it('avisa cuando ya no quedan sesiones por atender esta semana', async () => {
     freezeTime(new Date(2026, 8, 25, 18));
-    openAgenda();
+    await openAgenda();
 
     expect(
       await screen.findByText('No tienes más sesiones confirmadas esta semana.'),
@@ -110,7 +110,7 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
   });
 
   it('navega entre semanas y solo muestra la próxima sesión en la semana actual', async () => {
-    const { router, user } = openAgenda();
+    const { router, user } = await openAgenda();
     await rowsOf(TODAY);
 
     await user.click(screen.getByRole('button', { name: 'Semana siguiente' }));
@@ -126,7 +126,7 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
   });
 
   it('avisa si la semana no tiene reservas', async () => {
-    openAgenda('?semana=2026-09-14');
+    await openAgenda('?semana=2026-09-14');
 
     expect(await screen.findByText('No tienes reservas esta semana.')).toBeInTheDocument();
     expect(kpi('Sesiones de la semana')).toBe('0');
@@ -138,7 +138,7 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
         once: true,
       }),
     );
-    const { user } = openAgenda();
+    const { user } = await openAgenda();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('No pudimos cargar tu agenda.');
@@ -150,7 +150,7 @@ describe('Mi agenda · reservas de la semana (HU-FE-03)', () => {
   });
 
   it('lleva a gestionar la disponibilidad', async () => {
-    const { router, user } = openAgenda();
+    const { router, user } = await openAgenda();
 
     await user.click(screen.getByRole('link', { name: 'Gestionar disponibilidad' }));
 
@@ -168,7 +168,7 @@ describe('Mi agenda · en tiempo real (RT-2)', () => {
   });
 
   it('se actualiza sola cuando un paciente cancela una de sus sesiones', async () => {
-    openAgenda();
+    await openAgenda();
     await rowsOf(TODAY);
 
     const slot = cancelReservationAt(new Date(2026, 8, 23, 11));
@@ -184,7 +184,7 @@ describe('Mi agenda · en tiempo real (RT-2)', () => {
 
   it('ignora cambios de otros psicólogos, franjas nuevas y mensajes mal formados', async () => {
     const requests = countAgendaRequests();
-    openAgenda();
+    await openAgenda();
     await rowsOf(TODAY);
     const slot = readWellbeingDb().slots[0];
     const control = cancelReservationAt(new Date(2026, 8, 23, 11));
@@ -209,7 +209,7 @@ describe('Mi agenda · en tiempo real (RT-2)', () => {
 
   it('recupera los cambios perdidos al reconectarse', async () => {
     const { client, store } = controlledRealtimeClient();
-    openAgenda('', () => client);
+    await openAgenda('', () => client);
     await rowsOf(TODAY);
 
     act(() => {

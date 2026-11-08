@@ -1,12 +1,13 @@
 import type { PanInfo } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useMatches } from 'react-router';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { FreedSlotAlerts } from '@/features/freedSlots/components/FreedSlotAlerts';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { OpenCallAnnouncer } from '@/features/openCalls/components/OpenCallAnnouncer';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
+import { LoadingStatus } from '@/shared/ui/LoadingStatus/LoadingStatus';
 import { RealtimeStatusBadge } from './RealtimeStatusBadge';
 import { CloseIcon, MenuIcon } from '@/shared/ui/icons';
 import { ROLE_PROFILE } from '../navigation';
@@ -162,14 +163,18 @@ export function AppLayout() {
         </header>
 
         <main id="contenido" className={styles.content} tabIndex={-1}>
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            <Outlet />
-          </motion.div>
+          {/* Fuera de la animación por ruta: al cambiar de pantalla, la anterior sigue a la vista
+              mientras llega la nueva; el aviso solo sale cuando no hay nada que mostrar. */}
+          <Suspense fallback={<LoadingStatus>Cargando la sección…</LoadingStatus>}>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <Outlet />
+            </motion.div>
+          </Suspense>
         </main>
       </div>
 
