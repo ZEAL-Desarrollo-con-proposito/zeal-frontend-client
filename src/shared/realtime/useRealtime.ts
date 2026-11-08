@@ -1,4 +1,5 @@
 import { use, useCallback, useEffect, useEffectEvent, useSyncExternalStore } from 'react';
+import { liveLatency } from './liveLatency';
 import type { RealtimeListener, RealtimeStatus } from './realtimeClient';
 import { RealtimeContext } from './RealtimeContext';
 
@@ -28,7 +29,10 @@ export function useRealtimePublish(): (destination: string, payload: unknown) =>
   );
 }
 
-/** Escucha un destino mientras el componente está montado (siempre con el callback más reciente). */
+/**
+ * Escucha un destino mientras el componente está montado (siempre con el callback más reciente).
+ * Cada aviso se mide desde que el servidor lo emitió hasta que se pinta (HU-FE-24, REND-1).
+ */
 export function useRealtimeSubscription(destination: string, listener: RealtimeListener): void {
   const client = use(RealtimeContext);
   const onMessage = useEffectEvent(listener);
@@ -39,6 +43,7 @@ export function useRealtimeSubscription(destination: string, listener: RealtimeL
     }
     return client.subscribe(destination, (payload) => {
       onMessage(payload);
+      liveLatency.observe(destination, payload);
     });
   }, [client, destination]);
 }
