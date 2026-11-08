@@ -76,7 +76,7 @@ describe('authApi.refreshSession', () => {
     await expect(refreshSession()).rejects.toBeInstanceOf(InvalidSessionResponseError);
   });
 
-  it('reutilizar una cookie ya rotada revoca toda la sesión (simulador, SEG-3)', async () => {
+  it('reutilizar una cookie ya rotada revoca toda la sesión (simulador, SEG-4)', async () => {
     startRefreshFamily(seedUser('EMPLEADO').id, false);
     const stolen = document.cookie.split('; ')[0] ?? '';
     await refreshSession();

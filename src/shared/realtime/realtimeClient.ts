@@ -27,7 +27,7 @@ export interface RealtimeClient {
 export interface RealtimeCredentials {
   /** Token vigente: cada reconexión usa el último. */
   currentToken: () => string | null;
-  /** El servidor rechazó la conexión: quizá la sesión fue revocada (escenario SEG-3). */
+  /** El servidor rechazó la conexión: quizá la sesión fue revocada (escenario SEG-4). */
   onRejected: () => void;
 }
 

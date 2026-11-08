@@ -6,7 +6,7 @@ const LEGACY_SESSION_KEY = 'zeal.session';
 let current: Session | null = null;
 
 /**
- * La sesión vive solo en la memoria de la pestaña (HU-FE-21, escenario SEG-3): un script inyectado
+ * La sesión vive solo en la memoria de la pestaña (HU-FE-21, ADR-07): un script inyectado
  * no encuentra el token en localStorage ni en sessionStorage. Al recargar o abrir otra pestaña se
  * recupera con la cookie de refresh, que el navegador guarda fuera del alcance de JavaScript.
  */

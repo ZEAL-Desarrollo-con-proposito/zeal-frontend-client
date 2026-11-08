@@ -76,7 +76,7 @@ describe('Acceso denegado al módulo de bienestar (HU-FE-11)', () => {
     },
   );
 
-  it('si el servidor oculta el recurso con 404 (SEG-2), reemplaza la pantalla sin confirmar que existe', async () => {
+  it('si el servidor oculta el recurso con 404 (SEG-3), reemplaza la pantalla sin confirmar que existe', async () => {
     storeTamperedSession('EMPLEADO');
     const { router, user } = renderRoute(EMPLOYEE_PATHS.wellbeing);
 

@@ -125,7 +125,7 @@ esa cookie (`credentials: 'include'`) y sin `Authorization`.
 | `POST /api/auth/refresh` | `200` como el login, con la cookie rotada · `401` sin cookie, vencida o revocada |
 | `POST /api/auth/logout`  | `204` revoca toda la familia de tokens y borra la cookie                         |
 
-Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-3).
+Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-4).
 
 ### Contrato de disponibilidad (acordar con HU-BE-02)
 
@@ -296,7 +296,7 @@ negocio viven en el backend; el frontend muestra el `message` del error tal cual
 ### Contrato de la sala de la sesión (acordar con HU-BE-12)
 
 La sala es un sub-recurso de la reserva y la ven sus dos participantes (psicólogo y empleado);
-cualquier otra persona, también un rol empresarial, recibe `404` (SEG-2). Solo el psicólogo la activa, y
+cualquier otra persona, también un rol empresarial, recibe `404` (SEG-3). Solo el psicólogo la activa, y
 solo dentro de la ventana de ingreso (en el simulador: desde 10 minutos antes hasta el fin).
 
 | Método y ruta                                    | Respuesta                                                                   |
@@ -519,11 +519,11 @@ El backend corre en varias réplicas detrás de un balanceador; el cliente toler
   (aislamiento entre roles), también ante direcciones que no existen bajo ese prefijo (p. ej. un
   enlace al chat de un empleado abierto por el administrador). La autorización real la aplica
   siempre el backend.
-- **Lo que el servidor oculta (SEG-2):** ante un recurso ajeno el servidor responde `404`, no `403`,
+- **Lo que el servidor oculta (SEG-3, ADR-08):** ante un recurso ajeno el servidor responde `404`, no `403`,
   para no revelar que existe. Si la lista de una pantalla responde `404` (`listing` en `useFetch` y
   `useLiveFetch`), la pantalla se reemplaza por "No encontramos esta página", sin nada de su
   contenido ni reintento. Un `403` que aún llegue se muestra como "Permiso denegado".
-- **Token (SEG-3):** se envía como `Authorization: Bearer <token>` y vive solo en la memoria de la
+- **Token (SEG-2, ADR-07):** se envía como `Authorization: Bearer <token>` y vive solo en la memoria de la
   pestaña: nada queda en `localStorage` ni en `sessionStorage`. El frontend solo lee el claim `exp`;
   la firma la valida el servidor.
 - **Renovación:** el refresh token va en una cookie que JavaScript no puede leer. Se usa al recargar o

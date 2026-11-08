@@ -6,7 +6,7 @@ export type LoadStatus = 'loading' | 'ready' | 'error';
 export interface FetchOptions {
   /**
    * Es la lista de una pantalla, que siempre existe para quien tiene acceso: un 404 significa que
-   * el servidor la oculta (SEG-2) y se trata igual que un 403. Sin esto, un 404 lo decide la pantalla.
+   * el servidor la oculta (SEG-3) y se trata igual que un 403. Sin esto, un 404 lo decide la pantalla.
    */
   listing?: boolean;
 }

@@ -6,7 +6,7 @@ import { NotFoundPage } from './NotFoundPage';
 /**
  * Frontera de las pantallas de un rol: si el servidor no entrega lo que una pantalla carga, esa
  * pantalla se reemplaza, sin nada de su contenido. Un 404 se muestra como "no encontrada": el
- * servidor oculta el recurso (SEG-2) y la interfaz tampoco confirma que exista. Cualquier otro
+ * servidor oculta el recurso (SEG-3) y la interfaz tampoco confirma que exista. Cualquier otro
  * error sigue hacia la frontera de la raíz.
  */
 export function AccessBoundary() {

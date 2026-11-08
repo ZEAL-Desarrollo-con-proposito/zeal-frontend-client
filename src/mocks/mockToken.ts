@@ -1,6 +1,6 @@
 import type { AuthUser } from '@/features/auth/model/session';
 
-/** El token de acceso dura 15 minutos (HU-BE-22, escenario SEG-3). */
+/** El token de acceso dura 15 minutos (HU-BE-22, ADR-07). */
 export const MOCK_TOKEN_TTL_SECONDS = 15 * 60;
 
 function base64UrlEncode(value: object): string {
