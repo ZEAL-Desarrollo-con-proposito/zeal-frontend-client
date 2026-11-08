@@ -11,6 +11,8 @@ interface RequestOptions {
   signal?: AbortSignal;
   /** Petición de autenticación: viaja con la cookie de refresh y sin el token de la sesión. */
   withRefreshCookie?: boolean;
+  /** La petición termina aunque la pestaña se cierre (p. ej. la telemetría al ocultarse). */
+  keepalive?: boolean;
 }
 
 const NO_CONTENT = 204;
@@ -139,7 +141,14 @@ function repeatAfterRenewal(path: string, options: RequestOptions, token: string
 
 async function fetchResponse(
   path: string,
-  { method = 'GET', body, query = {}, signal, withRefreshCookie = false }: RequestOptions,
+  {
+    method = 'GET',
+    body,
+    query = {},
+    signal,
+    withRefreshCookie = false,
+    keepalive = false,
+  }: RequestOptions,
   token: string | undefined,
 ): Promise<Response> {
   const headers = new Headers({ Accept: 'application/json' });
@@ -160,6 +169,7 @@ async function fetchResponse(
       headers,
       body: body === undefined ? null : JSON.stringify(body),
       signal: signal ?? null,
+      keepalive,
       ...(withRefreshCookie ? { credentials: 'include' as const } : {}),
     });
   } catch (cause) {

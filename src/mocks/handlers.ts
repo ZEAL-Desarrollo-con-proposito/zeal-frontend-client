@@ -10,6 +10,7 @@ import { applicationHandlers } from './projects/applicationHandlers';
 import { projectHandlers } from './projects/handlers';
 import { revokeRefreshFamily, rotateRefreshCookie, startRefreshFamily } from './refreshSession';
 import { findSeedUser, SEED_USERS } from './seedUsers';
+import { telemetryHandlers } from './telemetryHandlers';
 import { adminWorkshopHandlers } from './workshops/adminHandlers';
 import { bookingHandlers } from './wellbeing/bookingHandlers';
 import { chatHistoryHandlers } from './wellbeing/chatHistoryHandlers';
@@ -87,4 +88,5 @@ export const handlers = [
   ...organizationHandlers,
   ...workshopRoomHandlers,
   ...workshopHandlers,
+  ...telemetryHandlers,
 ];
