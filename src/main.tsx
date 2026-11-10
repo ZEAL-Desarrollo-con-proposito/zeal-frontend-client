@@ -9,6 +9,7 @@ import './styles/global.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { reloadOnStaleBuild } from './app/staleBuild';
 import { resolveRealtimeUrl } from './shared/config/realtimeUrl';
 import type { RealtimeClientFactory } from './shared/realtime/realtimeClient';
 import { createStompRealtimeClient } from './shared/realtime/stompRealtimeClient';
@@ -45,6 +46,8 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('No se encontró el elemento raíz #root en index.html');
 }
+
+reloadOnStaleBuild(window);
 
 const realtimeClientFactory = await createBackendAdapters();
 
