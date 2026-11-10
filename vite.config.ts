@@ -10,7 +10,7 @@ const FRONTEND_PORT = 3000;
 
 // Las secciones se cargan bajo demanda (HU-FE-24) y ningún paquete de la aplicación llega a 500 kB.
 // La única excepción es el SDK de video (livekit-client, ≈520 kB): es un solo módulo de terceros,
-// no se puede dividir y solo se descarga al entrar a la sala de un taller. El aviso sigue activo
+// no se puede dividir y solo se descarga al entrar a una sala de video. El aviso sigue activo
 // para cualquier otro paquete que crezca más de la cuenta.
 const CHUNK_SIZE_WARNING_KB = 550;
 

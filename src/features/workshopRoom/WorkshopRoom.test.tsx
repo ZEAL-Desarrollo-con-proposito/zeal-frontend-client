@@ -12,11 +12,11 @@ import { storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import { workshopRoomEndpoint } from './api/workshopRoomApi';
 import type {
-  GroupCallOptions,
-  GroupCallSnapshot,
-  GroupChatMessage,
-  GroupParticipant,
-} from './call/groupCall';
+  VideoCallOptions,
+  VideoCallSnapshot,
+  CallChatMessage,
+  CallParticipant,
+} from '@/features/videoCall/call/videoCall';
 
 /** Servidor de video simulado: la prueba decide cuándo conecta y qué personas hay en la sala. */
 const video = vi.hoisted(() => ({
@@ -24,10 +24,10 @@ const video = vi.hoisted(() => ({
   setMedia: vi.fn(),
   sendMessage: vi.fn(),
   leave: vi.fn(),
-  options: null as GroupCallOptions | null,
+  options: null as VideoCallOptions | null,
 }));
 
-vi.mock('./call/liveKitGroupCall', () => ({
+vi.mock('@/features/videoCall/call/liveKitVideoCall', () => ({
   connectLiveKit: (options: unknown) => video.connect(options) as unknown,
 }));
 
@@ -77,9 +77,7 @@ function seedWorkshops() {
   writeWorkshopsDb(db);
 }
 
-function person(
-  fields: Partial<GroupParticipant> & { id: string; name: string },
-): GroupParticipant {
+function person(fields: Partial<CallParticipant> & { id: string; name: string }): CallParticipant {
   return {
     host: false,
     self: false,
@@ -99,14 +97,14 @@ const MARIANA = person({
 });
 
 /** El servidor de video avisa un cambio en la sala. */
-function serverSends(snapshot: GroupCallSnapshot) {
+function serverSends(snapshot: VideoCallSnapshot) {
   act(() => {
     video.options?.onChange(snapshot);
   });
 }
 
 /** Llega un mensaje del chat por la sala de video. */
-function chatArrives(message: Partial<GroupChatMessage> & { id: string; text: string }) {
+function chatArrives(message: Partial<CallChatMessage> & { id: string; text: string }) {
   act(() => {
     video.options?.onMessage({
       senderId: HOST.id,
@@ -118,7 +116,7 @@ function chatArrives(message: Partial<GroupChatMessage> & { id: string; text: st
   });
 }
 
-async function joinWith(participants: GroupParticipant[]) {
+async function joinWith(participants: CallParticipant[]) {
   const view = await openAs('EMPLEADO', workshopRoomPath('EMPLEADO', LIVE));
   await view.user.click(await joinButton());
   serverSends({ status: 'connected', participants });
@@ -155,7 +153,7 @@ beforeEach(() => {
   video.options = null;
   video.setMedia.mockResolvedValue(undefined);
   video.sendMessage.mockResolvedValue(undefined);
-  video.connect.mockImplementation((options: GroupCallOptions) => {
+  video.connect.mockImplementation((options: VideoCallOptions) => {
     video.options = options;
     return Promise.resolve({
       setMedia: video.setMedia,
@@ -284,7 +282,7 @@ describe('Sala del taller (videollamada grupal)', () => {
 
   it('mientras conecta no se puede volver a pulsar; los controles esperan a la conexión', async () => {
     let finish: () => void = () => undefined;
-    video.connect.mockImplementation((options: GroupCallOptions) => {
+    video.connect.mockImplementation((options: VideoCallOptions) => {
       video.options = options;
       // El servidor avisa quién está antes de terminar de conectar.
       options.onChange({ status: 'connected', participants: [SELF] });

@@ -1,4 +1,6 @@
 import { isRecord } from '@/features/auth/model/session';
+import type { VideoConnection } from '@/features/videoCall/call/videoCall';
+import { isVideoConnection } from '@/features/videoCall/call/videoCall';
 import type { BadgeTone } from '@/shared/ui/Badge/Badge';
 
 export const ROOM_STATUSES = ['PROGRAMADA', 'ACTIVA', 'CANCELADA', 'FINALIZADA'] as const;
@@ -8,12 +10,6 @@ export const ROOM_STATUSES = ['PROGRAMADA', 'ACTIVA', 'CANCELADA', 'FINALIZADA']
  * después; `CANCELADA` o `FINALIZADA` cuando la sesión ya no admite videollamada.
  */
 export type RoomStatus = (typeof ROOM_STATUSES)[number];
-
-export interface IceServer {
-  urls: string | string[];
-  username?: string;
-  credential?: string;
-}
 
 /** Sala de una sesión 1:1, vista por cualquiera de sus dos participantes (HU-BE-12). */
 export interface Room {
@@ -26,22 +22,15 @@ export interface Room {
   closesAt: string;
   /** La otra persona de la sesión. */
   participant: { id: string; fullName: string };
-  /** Servidores STUN/TURN para conectar el video; los entrega el servidor con credenciales. */
-  iceServers: IceServer[];
+  /**
+   * Dónde y con qué permiso entrar al video (LiveKit, ADR-14). Solo viene con la sala activa y
+   * dentro de la ventana de ingreso: el permiso es para esta persona y esta sesión.
+   */
+  connection: VideoConnection | null;
 }
 
 function isIsoDateTime(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
-}
-
-function isIceServer(value: unknown): value is IceServer {
-  return (
-    isRecord(value) &&
-    (typeof value.urls === 'string' ||
-      (Array.isArray(value.urls) && value.urls.every((url) => typeof url === 'string'))) &&
-    (value.username === undefined || typeof value.username === 'string') &&
-    (value.credential === undefined || typeof value.credential === 'string')
-  );
 }
 
 export function isRoom(value: unknown): value is Room {
@@ -56,8 +45,7 @@ export function isRoom(value: unknown): value is Room {
     isRecord(value.participant) &&
     typeof value.participant.id === 'string' &&
     typeof value.participant.fullName === 'string' &&
-    Array.isArray(value.iceServers) &&
-    value.iceServers.every(isIceServer)
+    (value.connection === null || isVideoConnection(value.connection))
   );
 }
 
@@ -65,7 +53,7 @@ export function isRoom(value: unknown): value is Room {
 export type RoomPhase =
   | { kind: 'upcoming'; opensAt: Date }
   | { kind: 'scheduled' }
-  | { kind: 'active' }
+  | { kind: 'active'; connection: VideoConnection }
   | { kind: 'closed' }
   | { kind: 'cancelled' }
   | { kind: 'finished' };
@@ -81,10 +69,13 @@ export function roomPhase(room: Room, now: number): RoomPhase {
   if (now < opensAt) {
     return { kind: 'upcoming', opensAt: new Date(opensAt) };
   }
-  if (now > Date.parse(room.closesAt)) {
-    return { kind: 'closed' };
+  if (room.status !== 'ACTIVA') {
+    return now > Date.parse(room.closesAt) ? { kind: 'closed' } : { kind: 'scheduled' };
   }
-  return room.status === 'ACTIVA' ? { kind: 'active' } : { kind: 'scheduled' };
+  // Activa pero sin permiso de video: para el servidor la ventana de ingreso ya terminó.
+  return now > Date.parse(room.closesAt) || room.connection === null
+    ? { kind: 'closed' }
+    : { kind: 'active', connection: room.connection };
 }
 
 /** Etiqueta de la cabecera: "En curso" es una lectura del reloj sobre una sesión vigente. */

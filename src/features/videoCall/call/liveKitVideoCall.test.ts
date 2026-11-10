@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GroupCallSnapshot, GroupChatMessage } from './groupCall';
-import { CHAT_TOPIC, connectLiveKit, isHostMetadata, parseChatPayload } from './liveKitGroupCall';
+import type { CallChatMessage, VideoCallSnapshot } from './videoCall';
+import { CHAT_TOPIC, connectLiveKit, isHostMetadata, parseChatPayload } from './liveKitVideoCall';
 
 /** Sala de LiveKit simulada: la prueba decide quién está, qué publica y qué eventos llegan. */
 const sdk = vi.hoisted(() => {
@@ -125,8 +125,8 @@ function room() {
 }
 
 async function connect() {
-  const snapshots: GroupCallSnapshot[] = [];
-  const messages: GroupChatMessage[] = [];
+  const snapshots: VideoCallSnapshot[] = [];
+  const messages: CallChatMessage[] = [];
   const call = await connectLiveKit({
     serverUrl: 'wss://zeal.co/livekit',
     token: 'permiso',
@@ -148,7 +148,11 @@ describe('connectLiveKit', () => {
     const { latest } = await connect();
 
     expect(room().connect).toHaveBeenCalledWith('wss://zeal.co/livekit', 'permiso');
-    expect(room().options).toEqual({ adaptiveStream: false, dynacast: true });
+    expect(room().options).toEqual({
+      adaptiveStream: false,
+      dynacast: true,
+      disconnectOnPageLeave: true,
+    });
     expect(latest()).toEqual({
       status: 'connected',
       participants: [
@@ -255,7 +259,7 @@ const CHAT = {
   sentAt: '2026-09-23T14:30:00.000Z',
 };
 
-describe('chat del taller', () => {
+describe('chat de la sala', () => {
   it('envía el mensaje a la sala por el canal del chat y lo muestra como propio', async () => {
     const { call, messages } = await connect();
 

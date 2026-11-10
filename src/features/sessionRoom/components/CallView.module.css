@@ -105,3 +105,21 @@
     translate: -50% 64px;
   }
 }
+
+/* El navegador no dejó encender la cámara o el micrófono: se explica cómo darle permiso. */
+.alert {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-coral-strong);
+}
+
+.alert svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}

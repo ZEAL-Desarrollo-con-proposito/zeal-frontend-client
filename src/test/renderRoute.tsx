@@ -3,15 +3,15 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { expect } from 'vitest';
 import { SECTIONS } from '@/app/lazyPages';
 import { routes } from '@/app/routes';
-import { combineMockMessageHandlers, createMockRealtimeClient } from '@/mocks/realtime';
+import { createMockRealtimeClient } from '@/mocks/realtime';
 import { handleChatMessage } from '@/mocks/wellbeing/chatHandlers';
-import { handleRoomMessage } from '@/mocks/wellbeing/roomHandlers';
 import type { RealtimeClientFactory } from '@/shared/realtime/realtimeClient';
 import { RealtimeFactoryContext } from '@/shared/realtime/RealtimeContext';
 import { trackSubscriptions } from './realtime';
 import { setupUser } from './user';
 
-const onMockMessage = combineMockMessageHandlers(handleRoomMessage, handleChatMessage);
+/** El servidor simulado procesa lo que envía el cliente: hoy, solo los mensajes de chat. */
+const onMockMessage = handleChatMessage;
 
 /** Aviso de las pantallas que aún se descargan (HU-FE-24). */
 const SECTION_LOADING = /^Cargando la (sección|pantalla)…$/;

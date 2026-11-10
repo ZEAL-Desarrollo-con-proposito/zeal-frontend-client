@@ -1,27 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MediaErrorReason } from '@/features/sessionRoom/call/localMedia';
-import { mediaErrorReason } from '@/features/sessionRoom/call/localMedia';
-import type { MediaState } from '@/features/sessionRoom/model/roomEvent';
 import { API_BASE_URL } from '@/shared/config/apiBaseUrl';
+import type { MediaErrorReason } from '../call/mediaError';
+import { mediaErrorReason } from '../call/mediaError';
 import type {
-  GroupCall,
-  GroupCallConnector,
-  GroupCallSnapshot,
-  GroupChatMessage,
-} from '../call/groupCall';
-import type { WorkshopRoomConnection } from '../model/workshopRoom';
-import { resolveServerUrl } from '../model/workshopRoom';
+  CallChatMessage,
+  MediaState,
+  VideoCall,
+  VideoCallConnector,
+  VideoCallSnapshot,
+  VideoConnection,
+} from '../call/videoCall';
+import { resolveServerUrl } from '../call/videoCall';
 
-export type GroupCallPhase =
+export type VideoCallPhase =
   | { kind: 'idle' }
   | { kind: 'joining' }
-  | { kind: 'joined'; snapshot: GroupCallSnapshot }
+  | { kind: 'joined'; snapshot: VideoCallSnapshot }
   | { kind: 'failed' }
   | { kind: 'ended' };
 
 /** El SDK de video pesa varios cientos de kB: se descarga solo cuando alguien entra a una sala. */
-const connectWithLiveKit: GroupCallConnector = async (options) => {
-  const { connectLiveKit } = await import('../call/liveKitGroupCall');
+const connectWithLiveKit: VideoCallConnector = async (options) => {
+  const { connectLiveKit } = await import('../call/liveKitVideoCall');
   return connectLiveKit(options);
 };
 
@@ -29,17 +29,17 @@ const connectWithLiveKit: GroupCallConnector = async (options) => {
 const INITIAL_MEDIA: MediaState = { audio: true, video: true };
 
 /**
- * Videollamada grupal del taller: entrar, encender o apagar micrófono y cámara, y salir. Si el
- * navegador niega la cámara, la persona igual queda en la sala (puede escuchar y ver) y se le
- * explica cómo dar el permiso.
+ * Videollamada de una sala (sesión 1:1 o taller en vivo, ADR-14): entrar, encender o apagar
+ * micrófono y cámara, y salir. Si el navegador niega la cámara, la persona igual queda en la sala
+ * (puede escuchar y ver) y se le explica cómo dar el permiso.
  */
-export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit) {
-  const [phase, setPhase] = useState<GroupCallPhase>({ kind: 'idle' });
+export function useVideoCall(connector: VideoCallConnector = connectWithLiveKit) {
+  const [phase, setPhase] = useState<VideoCallPhase>({ kind: 'idle' });
   const [media, setMediaState] = useState<MediaState>(INITIAL_MEDIA);
   const [mediaError, setMediaError] = useState<MediaErrorReason | null>(null);
-  const [messages, setMessages] = useState<GroupChatMessage[]>([]);
+  const [messages, setMessages] = useState<CallChatMessage[]>([]);
   const [chatFailed, setChatFailed] = useState(false);
-  const callRef = useRef<GroupCall | null>(null);
+  const callRef = useRef<VideoCall | null>(null);
 
   useEffect(
     () => () => {
@@ -49,7 +49,7 @@ export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit)
     [],
   );
 
-  async function applyMedia(call: GroupCall, next: MediaState) {
+  async function applyMedia(call: VideoCall, next: MediaState) {
     setMediaState(next);
     try {
       await call.setMedia(next);
@@ -60,9 +60,9 @@ export function useGroupCall(connector: GroupCallConnector = connectWithLiveKit)
     }
   }
 
-  async function join(connection: WorkshopRoomConnection) {
+  async function join(connection: VideoConnection) {
     setPhase({ kind: 'joining' });
-    // El chat del taller vive en la sala: al volver a entrar empieza vacío.
+    // El chat de la sala vive en la sala: al volver a entrar empieza vacío.
     setMessages([]);
     try {
       const call = await connector({

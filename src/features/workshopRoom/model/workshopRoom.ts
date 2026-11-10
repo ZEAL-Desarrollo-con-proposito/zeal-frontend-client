@@ -1,4 +1,6 @@
 import { isRecord } from '@/features/auth/model/session';
+import type { VideoConnection } from '@/features/videoCall/call/videoCall';
+import { isVideoConnection } from '@/features/videoCall/call/videoCall';
 import { isIsoDateTime } from '@/shared/lib/dates';
 
 export const WORKSHOP_ROOM_STATUSES = ['PROGRAMADA', 'ABIERTA', 'FINALIZADA'] as const;
@@ -8,12 +10,6 @@ export const WORKSHOP_ROOM_ROLES = ['ANFITRION', 'PARTICIPANTE'] as const;
 export type WorkshopRoomStatus = (typeof WORKSHOP_ROOM_STATUSES)[number];
 /** La empresa que dicta el taller es la anfitriona; las personas inscritas, participantes. */
 export type WorkshopRoomRole = (typeof WORKSHOP_ROOM_ROLES)[number];
-
-/** Dónde y con qué permiso conectarse al servidor de video; solo viene con la sala abierta. */
-export interface WorkshopRoomConnection {
-  serverUrl: string;
-  token: string;
-}
 
 /** Sala de video grupal de un taller (Business Domain), vista por una persona con acceso. */
 export interface WorkshopRoom {
@@ -27,11 +23,8 @@ export interface WorkshopRoom {
   role: WorkshopRoomRole;
   /** Personas inscritas al taller. */
   enrolled: number;
-  connection: WorkshopRoomConnection | null;
-}
-
-function isConnection(value: unknown): value is WorkshopRoomConnection {
-  return isRecord(value) && typeof value.serverUrl === 'string' && typeof value.token === 'string';
+  /** Dónde y con qué permiso conectarse al servidor de video; solo viene con la sala abierta. */
+  connection: VideoConnection | null;
 }
 
 export function isWorkshopRoom(value: unknown): value is WorkshopRoom {
@@ -45,7 +38,7 @@ export function isWorkshopRoom(value: unknown): value is WorkshopRoom {
     WORKSHOP_ROOM_STATUSES.some((status) => status === value.status) &&
     WORKSHOP_ROOM_ROLES.some((role) => role === value.role) &&
     typeof value.enrolled === 'number' &&
-    (value.connection === null || isConnection(value.connection)) &&
+    (value.connection === null || isVideoConnection(value.connection)) &&
     (value.status !== 'ABIERTA' || value.connection !== null)
   );
 }
@@ -56,7 +49,7 @@ export function isWorkshopRoom(value: unknown): value is WorkshopRoom {
  */
 export type WorkshopRoomPhase =
   | { kind: 'upcoming'; opensAt: Date }
-  | { kind: 'open'; connection: WorkshopRoomConnection }
+  | { kind: 'open'; connection: VideoConnection }
   | { kind: 'finished' }
   | { kind: 'stale' };
 
@@ -85,14 +78,4 @@ export function isRoomWindow(
 ): boolean {
   const start = Date.parse(startsAt);
   return now >= start - ROOM_OPENS_BEFORE_MS && now < start + durationMinutes * 60_000;
-}
-
-/**
- * URL WebSocket del servidor de video. Una ruta relativa ("/livekit") se resuelve contra el API
- * Gateway, que también enruta la señalización del video.
- */
-export function resolveServerUrl(serverUrl: string, apiBaseUrl: string): string {
-  const url = new URL(serverUrl, apiBaseUrl);
-  url.protocol = url.protocol === 'https:' || url.protocol === 'wss:' ? 'wss:' : 'ws:';
-  return url.toString().replace(/\/$/, '');
 }

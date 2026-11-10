@@ -1,10 +1,10 @@
 import { motion } from 'motion/react';
+import type { VideoConnection } from '@/features/videoCall/call/videoCall';
+import type { VideoCallPhase } from '@/features/videoCall/hooks/useVideoCall';
 import { formatTime } from '@/shared/lib/dates';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { Button } from '@/shared/ui/Button/Button';
 import { AlertIcon } from '@/shared/ui/icons';
-import { MEDIA_ERROR_MESSAGES } from '../call/localMedia';
-import type { CallPhase } from '../hooks/useCall';
 import type { RoomPhase } from '../model/room';
 import styles from './RoomLobby.module.css';
 
@@ -14,10 +14,10 @@ interface RoomLobbyProps {
   participant: string;
   /** El psicólogo activa la sala; el empleado espera a que lo haga. */
   host: boolean;
-  callPhase: CallPhase;
+  callPhase: VideoCallPhase;
   activation: { pending: boolean; error: string | null };
   onActivate: () => void;
-  onJoin: () => void;
+  onJoin: (connection: VideoConnection) => void;
 }
 
 interface LobbyView {
@@ -73,9 +73,23 @@ function lobbyView(phase: RoomPhase, participant: string, host: boolean): LobbyV
   }
 }
 
+/** Qué dice el botón de entrar según cómo terminó el último intento. */
+function joinLabel(callPhase: VideoCallPhase): string {
+  switch (callPhase.kind) {
+    case 'joining':
+      return 'Conectando…';
+    case 'failed':
+      return 'Reintentar';
+    case 'ended':
+      return 'Volver a entrar';
+    default:
+      return 'Entrar a la llamada';
+  }
+}
+
 /**
  * Vestíbulo de la sala: cuándo abre, "Activar sala" para el psicólogo, la sala de espera del
- * empleado (cambia sola cuando se activa) y los avisos si la cámara no enciende.
+ * empleado (cambia sola cuando se activa) y el aviso si el video no conecta.
  */
 export function RoomLobby({
   phase,
@@ -87,32 +101,35 @@ export function RoomLobby({
   onJoin,
 }: Readonly<RoomLobbyProps>) {
   const view = lobbyView(phase, participant, host);
-  const starting = callPhase.kind === 'starting';
-  const mediaError =
-    callPhase.kind === 'media-error' ? MEDIA_ERROR_MESSAGES[callPhase.reason] : null;
+  const joining = callPhase.kind === 'joining';
+  const failed = callPhase.kind === 'failed';
 
   function action() {
     if (view.state === 'scheduled') {
       let label = 'Activar sala';
       if (activation.pending) {
         label = 'Activando…';
-      } else if (starting) {
-        label = 'Encendiendo tu cámara…';
+      } else if (joining) {
+        label = 'Conectando…';
       }
+      const busy = activation.pending || joining;
       return (
-        <Button onClick={onActivate} disabled={activation.pending || starting}>
+        <Button onClick={onActivate} disabled={busy} aria-busy={busy}>
           {label}
         </Button>
       );
     }
-    if (view.state === 'active') {
-      let label = mediaError === null ? 'Entrar a la llamada' : 'Reintentar';
-      if (starting) {
-        label = 'Encendiendo tu cámara…';
-      }
+    if (phase.kind === 'active') {
+      const { connection } = phase;
       return (
-        <Button onClick={onJoin} disabled={starting}>
-          {label}
+        <Button
+          onClick={() => {
+            onJoin(connection);
+          }}
+          disabled={joining}
+          aria-busy={joining}
+        >
+          {joinLabel(callPhase)}
         </Button>
       );
     }
@@ -144,13 +161,11 @@ export function RoomLobby({
         )}
         <h2 className={styles.title}>{view.title}</h2>
         <p className={styles.detail}>{view.detail}</p>
-        {mediaError !== null && (
-          <div role="alert" className={styles.alert}>
+        {failed && (
+          <p role="alert" className={styles.alert}>
             <AlertIcon />
-            <p>
-              <strong>{mediaError.title}.</strong> {mediaError.detail}
-            </p>
-          </div>
+            No pudimos conectar el video. Revisa tu conexión e inténtalo de nuevo.
+          </p>
         )}
         {activation.error !== null && (
           <p role="alert" className={styles.alert}>

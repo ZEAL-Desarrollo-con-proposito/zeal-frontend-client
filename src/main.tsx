@@ -21,20 +21,14 @@ const isApiMockingEnabled = import.meta.env.DEV && import.meta.env.VITE_API_MOCK
  */
 async function createBackendAdapters(): Promise<RealtimeClientFactory> {
   if (isApiMockingEnabled) {
-    const [
-      { worker },
-      { combineMockMessageHandlers, createMockRealtimeClient },
-      { handleRoomMessage },
-      { handleChatMessage },
-    ] = await Promise.all([
+    const [{ worker }, { createMockRealtimeClient }, { handleChatMessage }] = await Promise.all([
       import('./mocks/browser'),
       import('./mocks/realtime'),
-      import('./mocks/wellbeing/roomHandlers'),
       import('./mocks/wellbeing/chatHandlers'),
     ]);
     await worker.start({ onUnhandledRequest: 'bypass' });
-    const onMessage = combineMockMessageHandlers(handleRoomMessage, handleChatMessage);
-    return (accessToken) => createMockRealtimeClient(accessToken, onMessage);
+    // El cliente solo envía mensajes de chat; el video va por el servidor de medios (ADR-14).
+    return (accessToken) => createMockRealtimeClient(accessToken, handleChatMessage);
   }
   const realtimeUrl = resolveRealtimeUrl(import.meta.env.VITE_REALTIME_URL);
   return (accessToken, credentials) =>

@@ -1,17 +1,19 @@
 import { delay, http, HttpResponse } from 'msw';
 import type { Room } from '@/features/sessionRoom/model/room';
-import { isSignal, ROOMS_QUEUE } from '@/features/sessionRoom/model/roomEvent';
+import { ROOMS_QUEUE } from '@/features/sessionRoom/model/roomEvent';
 import { RESERVATIONS_ENDPOINT } from '@/features/agenda/api/agendaApi';
 import { formatTime } from '@/shared/lib/dates';
 import { authenticate, authorize, errorBody } from '../mockAuth';
 import { publishToUser } from '../realtime';
+import { MOCK_LIVEKIT_PATH } from '../workshops/roomHandlers';
 import type { ReservationRecord, WellbeingDb } from './db';
 import { readWellbeingDb, writeWellbeingDb } from './db';
 import { joinWindow } from './handlers';
 
 /**
  * Sala de la sesión de una reserva vista por uno de sus participantes (HU-BE-12); `null` si la
- * persona no participa en esa sesión. El estado lo decide el servidor.
+ * persona no participa en esa sesión. El estado lo decide el servidor. Con la sala activa y dentro
+ * de la ventana de ingreso entrega el permiso de video de esa persona (tarea 482, ADR-14).
  */
 function roomFor(record: ReservationRecord, userId: string, db: WellbeingDb, now: number) {
   const psychologist = db.psychologists.find(({ id }) => id === record.psychologistId);
@@ -31,6 +33,7 @@ function roomFor(record: ReservationRecord, userId: string, db: WellbeingDb, now
   } else if (record.status === 'FINALIZADA' || Date.parse(record.endsAt) <= now) {
     status = 'FINALIZADA';
   }
+  const canJoin = status === 'ACTIVA' && now >= opensAt.getTime() && now <= closesAt.getTime();
   const room: Room = {
     reservationId: record.id,
     status,
@@ -39,8 +42,9 @@ function roomFor(record: ReservationRecord, userId: string, db: WellbeingDb, now
     opensAt: opensAt.toISOString(),
     closesAt: closesAt.toISOString(),
     participant: { id: participant.id, fullName: participant.fullName },
-    // En la demo las dos pestañas están en el mismo equipo: no hace falta STUN ni TURN.
-    iceServers: [],
+    connection: canJoin
+      ? { serverUrl: MOCK_LIVEKIT_PATH, token: `token-de-${userId}-para-${record.id}` }
+      : null,
   };
   return room;
 }
@@ -103,29 +107,7 @@ export const roomHandlers = [
         writeWellbeingDb(db);
         announceRoomChange(record);
       }
-      return HttpResponse.json({ ...room, status: 'ACTIVA' } satisfies Room);
+      return HttpResponse.json(findRoom(params.id, user.id).room);
     },
   ),
 ];
-
-const SIGNAL_DESTINATION = /^\/app\/salas\/([^/]+)\/senales$/;
-
-/**
- * Señalización de la videollamada (como un `@MessageMapping` de Spring): reenvía la señal a la
- * otra persona, solo entre los dos participantes y con la sala activa y abierta.
- */
-export function handleRoomMessage(userId: string, destination: string, payload: unknown): void {
-  const reservationId = SIGNAL_DESTINATION.exec(destination)?.[1];
-  if (reservationId === undefined || !isSignal(payload)) {
-    return;
-  }
-  const { room } = findRoom(decodeURIComponent(reservationId), userId);
-  if (room?.status !== 'ACTIVA' || Date.now() > Date.parse(room.closesAt)) {
-    return;
-  }
-  publishToUser(room.participant.id, ROOMS_QUEUE, {
-    type: 'SENAL',
-    reservationId: room.reservationId,
-    signal: payload,
-  });
-}
