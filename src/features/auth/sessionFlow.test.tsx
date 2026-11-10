@@ -25,7 +25,7 @@ async function loginAs(
   email: string,
   { remember = false } = {},
 ) {
-  await user.type(screen.getByLabelText('Correo corporativo'), email);
+  await user.type(await screen.findByLabelText('Correo corporativo'), email);
   await user.type(screen.getByLabelText('Contraseña'), DEMO_PASSWORD);
   if (remember) {
     await user.click(screen.getByRole('checkbox', { name: 'Recordarme' }));
