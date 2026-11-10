@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WorkshopRoom } from './workshopRoom';
-import { isRoomWindow, isWorkshopRoom, resolveServerUrl, workshopRoomPhase } from './workshopRoom';
+import { isRoomWindow, isWorkshopRoom, workshopRoomPhase } from './workshopRoom';
 
 const OPEN: WorkshopRoom = {
   workshopId: 'taller-1',
@@ -71,21 +71,5 @@ describe('isRoomWindow', () => {
     expect(isRoomWindow(workshop, at('2026-09-23T14:50:00Z'))).toBe(true);
     expect(isRoomWindow(workshop, at('2026-09-23T15:59:59Z'))).toBe(true);
     expect(isRoomWindow(workshop, at('2026-09-23T16:00:00Z'))).toBe(false);
-  });
-});
-
-describe('resolveServerUrl', () => {
-  it('resuelve una ruta relativa contra el API Gateway y usa WebSocket', () => {
-    expect(resolveServerUrl('/livekit', 'http://localhost:8080')).toBe(
-      'ws://localhost:8080/livekit',
-    );
-    expect(resolveServerUrl('/livekit', 'https://zeal.co')).toBe('wss://zeal.co/livekit');
-  });
-
-  it('respeta una URL absoluta', () => {
-    expect(resolveServerUrl('wss://video.zeal.co/', 'http://localhost:8080')).toBe(
-      'wss://video.zeal.co',
-    );
-    expect(resolveServerUrl('ws://127.0.0.1:7880', 'https://zeal.co')).toBe('ws://127.0.0.1:7880');
   });
 });

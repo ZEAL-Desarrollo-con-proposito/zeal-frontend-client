@@ -11,9 +11,6 @@ export function useRoom(reservationId: string) {
     key: reservationId,
     load: (signal) => fetchRoom(reservationId, signal),
     topic: ROOMS_QUEUE,
-    isRelevant: (payload) =>
-      isRoomEvent(payload) &&
-      payload.type === 'SALA_ACTUALIZADA' &&
-      payload.reservationId === reservationId,
+    isRelevant: (payload) => isRoomEvent(payload) && payload.reservationId === reservationId,
   });
 }

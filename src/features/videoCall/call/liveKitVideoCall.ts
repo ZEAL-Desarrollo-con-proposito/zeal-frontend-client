@@ -2,12 +2,12 @@ import type { Participant, RemoteParticipant } from 'livekit-client';
 import { ConnectionState, Room, RoomEvent, Track } from 'livekit-client';
 import { isRecord } from '@/features/auth/model/session';
 import type {
-  GroupCallConnector,
-  GroupCallSnapshot,
-  GroupChatMessage,
-  GroupParticipant,
-} from './groupCall';
-import { MAX_CHAT_MESSAGE_LENGTH } from './groupCall';
+  VideoCallConnector,
+  VideoCallSnapshot,
+  CallChatMessage,
+  CallParticipant,
+} from './videoCall';
+import { MAX_CHAT_MESSAGE_LENGTH } from './videoCall';
 
 /** Cualquier cambio de personas, pistas o voz activa vuelve a dibujar la llamada. */
 const REFRESH_EVENTS = [
@@ -25,7 +25,7 @@ const REFRESH_EVENTS = [
   RoomEvent.Reconnected,
 ] as const;
 
-/** Canal de datos por el que viaja el chat del taller dentro de la sala. */
+/** Canal de datos por el que viaja el chat dentro de la sala. */
 export const CHAT_TOPIC = 'zeal.chat';
 
 interface ChatPayload {
@@ -76,14 +76,15 @@ function displayName(participant: Participant): string {
  * con un `MediaStream` (cámara y, si es otra persona, micrófono) que solo se recrea cuando
  * cambian sus pistas: reasignarlo reiniciaría la reproducción.
  */
-export const connectLiveKit: GroupCallConnector = async ({
+export const connectLiveKit: VideoCallConnector = async ({
   serverUrl,
   token,
   onChange,
   onMessage,
 }) => {
   // Sin adaptiveStream: el video se dibuja con el MediaStream del navegador, no con attach().
-  const room = new Room({ adaptiveStream: false, dynacast: true });
+  // Al cerrar o recargar la pestaña se sale de la sala: los demás ven al instante que se fue.
+  const room = new Room({ adaptiveStream: false, dynacast: true, disconnectOnPageLeave: true });
   const streams = new Map<string, { key: string; stream: MediaStream }>();
   let ended = false;
 
@@ -107,7 +108,7 @@ export const connectLiveKit: GroupCallConnector = async ({
     return stream;
   }
 
-  function toParticipant(participant: Participant, self: boolean): GroupParticipant {
+  function toParticipant(participant: Participant, self: boolean): CallParticipant {
     return {
       id: participant.identity,
       name: displayName(participant),
@@ -119,8 +120,8 @@ export const connectLiveKit: GroupCallConnector = async ({
     };
   }
 
-  function snapshot(): GroupCallSnapshot {
-    let status: GroupCallSnapshot['status'] = 'connected';
+  function snapshot(): VideoCallSnapshot {
+    let status: VideoCallSnapshot['status'] = 'connected';
     if (ended) {
       status = 'ended';
     } else if (room.state === ConnectionState.Reconnecting) {
@@ -177,7 +178,7 @@ export const connectLiveKit: GroupCallConnector = async ({
       }
     },
     async sendMessage(text) {
-      const message: GroupChatMessage = {
+      const message: CallChatMessage = {
         id: crypto.randomUUID(),
         text: text.trim().slice(0, MAX_CHAT_MESSAGE_LENGTH),
         sentAt: new Date().toISOString(),

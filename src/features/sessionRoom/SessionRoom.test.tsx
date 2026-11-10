@@ -1,69 +1,58 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it, onTestFinished } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { employeeRoomPath, EMPLOYEE_PATHS, PSYCHOLOGIST_PATHS, sessionRoomPath } from '@/app/paths';
 import type { Role } from '@/features/auth/model/session';
-import { createMockRealtimeClient, publishToUser } from '@/mocks/realtime';
+import type {
+  CallParticipant,
+  VideoCallOptions,
+  VideoCallSnapshot,
+} from '@/features/videoCall/call/videoCall';
+import { publishToUser } from '@/mocks/realtime';
 import { server } from '@/mocks/server';
-import { handleRoomMessage } from '@/mocks/wellbeing/roomHandlers';
-import type { RealtimeClient } from '@/shared/realtime/realtimeClient';
-import { createStatusStore } from '@/shared/realtime/realtimeClient';
 import { controlClock, freezeTime, jumpTo } from '@/test/clock';
 import { buildSession, storeSession } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import { cancelReservationAt } from '@/test/wellbeing';
-import { asMediaStream, FakeStream, installCamera, installPeerConnection } from '@/test/webrtc';
 import { roomEndpoint } from './api/roomApi';
-import type { Signal } from './model/roomEvent';
-import { isRoomEvent, ROOMS_QUEUE, signalDestination } from './model/roomEvent';
+import { ROOMS_QUEUE } from './model/roomEvent';
+
+/** Servidor de video simulado: la prueba decide cuándo conecta y quién está en la sala. */
+const video = vi.hoisted(() => ({
+  connect: vi.fn(),
+  setMedia: vi.fn(),
+  sendMessage: vi.fn(),
+  leave: vi.fn(),
+  options: null as VideoCallOptions | null,
+}));
+
+vi.mock('@/features/videoCall/call/liveKitVideoCall', () => ({
+  connectLiveKit: (options: unknown) => video.connect(options) as unknown,
+}));
 
 // Miércoles 23 a las 9:20: reserva-16 (9:00 – 9:50, David con Laura) está en curso.
 const RESERVATION = 'reserva-16';
 const LAURA = 'usr-psicologo-001';
+const DAVID = 'usr-empleado-001';
 const wednesdayAt = (hour: number, minute = 0) => new Date(2026, 8, 23, hour, minute);
 
-async function openAs(
-  role: Role,
-  path: string,
-  realtimeFactory?: (token: string) => RealtimeClient,
-) {
-  storeSession(role);
-  return await renderRoute(path, realtimeFactory);
+function person(fields: Partial<CallParticipant> & { id: string; name: string }): CallParticipant {
+  return {
+    host: false,
+    self: false,
+    stream: null,
+    media: { audio: true, video: true },
+    speaking: false,
+    ...fields,
+  };
 }
 
-/** La otra persona de la llamada, conectada al Real-Time Gateway simulado con su propia sesión. */
-function counterpart(role: Role, reservationId = RESERVATION) {
-  const client = createMockRealtimeClient(buildSession(role).accessToken, handleRoomMessage);
-  client.connect();
-  onTestFinished(() => {
-    client.disconnect();
-  });
-  const received: Signal[] = [];
-  client.subscribe(ROOMS_QUEUE, (payload) => {
-    if (isRoomEvent(payload) && payload.type === 'SENAL') {
-      received.push(payload.signal);
-    }
-  });
-  return {
-    received,
-    send(signal: Signal) {
-      act(() => {
-        client.publish(signalDestination(reservationId), signal);
-      });
-    },
-    /** Espera la `count`-ésima señal de ese tipo que le llegó. */
-    async next<T extends Signal['type']>(
-      type: T,
-      count = 1,
-    ): Promise<Extract<Signal, { type: T }>> {
-      let found: Signal | undefined;
-      await waitFor(() => {
-        found = received.filter((signal) => signal.type === type)[count - 1];
-        expect(found).toBeDefined();
-      });
-      return found as Extract<Signal, { type: T }>;
-    },
-  };
+const LAURA_SELF = person({ id: LAURA, name: 'Laura Martínez', self: true });
+const DAVID_REMOTE = person({ id: DAVID, name: 'David Cajamarca' });
+
+async function openAs(role: Role, path: string) {
+  storeSession(role);
+  return await renderRoute(path);
 }
 
 /** El psicólogo activa la sala desde otra pestaña (como lo haría con su cuenta). */
@@ -76,214 +65,216 @@ async function activateAsPsychologist(reservationId = RESERVATION) {
   );
 }
 
+/** El servidor de video avisa un cambio en la sala. */
+function serverSends(snapshot: VideoCallSnapshot) {
+  act(() => {
+    video.options?.onChange(snapshot);
+  });
+}
+
+/** Espera a que la pantalla se conecte al servidor de video y le dice quién está en la sala. */
+async function connectedWith(participants: CallParticipant[]) {
+  await waitFor(() => {
+    expect(video.options).not.toBeNull();
+  });
+  serverSends({ status: 'connected', participants });
+  return await screen.findByRole('region', { name: 'Videollamada' });
+}
+
 function lobby() {
   return within(screen.getByRole('region', { name: 'Estado de la sala' }));
+}
+
+/** El aviso de la llamada: la región viva junto al video (el chat tiene la suya, de presencia). */
+function callStatus() {
+  const status = screen
+    .getAllByRole('status')
+    .find((element) => element.closest('aside') === null && element.closest('figure') === null);
+  if (status === undefined) {
+    throw new Error('No hay aviso de la llamada');
+  }
+  return status;
 }
 
 function callRegion() {
   return within(screen.getByRole('region', { name: 'Videollamada' }));
 }
 
-function videoOf(name: string): HTMLVideoElement {
-  const video = callRegion()
-    .getByRole('figure', { name: new RegExp(`^${name}`) })
-    .querySelector('video');
-  if (video === null) {
-    throw new Error(`No hay video de ${name}`);
-  }
-  return video;
-}
-
-/** `pageshow` como lo entrega el navegador: `persisted` solo es `true` al restaurar desde caché. */
-function pageShow(persisted: boolean): Event {
-  return Object.assign(new Event('pageshow'), { persisted });
-}
-
 async function joinAsPsychologist() {
-  const camera = installCamera();
-  const peers = installPeerConnection();
-  const david = counterpart('EMPLEADO');
   const view = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
   await view.user.click(await screen.findByRole('button', { name: 'Activar sala' }));
-  await screen.findByRole('region', { name: 'Videollamada' });
-  const [local] = camera.granted;
-  if (local === undefined) {
-    throw new Error('La cámara no se encendió');
-  }
-  return { ...view, camera, peers, david, local };
+  await connectedWith([LAURA_SELF]);
+  return view;
 }
 
-describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
+beforeEach(() => {
+  video.options = null;
+  video.connect.mockImplementation((options: VideoCallOptions) => {
+    video.options = options;
+    return Promise.resolve({
+      setMedia: video.setMedia,
+      sendMessage: video.sendMessage,
+      leave: video.leave,
+    });
+  });
+  video.setMedia.mockResolvedValue(undefined);
+});
+
+describe('Sala de la sesión · psicólogo (HU-FE-12, ADR-14)', () => {
   beforeEach(() => {
     freezeTime();
   });
 
-  it('activa la sala, entra a la llamada y conecta el video con el paciente', async () => {
-    const { david, peers, camera } = await joinAsPsychologist();
+  it('activa la sala y entra al video con el permiso que entrega el servidor', async () => {
+    await joinAsPsychologist();
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Sesión 1:1 · David Cajamarca' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Miércoles, 23 de septiembre · 9:00 – 9:50')).toBeInTheDocument();
     expect(screen.getByText('En curso')).toBeInTheDocument();
+    expect(screen.getByText('Cifrado en tránsito · solo ustedes dos')).toBeInTheDocument();
     expect(document.title).toBe('Sala de sesión · ZEAL');
-    expect(camera.getUserMedia).toHaveBeenCalledOnce();
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Esperando a que David Cajamarca entre a la sala…',
+    expect(video.connect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serverUrl: `ws://${window.location.host}/livekit`,
+        token: `token-de-${LAURA}-para-${RESERVATION}`,
+      }),
     );
+    // Al entrar se encienden el micrófono y la cámara.
+    expect(video.setMedia).toHaveBeenCalledWith({ audio: true, video: true });
+    expect(callStatus()).toHaveTextContent('Esperando a que David Cajamarca entre a la sala…');
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Silenciar micrófono' })).toHaveFocus();
     });
 
-    // El paciente entra: se negocia el video por el Real-Time Gateway.
-    await david.next('LISTO');
-    david.send({ type: 'LISTO', media: { audio: true, video: true } });
-    const offer = await david.next('OFERTA');
-    david.send({ type: 'RESPUESTA', id: offer.id, sdp: 'respuesta-de-david' });
-    await waitFor(() => {
-      expect(peers.last().remoteDescription).toEqual({ type: 'answer', sdp: 'respuesta-de-david' });
+    // El paciente entra con la cámara apagada.
+    serverSends({
+      status: 'connected',
+      participants: [LAURA_SELF, { ...DAVID_REMOTE, media: { audio: true, video: false } }],
     });
 
-    const remote = asMediaStream(new FakeStream());
-    act(() => {
-      peers.last().emitCandidate({ candidate: 'candidate:1', sdpMid: '0', sdpMLineIndex: 0 });
-      peers.last().emitTrack([remote]);
-      peers.last().setState('connected');
-    });
-
-    expect(await david.next('CANDIDATO')).toMatchObject({ id: offer.id });
-    expect(await screen.findByText('Conectado con David Cajamarca')).toBeInTheDocument();
-    expect(videoOf('David Cajamarca').srcObject).toBe(remote);
-    expect(peers.last().tracks).toHaveLength(2);
-
-    act(() => {
-      peers.last().setState('disconnected');
-    });
-    expect(await screen.findByText('Se perdió la conexión. Reconectando…')).toBeInTheDocument();
+    expect(callStatus()).toHaveTextContent('Conectado con David Cajamarca');
+    expect(
+      callRegion().getByRole('figure', { name: 'David Cajamarca, cámara apagada' }),
+    ).toBeInTheDocument();
+    expect(callRegion().getByRole('figure', { name: 'Tú' })).toBeInTheDocument();
   });
 
-  it('los controles apagan el micrófono y la cámara, y la otra persona se entera', async () => {
-    const { user, david, local } = await joinAsPsychologist();
-    const microphone = screen.getByRole('button', { name: 'Silenciar micrófono' });
-    const camera = screen.getByRole('button', { name: 'Apagar cámara' });
+  it('los controles apagan y encienden el micrófono y la cámara', async () => {
+    const { user } = await joinAsPsychologist();
 
-    await user.click(microphone);
-    await user.click(camera);
-
-    expect(microphone).toHaveAttribute('aria-pressed', 'true');
-    expect(camera).toHaveAttribute('aria-pressed', 'true');
-    expect(local.track('audio').enabled).toBe(false);
-    expect(local.track('video').enabled).toBe(false);
-    expect(await david.next('MEDIOS', 2)).toEqual({
-      type: 'MEDIOS',
-      media: { audio: false, video: false },
-    });
-    const own = callRegion().getByRole('figure', { name: /^Tú/ });
-    expect(own).toHaveTextContent('Tú, micrófono silenciado, cámara apagada');
-    expect(within(own).getByRole('img', { name: 'Laura Martínez' })).toBeInTheDocument();
-
-    await user.click(microphone);
-    expect(microphone).toHaveAttribute('aria-pressed', 'false');
-    expect(local.track('audio').enabled).toBe(true);
-
-    david.send({ type: 'MEDIOS', media: { audio: false, video: false } });
+    await user.click(screen.getByRole('button', { name: 'Silenciar micrófono' }));
+    expect(video.setMedia).toHaveBeenLastCalledWith({ audio: false, video: true });
+    await user.click(screen.getByRole('button', { name: 'Apagar cámara' }));
+    expect(video.setMedia).toHaveBeenLastCalledWith({ audio: false, video: false });
     expect(
-      await callRegion().findByRole('figure', {
-        name: 'David Cajamarca, micrófono silenciado, cámara apagada',
-      }),
+      callRegion().getByRole('figure', { name: 'Tú, micrófono silenciado, cámara apagada' }),
     ).toBeInTheDocument();
   });
 
   it('si el paciente sale, le avisa al instante y vuelve a esperarlo', async () => {
-    const { david } = await joinAsPsychologist();
-    await david.next('LISTO');
-    david.send({ type: 'LISTO', media: { audio: true, video: true } });
-    await david.next('OFERTA');
+    await joinAsPsychologist();
+    serverSends({ status: 'connected', participants: [LAURA_SELF, DAVID_REMOTE] });
 
-    david.send({ type: 'SALIO' });
+    serverSends({ status: 'connected', participants: [LAURA_SELF] });
 
-    expect(
-      await screen.findByText(
-        'David Cajamarca salió de la sala. Puedes esperar a que vuelva o salir tú también.',
-      ),
-    ).toBeInTheDocument();
+    expect(callStatus()).toHaveTextContent(
+      'David Cajamarca salió de la sala. Puedes esperar a que vuelva o salir tú también.',
+    );
+    serverSends({ status: 'connected', participants: [LAURA_SELF, DAVID_REMOTE] });
+    expect(callStatus()).toHaveTextContent('Conectado con David Cajamarca');
   });
 
-  it('al salir apaga la cámara, avisa al paciente y vuelve a la agenda', async () => {
-    const { user, router, david, local } = await joinAsPsychologist();
+  it('avisa si se pierde la conexión mientras se recupera', async () => {
+    await joinAsPsychologist();
+
+    serverSends({ status: 'reconnecting', participants: [LAURA_SELF, DAVID_REMOTE] });
+
+    expect(callStatus()).toHaveTextContent('Se perdió la conexión. Reconectando…');
+  });
+
+  it('al salir deja la sala de video y vuelve a la agenda', async () => {
+    const { user, router } = await joinAsPsychologist();
 
     await user.click(screen.getByRole('button', { name: 'Salir de la sala' }));
 
+    expect(video.leave).toHaveBeenCalled();
     expect(router.state.location.pathname).toBe(PSYCHOLOGIST_PATHS.agenda);
-    expect(local.getTracks().map((track) => track.readyState)).toEqual(['ended', 'ended']);
-    expect(await david.next('SALIO')).toEqual({ type: 'SALIO' });
   });
 
-  it('si cierra la pestaña, avisa que salió y apaga la cámara', async () => {
-    const { david, local } = await joinAsPsychologist();
+  it('si el servidor de video cierra la llamada, vuelve al vestíbulo para entrar de nuevo', async () => {
+    const { user } = await joinAsPsychologist();
 
+    serverSends({ status: 'ended', participants: [LAURA_SELF] });
+
+    expect(await screen.findByRole('heading', { name: 'La sala está activa' })).toBeInTheDocument();
+    await user.click(lobby().getByRole('button', { name: 'Volver a entrar' }));
+    expect(video.connect).toHaveBeenCalledTimes(2);
+  });
+
+  it('si la sesión se cancela con la llamada abierta, la cierra', async () => {
+    await joinAsPsychologist();
+
+    cancelReservationAt(wednesdayAt(9));
     act(() => {
-      window.dispatchEvent(new Event('pagehide'));
+      publishToUser(LAURA, ROOMS_QUEUE, { type: 'SALA_ACTUALIZADA', reservationId: RESERVATION });
     });
 
-    expect(await david.next('SALIO')).toEqual({ type: 'SALIO' });
-    expect(local.getTracks().map((track) => track.readyState)).toEqual(['ended', 'ended']);
+    await waitFor(() => {
+      expect(video.leave).toHaveBeenCalled();
+    });
   });
 
-  it('si el navegador restaura la página desde su caché, vuelve al vestíbulo', async () => {
-    installCamera();
-    installPeerConnection();
+  it('si no hay permiso para la cámara, se queda en la sala y explica cómo darlo', async () => {
+    video.setMedia.mockRejectedValueOnce(new DOMException('denegado', 'NotAllowedError'));
+    await joinAsPsychologist();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Permite el acceso a tu cámara y micrófono.',
+    );
+    expect(screen.getByRole('region', { name: 'Videollamada' })).toBeInTheDocument();
+  });
+
+  it('si el video no conecta, avisa y deja reintentar', async () => {
+    video.connect.mockRejectedValueOnce(new Error('sin red'));
+    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+    await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar el video');
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }));
+
+    expect(video.connect).toHaveBeenCalledTimes(2);
+  });
+
+  it('mientras conecta bloquea el botón', async () => {
+    let connected: () => void = () => undefined;
+    video.connect.mockImplementationOnce(
+      (options: VideoCallOptions) =>
+        new Promise((resolve) => {
+          connected = () => {
+            video.options = options;
+            resolve({
+              setMedia: video.setMedia,
+              sendMessage: video.sendMessage,
+              leave: video.leave,
+            });
+          };
+        }),
+    );
     await activateAsPsychologist();
     const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
+
     await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
-    await screen.findByRole('region', { name: 'Videollamada' });
 
-    act(() => {
-      window.dispatchEvent(pageShow(false));
-    });
-    expect(callRegion().getByRole('figure', { name: /^Tú/ })).toBeInTheDocument();
-
-    act(() => {
-      window.dispatchEvent(pageShow(true));
-    });
-
-    expect(
-      await lobby().findByRole('heading', { name: 'La sala está activa' }),
-    ).toBeInTheDocument();
-    expect(await lobby().findByRole('button', { name: 'Entrar a la llamada' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Videollamada' })).not.toBeInTheDocument();
-  });
-
-  it('al recuperar la conexión con ZEAL vuelve a saludar para renegociar el video', async () => {
-    installCamera();
-    installPeerConnection();
-    const david = counterpart('EMPLEADO');
-    const store = createStatusStore();
-    const factory = (token: string): RealtimeClient => {
-      const inner = createMockRealtimeClient(token, handleRoomMessage);
-      return {
-        ...inner,
-        connect: () => {
-          inner.connect();
-          store.set('connected');
-        },
-        getStatus: store.getStatus,
-        getRecoveries: store.getRecoveries,
-        onChange: store.onChange,
-      };
-    };
-    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION), factory);
-    await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
-    await david.next('LISTO');
-
-    act(() => {
-      store.set('reconnecting');
+    expect(lobby().getByRole('button', { name: 'Conectando…' })).toBeDisabled();
+    await waitFor(() => {
+      expect(video.connect).toHaveBeenCalled();
     });
     act(() => {
-      store.set('connected');
+      connected();
     });
-
-    expect(await david.next('LISTO', 2)).toMatchObject({ type: 'LISTO' });
+    expect(await connectedWith([LAURA_SELF])).toBeInTheDocument();
   });
 
   it('muestra el mensaje del servidor si no puede activar la sala', async () => {
@@ -310,64 +301,37 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     answer();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('La sala de esta sesión ya cerró.');
-    expect(lobby().getByRole('button', { name: 'Activar sala' })).toBeEnabled();
+    expect(video.connect).not.toHaveBeenCalled();
   });
 
-  it('si no hay permiso para la cámara, explica cómo darlo y deja reintentar', async () => {
-    installCamera(new DOMException('Permiso denegado', 'NotAllowedError'));
-    installPeerConnection();
+  it('si la activa pero el servidor no entrega el permiso de video, no intenta conectar', async () => {
+    server.use(
+      http.post(
+        `*${roomEndpoint(RESERVATION)}/activar`,
+        () =>
+          HttpResponse.json({
+            reservationId: RESERVATION,
+            status: 'ACTIVA',
+            startsAt: wednesdayAt(9).toISOString(),
+            endsAt: wednesdayAt(9, 50).toISOString(),
+            opensAt: wednesdayAt(8, 50).toISOString(),
+            closesAt: wednesdayAt(9, 50).toISOString(),
+            participant: { id: DAVID, fullName: 'David Cajamarca' },
+            connection: null,
+          }),
+        { once: true },
+      ),
+    );
     const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
 
     await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
 
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Permite el acceso a tu cámara y micrófono.');
-    expect(alert).toHaveTextContent('Actívalo desde el candado de la barra de direcciones');
-
-    installCamera();
-    await user.click(await screen.findByRole('button', { name: 'Reintentar' }));
-    expect(await screen.findByRole('region', { name: 'Videollamada' })).toBeInTheDocument();
-  });
-
-  it('mientras enciende la cámara bloquea el botón; si se va antes, la apaga igual', async () => {
-    const camera = installCamera('pending');
-    installPeerConnection();
-    const { user, router } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
-    await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
-    expect(await screen.findByRole('button', { name: 'Encendiendo tu cámara…' })).toBeDisabled();
-
-    await user.click(screen.getByRole('link', { name: 'Volver a mi agenda' }));
-    expect(router.state.location.pathname).toBe(PSYCHOLOGIST_PATHS.agenda);
-    await act(async () => {
-      camera.release('ok');
-      await Promise.resolve();
-    });
-
-    expect(camera.granted[0]?.getTracks().map((track) => track.readyState)).toEqual([
-      'ended',
-      'ended',
-    ]);
-  });
-
-  it('un permiso que llega tarde, cuando ya salió, se ignora', async () => {
-    const camera = installCamera('pending');
-    installPeerConnection();
-    const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
-    await user.click(await screen.findByRole('button', { name: 'Activar sala' }));
-    await screen.findByRole('button', { name: 'Encendiendo tu cámara…' });
-    await user.click(screen.getByRole('link', { name: 'Volver a mi agenda' }));
-
-    await act(async () => {
-      camera.release(new DOMException('Permiso denegado', 'NotAllowedError'));
-      await Promise.resolve();
-    });
-
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // Entrar habría cambiado el botón a "Conectando…": vuelve a "Activar sala" sin conectar.
+    expect(await screen.findByRole('button', { name: 'Activar sala' })).toBeEnabled();
+    expect(video.connect).not.toHaveBeenCalled();
   });
 
   it('si ya la activó (p. ej. recargó la página), ofrece volver a la llamada', async () => {
-    installCamera();
-    installPeerConnection();
     await activateAsPsychologist();
     const { user } = await openAs('PSICOLOGO', sessionRoomPath(RESERVATION));
 
@@ -377,7 +341,7 @@ describe('Sala de la sesión · psicólogo (HU-FE-12)', () => {
     ).toBeInTheDocument();
 
     await user.click(lobby().getByRole('button', { name: 'Entrar a la llamada' }));
-    expect(await screen.findByRole('region', { name: 'Videollamada' })).toBeInTheDocument();
+    expect(await connectedWith([LAURA_SELF])).toBeInTheDocument();
   });
 });
 
@@ -486,15 +450,12 @@ describe('Sala de la sesión · vestíbulo', () => {
   });
 });
 
-describe('Sala de la sesión · empleado (HU-FE-12)', () => {
+describe('Sala de la sesión · empleado (HU-FE-12, ADR-14)', () => {
   beforeEach(() => {
     freezeTime();
   });
 
   it('espera a que la psicóloga active la sala y entra en cuanto lo hace, sin recargar', async () => {
-    const camera = installCamera('pending');
-    const peers = installPeerConnection();
-    const laura = counterpart('PSICOLOGO');
     const { user } = await openAs('EMPLEADO', employeeRoomPath(RESERVATION));
 
     expect(
@@ -509,35 +470,25 @@ describe('Sala de la sesión · empleado (HU-FE-12)', () => {
 
     expect(await screen.findByRole('heading', { name: 'La sala está lista' })).toBeInTheDocument();
     await user.click(lobby().getByRole('button', { name: 'Entrar a la llamada' }));
-    expect(lobby().getByRole('button', { name: 'Encendiendo tu cámara…' })).toBeDisabled();
-    await act(async () => {
-      camera.release('ok');
-      await Promise.resolve();
-    });
-    await screen.findByRole('region', { name: 'Videollamada' });
 
-    // Laura ya estaba: saluda, el empleado confirma y responde su oferta.
-    expect(await laura.next('LISTO')).toMatchObject({ media: { audio: true, video: true } });
-    laura.send({ type: 'LISTO', media: { audio: true, video: false } });
-    expect(await laura.next('LISTO', 2)).toMatchObject({ type: 'LISTO' });
-    laura.send({ type: 'OFERTA', id: 'n-1', sdp: 'oferta-de-laura' });
-    expect(await laura.next('RESPUESTA')).toEqual({
-      type: 'RESPUESTA',
-      id: 'n-1',
-      sdp: 'respuesta-1',
-    });
-    expect(peers.last().remoteDescription).toEqual({ type: 'offer', sdp: 'oferta-de-laura' });
+    await connectedWith([
+      person({ id: DAVID, name: 'David Cajamarca', self: true }),
+      person({ id: LAURA, name: 'Laura Martínez', media: { audio: true, video: false } }),
+    ]);
+    // Su permiso de video es suyo: el servidor lo firma para el empleado y esta sesión.
+    expect(video.connect).toHaveBeenCalledWith(
+      expect.objectContaining({ token: `token-de-${DAVID}-para-${RESERVATION}` }),
+    );
     expect(
       callRegion().getByRole('figure', { name: 'Laura Martínez, cámara apagada' }),
     ).toBeInTheDocument();
   });
 
   it('vuelve a sus citas al salir', async () => {
-    installCamera();
-    installPeerConnection();
     await activateAsPsychologist();
     const { user, router } = await openAs('EMPLEADO', employeeRoomPath(RESERVATION));
     await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
+    await connectedWith([person({ id: DAVID, name: 'David Cajamarca', self: true })]);
     // El empleado ve la misma conversación con su psicóloga dentro de la llamada.
     expect(
       await screen.findByRole('region', { name: 'Chat con Laura Martínez' }),
@@ -546,34 +497,5 @@ describe('Sala de la sesión · empleado (HU-FE-12)', () => {
     await user.click(await screen.findByRole('button', { name: 'Salir de la sala' }));
 
     expect(router.state.location.pathname).toBe(EMPLOYEE_PATHS.appointments);
-  });
-
-  it('las señales de otra sala o mal formadas no llegan a la llamada', async () => {
-    installCamera();
-    const peers = installPeerConnection();
-    await activateAsPsychologist();
-    const { user } = await openAs('EMPLEADO', employeeRoomPath(RESERVATION));
-    await user.click(await screen.findByRole('button', { name: 'Entrar a la llamada' }));
-    await screen.findByRole('region', { name: 'Videollamada' });
-    const david = 'usr-empleado-001';
-
-    act(() => {
-      publishToUser(david, ROOMS_QUEUE, {
-        type: 'SENAL',
-        reservationId: 'reserva-18',
-        signal: { type: 'OFERTA', id: 'n-9', sdp: 'otra-sala' },
-      });
-      publishToUser(david, ROOMS_QUEUE, { type: 'SENAL', reservationId: RESERVATION, signal: {} });
-      publishToUser(david, ROOMS_QUEUE, {
-        type: 'SENAL',
-        reservationId: RESERVATION,
-        signal: { type: 'OFERTA', id: 'n-1', sdp: 'de-laura' },
-      });
-    });
-
-    await waitFor(() => {
-      expect(peers.last().remoteDescription).toEqual({ type: 'offer', sdp: 'de-laura' });
-    });
-    expect(peers.last().index).toBe(1);
   });
 });

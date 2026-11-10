@@ -3,11 +3,11 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ChatComposer } from '@/features/chat/components/ChatComposer';
 import { formatTime } from '@/shared/lib/dates';
 import { AlertIcon } from '@/shared/ui/icons';
-import type { GroupChatMessage } from '../call/groupCall';
+import type { CallChatMessage } from '@/features/videoCall/call/videoCall';
 import styles from './GroupChatPanel.module.css';
 
 interface GroupChatPanelProps {
-  messages: readonly GroupChatMessage[];
+  messages: readonly CallChatMessage[];
   failed: boolean;
   onSend: (text: string) => void;
 }

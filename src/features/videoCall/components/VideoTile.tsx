@@ -4,7 +4,7 @@ import { cx } from '@/shared/lib/cx';
 import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
 import { Avatar } from '@/shared/ui/Avatar/Avatar';
 import { MicOffIcon } from '@/shared/ui/icons';
-import type { MediaState } from '../model/roomEvent';
+import type { MediaState } from '../call/videoCall';
 import styles from './VideoTile.module.css';
 
 interface VideoTileProps {

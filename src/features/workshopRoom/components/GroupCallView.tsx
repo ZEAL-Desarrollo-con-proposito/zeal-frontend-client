@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { CallControls } from '@/features/sessionRoom/components/CallControls';
-import { VideoTile } from '@/features/sessionRoom/components/VideoTile';
-import type { MediaErrorReason } from '@/features/sessionRoom/call/localMedia';
-import { MEDIA_ERROR_MESSAGES } from '@/features/sessionRoom/call/localMedia';
-import type { MediaState } from '@/features/sessionRoom/model/roomEvent';
+import { CallControls } from '@/features/videoCall/components/CallControls';
+import { VideoTile } from '@/features/videoCall/components/VideoTile';
+import type { MediaErrorReason } from '@/features/videoCall/call/mediaError';
+import { MEDIA_ERROR_MESSAGES } from '@/features/videoCall/call/mediaError';
+import type { MediaState } from '@/features/videoCall/call/videoCall';
 import { AlertIcon } from '@/shared/ui/icons';
-import type { GroupCallSnapshot, GroupChatMessage } from '../call/groupCall';
-import { participantLabel } from '../call/groupCall';
+import type { VideoCallSnapshot, CallChatMessage } from '@/features/videoCall/call/videoCall';
+import { participantLabel } from '@/features/videoCall/call/videoCall';
 import { GroupChatPanel } from './GroupChatPanel';
 import styles from './GroupCallView.module.css';
 
 interface GroupCallViewProps {
-  snapshot: GroupCallSnapshot;
+  snapshot: VideoCallSnapshot;
   media: MediaState;
   mediaError: MediaErrorReason | null;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onLeave: () => void;
-  messages: readonly GroupChatMessage[];
+  messages: readonly CallChatMessage[];
   chatFailed: boolean;
   onSendMessage: (text: string) => void;
 }

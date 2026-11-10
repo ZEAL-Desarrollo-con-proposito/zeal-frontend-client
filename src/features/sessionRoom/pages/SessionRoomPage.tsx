@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ChatConversation } from '@/features/chat/components/ChatConversation';
 import { conversationId } from '@/features/chat/model/chatMessage';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
+import { useVideoCall } from '@/features/videoCall/hooks/useVideoCall';
 import { ApiError } from '@/shared/api/errors';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useNow } from '@/shared/hooks/useNow';
@@ -14,9 +15,8 @@ import { ArrowLeftIcon, LockIcon } from '@/shared/ui/icons';
 import { CallView } from '../components/CallView';
 import { RoomLobby } from '../components/RoomLobby';
 import { useActivateRoom } from '../hooks/useActivateRoom';
-import { useCall } from '../hooks/useCall';
 import { useRoom } from '../hooks/useRoom';
-import type { Room } from '../model/room';
+import type { Room, RoomPhase } from '../model/room';
 import { roomBadge, roomPhase } from '../model/room';
 import styles from './SessionRoomPage.module.css';
 
@@ -30,10 +30,13 @@ interface SessionRoomPageProps {
   exit: RoomExit;
 }
 
+/** Con la sala en estas fases ya no hay sesión: si la llamada sigue abierta, se cierra. */
+const OVER: ReadonlySet<RoomPhase['kind']> = new Set(['cancelled', 'finished', 'closed']);
+
 /**
  * Sala de una sesión 1:1 (Figma C2), a pantalla completa. El psicólogo la activa dentro de la
  * ventana que fija el servidor; el empleado espera y entra en cuanto se activa, sin recargar.
- * Adentro, el video de los dos se conecta por WebRTC.
+ * Adentro, el video de los dos pasa por el servidor de medios, como en los talleres (ADR-14).
  */
 export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
   const { reservationId = '' } = useParams();
@@ -43,19 +46,29 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
   const now = useNow();
   const room = useRoom(reservationId);
   const activation = useActivateRoom(reservationId);
-  const call = useCall({
-    reservationId,
-    role: host ? 'caller' : 'callee',
-    iceServers: room.data?.iceServers ?? [],
-  });
+  const call = useVideoCall();
   // En la sesión 1:1 el chat empieza abierto: es la misma conversación de Mensajes.
   const [chatOpen, setChatOpen] = useState(true);
   useDocumentTitle('Sala de sesión');
 
+  const over = room.data !== null && OVER.has(roomPhase(room.data, now).kind);
+  const joined = call.phase.kind === 'joined';
+  const { leave: hangUp } = call;
+  useEffect(() => {
+    if (over && joined) {
+      hangUp();
+    }
+  }, [over, joined, hangUp]);
+
   async function activateAndJoin() {
-    if (await activation.activate()) {
-      room.reload();
-      await call.join();
+    const activated = await activation.activate();
+    if (activated === null) {
+      return;
+    }
+    room.reload();
+    const phase = roomPhase(activated, Date.now());
+    if (phase.kind === 'active') {
+      await call.join(phase.connection);
     }
   }
 
@@ -74,9 +87,9 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
         <CallView
           participant={participant}
           selfName={user.fullName}
-          call={call.call}
-          localStream={call.phase.localStream}
+          snapshot={call.phase.snapshot}
           media={call.media}
+          mediaError={call.mediaError}
           onToggleAudio={call.toggleAudio}
           onToggleVideo={call.toggleVideo}
           onLeave={leave}
@@ -105,7 +118,7 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
         callPhase={call.phase}
         activation={activation}
         onActivate={() => void activateAndJoin()}
-        onJoin={() => void call.join()}
+        onJoin={(connection) => void call.join(connection)}
       />
     );
   }
@@ -151,7 +164,7 @@ function RoomHeader({ room, now, exit }: Readonly<RoomHeaderProps>) {
       {badge !== null && <Badge tone={badge.tone}>{badge.label}</Badge>}
       <p className={styles.secure}>
         <LockIcon />
-        Cifrado de extremo a extremo · WebRTC
+        Cifrado en tránsito · solo ustedes dos
       </p>
     </header>
   );

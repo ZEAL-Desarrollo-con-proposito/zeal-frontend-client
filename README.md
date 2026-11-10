@@ -64,7 +64,7 @@ abre, con `React.lazy` y `Suspense` (`src/app/lazyPages.ts`):
 Nadie descarga las pantallas de un rol que no es el suyo. Al entrar directo a una sección se ve
 "Cargando la sección…" (anunciado a lectores de pantalla) dentro de la estructura; al cambiar de
 sección, la pantalla anterior sigue a la vista hasta que llega la nueva. El SDK de video
-(`livekit-client`, ≈520 kB) solo se descarga dentro de la sala de un taller: es la única excepción
+(`livekit-client`, ≈520 kB) solo se descarga al entrar a una sala de video: es la única excepción
 al límite de 500 kB por paquete (`vite.config.ts`).
 
 ## Estructura
@@ -328,19 +328,21 @@ solo dentro de la ventana de ingreso (en el simulador: desde 10 minutos antes ha
 ```json
 {
   "reservationId": "reserva-16",
-  "status": "PROGRAMADA",
+  "status": "ACTIVA",
   "startsAt": "2026-09-23T14:00:00.000Z",
   "endsAt": "2026-09-23T14:50:00.000Z",
   "opensAt": "2026-09-23T13:50:00.000Z",
   "closesAt": "2026-09-23T14:50:00.000Z",
   "participant": { "id": "usr-empleado-001", "fullName": "David Cajamarca" },
-  "iceServers": [{ "urls": "turn:turn.zeal.co:3478", "username": "…", "credential": "…" }]
+  "connection": { "serverUrl": "/livekit", "token": "<JWT de LiveKit>" }
 }
 ```
 
 `status` ∈ `PROGRAMADA` (sin activar), `ACTIVA`, `CANCELADA`, `FINALIZADA`. `participant` es la otra
-persona de la sesión. `iceServers` son los STUN/TURN para el video, con credenciales temporales que
-entrega el servidor (el simulador envía `[]`: las dos pestañas están en el mismo equipo).
+persona de la sesión. `connection` es el permiso de video (tarea 482, ADR-14): solo viene con la
+sala `ACTIVA` y dentro de la ventana de ingreso, firmado para quien pide y para esa sala; en otro
+caso es `null`. `activar` responde la sala ya con el permiso del psicólogo. El campo `iceServers`
+del contrato anterior ya no se usa: el TURN lo resuelve el servidor de medios.
 
 ### Contrato de publicación de proyectos (acordar con HU-BE-14)
 
@@ -524,15 +526,9 @@ ahí hasta el primer cuadro que pinta después de procesarlo y lo agrega en un h
   `{ "type": "LEIDAS", "ids": [...] }` cuando se marcan como leídas en otra pestaña o equipo. Lo
   que llega mientras carga la lista no se pierde, y al reconectar se vuelve a pedir.
 - **Cola privada `/user/queue/salas`:** `{ "type": "SALA_ACTUALIZADA", "reservationId": … }` cuando
-  la sala cambia (se activó o se canceló la sesión; el cliente la vuelve a pedir) y
-  `{ "type": "SENAL", "reservationId": …, "signal": <señal> }` con las señales de la otra persona.
-- **Señalización WebRTC (HU-FE-12):** cada participante envía (STOMP `SEND`) a
-  `/app/salas/{id}/senales` y el servidor reenvía a la otra persona, solo si ambos son participantes
-  y la sala está activa. Señales: `LISTO` (entré o me reconecté, con el estado de micrófono y
-  cámara), `OFERTA` y `RESPUESTA` (`id` de la negociación y `sdp`), `CANDIDATO` (`id` y candidato
-  ICE), `MEDIOS` (cambié micrófono o cámara) y `SALIO`. Solo el psicólogo ofrece, así nunca se cruzan
-  dos negociaciones; lo de una negociación anterior se descarta por su `id`. Si la conexión falla o
-  se recupera el tiempo real, se vuelve a negociar.
+  la sala cambia (se activó o se canceló la sesión; el cliente la vuelve a pedir). El video ya no
+  pasa por el Real-Time Gateway: va por el servidor de medios (ver
+  [Videollamadas](#videollamadas-adr-14)).
 - **Canal de cada convocatoria `/topic/proyectos/{id}/cupos` (HU-FE-16):**
   `{ "type": "CUPOS", "projectId": …, "capacity": …, "occupied": …, "version": … }` cuando el
   servidor asigna, libera o amplía cupos. Un aviso con versión menor o igual a la conocida se
@@ -567,10 +563,35 @@ ahí hasta el primer cuadro que pinta después de procesarlo y lo agrega en un h
   recuperarse la conexión se vuelve a pedir la semana para no perder cambios.
 - **Con el simulador:** el tiempo real se simula entre pestañas del mismo navegador. Para verlo,
   inicia sesión como psicóloga, abre `/psicologo/disponibilidad` en dos pestañas y abre o elimina una
-  franja en una de ellas. Para la videollamada hacen falta dos sesiones a la vez: como la cookie de
-  refresh es una por navegador, inicia sesión como psicóloga en una ventana normal y como empleado
-  en una de incógnito durante una sesión en curso. La psicóloga activa la sala desde su agenda y el
-  empleado, que espera desde "Ir a la sala" en Mis citas, entra en cuanto se activa.
+  franja en una de ellas. Para la sala de una sesión hacen falta dos sesiones a la vez: como la
+  cookie de refresh es una por navegador, inicia sesión como psicóloga en una ventana normal y como
+  empleado en una de incógnito durante una sesión en curso. La psicóloga activa la sala desde su
+  agenda y el empleado, que espera desde "Ir a la sala" en Mis citas, ve al instante que puede
+  entrar. El simulador entrega el permiso de video, pero no hay servidor de medios: el video
+  conecta con el backend real (LiveKit en `zeal-infra-compose`).
+
+## Videollamadas (ADR-14)
+
+La sesión 1:1 y los talleres en vivo usan el mismo camino de medios: LiveKit (SFU) detrás del API
+Gateway en `/livekit`. El código vive en `src/features/videoCall` (adaptador de LiveKit, la llamada,
+el mosaico de video y los controles) y lo usan las dos salas.
+
+- **Permiso:** el backend entrega en la sala `connection` (`serverUrl` y un `token` firmado para esa
+  persona y esa sala) solo mientras se puede entrar. Una ruta relativa (`/livekit`) se resuelve
+  contra el API Gateway y pasa a WebSocket (`ws`/`wss`).
+- **Al entrar** se encienden micrófono y cámara; si el navegador los niega, la persona sigue en la
+  sala (escucha y ve) y se le explica cómo dar el permiso.
+- **Al salir**, cerrar o recargar la pestaña se deja la sala de video (`disconnectOnPageLeave`): la
+  otra persona ve al instante "salió de la sala". Si se pierde la conexión, LiveKit la recupera
+  sola y se avisa "Reconectando…".
+- **TURN:** lo configura el servidor de medios (coturn permanente, tarea 421); el navegador no
+  recibe credenciales STUN/TURN.
+- **Sesión 1:1:** el psicólogo activa la sala y entra con el permiso que devuelve la activación; el
+  empleado entra en cuanto se activa. Si la sesión se cancela, termina o la sala cierra con la
+  llamada abierta, se sale. El chat es la conversación de Mensajes, al lado del video.
+- **Taller:** la empresa es anfitriona; el chat del taller viaja por la sala de video y solo lo ven
+  quienes están adentro.
+- El SDK (≈520 kB) solo se descarga al entrar a una sala de video.
 
 ## Disponibilidad (HU-FE-19)
 

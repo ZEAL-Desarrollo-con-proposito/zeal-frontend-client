@@ -37,28 +37,8 @@ const REASONS_BY_ERROR: Partial<Record<string, MediaErrorReason>> = {
   NotSupportedError: 'unsupported',
 };
 
-/** El navegador rechaza `getUserMedia` con un `DOMException`; su `name` dice el motivo. */
+/** El navegador rechaza la cámara con un `DOMException`; su `name` dice el motivo. */
 export function mediaErrorReason(error: unknown): MediaErrorReason {
   const name = isRecord(error) && typeof error.name === 'string' ? error.name : '';
   return REASONS_BY_ERROR[name] ?? 'unknown';
-}
-
-/** Cámara (hasta 720p) y micrófono; el navegador pide el permiso la primera vez. */
-export async function requestLocalMedia(): Promise<MediaStream> {
-  // Fuera de un contexto seguro (https o localhost) el navegador no expone la cámara.
-  const devices = navigator.mediaDevices as MediaDevices | undefined;
-  if (devices === undefined) {
-    throw new DOMException('La cámara no está disponible en esta página', 'NotSupportedError');
-  }
-  return devices.getUserMedia({
-    audio: true,
-    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-  });
-}
-
-/** Apaga la cámara y el micrófono (se apaga también la luz de la cámara). */
-export function stopMedia(stream: MediaStream): void {
-  for (const track of stream.getTracks()) {
-    track.stop();
-  }
 }

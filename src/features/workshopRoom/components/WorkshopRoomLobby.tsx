@@ -2,20 +2,17 @@ import { motion } from 'motion/react';
 import { formatTime } from '@/shared/lib/dates';
 import { Button } from '@/shared/ui/Button/Button';
 import { AlertIcon } from '@/shared/ui/icons';
-import type { GroupCallPhase } from '../hooks/useGroupCall';
-import type {
-  WorkshopRoomConnection,
-  WorkshopRoomPhase,
-  WorkshopRoomRole,
-} from '../model/workshopRoom';
+import type { VideoCallPhase } from '@/features/videoCall/hooks/useVideoCall';
+import type { VideoConnection } from '@/features/videoCall/call/videoCall';
+import type { WorkshopRoomPhase, WorkshopRoomRole } from '../model/workshopRoom';
 import styles from './WorkshopRoomLobby.module.css';
 
 interface WorkshopRoomLobbyProps {
   phase: WorkshopRoomPhase;
   role: WorkshopRoomRole;
   enrolled: number;
-  callPhase: GroupCallPhase;
-  onJoin: (connection: WorkshopRoomConnection) => void;
+  callPhase: VideoCallPhase;
+  onJoin: (connection: VideoConnection) => void;
 }
 
 interface LobbyView {

@@ -10,7 +10,7 @@ import {
   MicOffIcon,
   PhoneOffIcon,
 } from '@/shared/ui/icons';
-import type { MediaState } from '../model/roomEvent';
+import type { MediaState } from '../call/videoCall';
 import styles from './CallControls.module.css';
 
 /** Chat dentro de la llamada: abierto o cerrado, y cuántos mensajes llegaron sin verse. */

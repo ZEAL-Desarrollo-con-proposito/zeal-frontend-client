@@ -33,7 +33,7 @@ describe('roomApi (contrato con HU-BE-12)', () => {
     configureHttpAuth(null);
   });
 
-  it('el psicólogo ve la sala con el paciente, la ventana de ingreso y los servidores ICE', async () => {
+  it('el psicólogo ve la sala con el paciente y la ventana de ingreso, sin permiso de video aún', async () => {
     authenticateAs('PSICOLOGO');
 
     await expect(fetchRoom('reserva-16')).resolves.toEqual({
@@ -44,7 +44,7 @@ describe('roomApi (contrato con HU-BE-12)', () => {
       opensAt: at(8, 50),
       closesAt: at(9, 50),
       participant: { id: 'usr-empleado-001', fullName: 'David Cajamarca' },
-      iceServers: [],
+      connection: null,
     });
   });
 
@@ -82,10 +82,17 @@ describe('roomApi (contrato con HU-BE-12)', () => {
     authenticateAs('PSICOLOGO');
 
     await expect(activateRoom('reserva-16')).resolves.toMatchObject({ status: 'ACTIVA' });
-    await expect(activateRoom('reserva-16')).resolves.toMatchObject({ status: 'ACTIVA' });
+    await expect(activateRoom('reserva-16')).resolves.toMatchObject({
+      status: 'ACTIVA',
+      connection: { serverUrl: '/livekit', token: 'token-de-usr-psicologo-001-para-reserva-16' },
+    });
 
+    // Cada participante recibe su propio permiso de video (ADR-14).
     authenticateAs('EMPLEADO');
-    await expect(fetchRoom('reserva-16')).resolves.toMatchObject({ status: 'ACTIVA' });
+    await expect(fetchRoom('reserva-16')).resolves.toMatchObject({
+      status: 'ACTIVA',
+      connection: { serverUrl: '/livekit', token: 'token-de-usr-empleado-001-para-reserva-16' },
+    });
   });
 
   it.each([

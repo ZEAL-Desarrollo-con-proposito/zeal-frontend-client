@@ -10,7 +10,7 @@ import { LinkButton } from '@/shared/ui/Button/LinkButton';
 import { ArrowLeftIcon, LockIcon } from '@/shared/ui/icons';
 import { GroupCallView } from '../components/GroupCallView';
 import { WorkshopRoomLobby } from '../components/WorkshopRoomLobby';
-import { useGroupCall } from '../hooks/useGroupCall';
+import { useVideoCall } from '@/features/videoCall/hooks/useVideoCall';
 import { useWorkshopRoom } from '../hooks/useWorkshopRoom';
 import type { WorkshopRoom } from '../model/workshopRoom';
 import { workshopRoomPhase } from '../model/workshopRoom';
@@ -39,7 +39,7 @@ export function WorkshopRoomPage({ exit }: Readonly<WorkshopRoomPageProps>) {
   const navigate = useNavigate();
   const now = useNow(CLOCK_REFRESH_MS);
   const room = useWorkshopRoom(workshopId);
-  const call = useGroupCall();
+  const call = useVideoCall();
   const phase = room.data === null ? null : workshopRoomPhase(room.data, now);
   useDocumentTitle('Sala del taller');
 
