@@ -584,6 +584,33 @@ El backend corre en varias réplicas detrás de un balanceador; el cliente toler
   réplica del Real-Time Gateway) y cada vista vuelve a pedir su estado para no perder lo que pasó
   sin conexión.
 
+## Despliegue (HU-FE-19, ADR-13)
+
+El frontend corre en su propio nodo: una imagen de nginx con el build de producción (sin MSW) que
+el balanceador (`api-gateway` de `zeal-infra-compose`) recibe por `/`, mientras enruta `/api` y
+`/ws` a los servicios. Para el navegador todo es el mismo origen.
+
+```bash
+docker build -t zeal/frontend-client .
+docker run -d --name zeal-web -p 3000:80 zeal/frontend-client   # http://localhost:3000/healthz → ok
+```
+
+- **Configuración del build:** `VITE_API_BASE_URL` vacío (el API en el mismo origen) y
+  `VITE_REALTIME_URL=/ws` (el Real-Time Gateway detrás del balanceador). Se cambian con
+  `--build-arg` si el gateway vive en otro origen.
+- **`/healthz`:** responde `ok` sin tocar el backend; lo usan el `HEALTHCHECK` de la imagen y el
+  balanceador para saber si el nodo está vivo.
+- **Caché:** `index.html` y las rutas de la SPA van con `no-cache`; los paquetes de `/assets` llevan
+  hash en el nombre y se cachean un año (`immutable`), con gzip. Un paquete que no existe responde
+  `404`, nunca el `index.html`.
+- **Versiones mezcladas:** cada build cambia el nombre de los paquetes de sección. Tras un
+  despliegue, o si el balanceador alterna entre nodos con versiones distintas, una pestaña con la
+  versión anterior pide un paquete que ya no existe: la app recarga sola para traer la vigente
+  (`src/app/staleBuild.ts`). Si vuelve a fallar en menos de 30 s, no insiste y muestra el error.
+- **Varios nodos:** la imagen no guarda estado (la sesión vive en la pestaña y en la cookie del
+  backend), así que se pueden correr varias réplicas detrás del balanceador. Todas deben salir del
+  mismo build para que los nombres de los paquetes coincidan.
+
 ## Sesión y seguridad
 
 - **Rutas por rol:** cada rol vive bajo su prefijo (`/empleado`, `/psicologo`, `/admin`). Sin
