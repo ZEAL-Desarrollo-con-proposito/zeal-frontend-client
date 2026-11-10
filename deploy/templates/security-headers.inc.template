@@ -1,0 +1,16 @@
+# Cabeceras de seguridad del frontend (HU-FE-21). `always`: también en los errores (p. ej. un 404).
+#
+# Content-Security-Policy: solo corre el código propio. El API, el tiempo real (/ws) y LiveKit
+# (/livekit) llegan por el mismo origen del balanceador; si alguno vive en otro origen, se agrega a
+# CSP_CONNECT_SRC al arrancar el contenedor. El hash de style-src es el de un <style> vacío: Motion
+# lo crea y le agrega reglas por CSSOM en las animaciones de salida (popLayout); un <style> con
+# contenido inyectado sigue bloqueado.
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; img-src 'self' data:; font-src 'self'; connect-src ${CSP_CONNECT_SRC}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+# El navegador no adivina tipos: un archivo solo se ejecuta como script si se sirve como tal.
+add_header X-Content-Type-Options "nosniff" always;
+# Nadie puede incrustar la app en un iframe (clickjacking); frame-ancestors lo dice en CSP.
+add_header X-Frame-Options "DENY" always;
+# Las direcciones llevan ids de citas y salas: no salen del sitio en el Referer.
+add_header Referrer-Policy "same-origin" always;
+# Cámara y micrófono solo para la app (salas de video); lo demás, apagado.
+add_header Permissions-Policy "camera=(self), microphone=(self), display-capture=(), geolocation=(), payment=(), usb=()" always;

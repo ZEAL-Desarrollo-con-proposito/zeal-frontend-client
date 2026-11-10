@@ -597,7 +597,8 @@ docker run -d --name zeal-web -p 3000:80 zeal/frontend-client   # http://localho
 
 - **Configuración del build:** `VITE_API_BASE_URL` vacío (el API en el mismo origen) y
   `VITE_REALTIME_URL=/ws` (el Real-Time Gateway detrás del balanceador). Se cambian con
-  `--build-arg` si el gateway vive en otro origen.
+  `--build-arg` si el gateway vive en otro origen; en ese caso ese origen también va en
+  `CSP_CONNECT_SRC` (ver [Cabeceras de seguridad](#cabeceras-de-seguridad-hu-fe-21)).
 - **`/healthz`:** responde `ok` sin tocar el backend; lo usan el `HEALTHCHECK` de la imagen y el
   balanceador para saber si el nodo está vivo.
 - **Caché:** `index.html` y las rutas de la SPA van con `no-cache`; los paquetes de `/assets` llevan
@@ -610,6 +611,30 @@ docker run -d --name zeal-web -p 3000:80 zeal/frontend-client   # http://localho
 - **Varios nodos:** la imagen no guarda estado (la sesión vive en la pestaña y en la cookie del
   backend), así que se pueden correr varias réplicas detrás del balanceador. Todas deben salir del
   mismo build para que los nombres de los paquetes coincidan.
+
+### Cabeceras de seguridad (HU-FE-21)
+
+El nginx del frontend (`deploy/templates/`) envía en cada respuesta de la SPA y de `/assets`,
+también en los errores:
+
+| Cabecera                  | Valor y motivo                                                                                                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Content-Security-Policy` | Solo corre el código propio (`script-src 'self'`, sin `eval` ni scripts en línea); sin plugins, sin `<base>` ajeno y sin poder incrustar la app (`frame-ancestors 'none'`). |
+| `X-Content-Type-Options`  | `nosniff`: un archivo solo se ejecuta como script si se sirve como tal.                                                                                                     |
+| `X-Frame-Options`         | `DENY`: lo mismo que `frame-ancestors` para navegadores antiguos (clickjacking).                                                                                            |
+| `Referrer-Policy`         | `same-origin`: las direcciones llevan ids de citas y salas y no salen del sitio.                                                                                            |
+| `Permissions-Policy`      | Cámara y micrófono solo para la app (salas de video); geolocalización, pagos, USB y captura de pantalla apagados.                                                           |
+
+- **Conexiones (`connect-src`):** el API, el tiempo real (`/ws`) y LiveKit (`/livekit`) llegan por
+  el mismo origen del balanceador, así que basta `'self'`. Si alguno vive en otro origen (p. ej.
+  LiveKit Cloud), se agrega al arrancar el contenedor, sin reconstruir la imagen:
+  `docker run -e CSP_CONNECT_SRC="'self' wss://video.zeal.co" ...`.
+- **Estilos:** `style-src 'self'` más el hash de un `<style>` vacío: Motion lo crea y le agrega
+  reglas por CSSOM en las animaciones de salida (`mode="popLayout"`). Un `<style>` con contenido
+  inyectado sigue bloqueado. Si se agrega una librería que inyecte estilos en línea, hay que
+  revisarlo aquí.
+- **Imágenes:** `'self'` y `data:` (Vite incrusta los íconos SVG pequeños como `data:`).
+- **HTTPS y HSTS** los pone el proxy TLS (Caddy) del borde, no este nodo.
 
 ## Sesión y seguridad
 
@@ -636,8 +661,8 @@ docker run -d --name zeal-web -p 3000:80 zeal/frontend-client   # http://localho
   quizá solo cayó una réplica. Las demás pestañas se enteran por `BroadcastChannel`, que nunca lleva
   el token. Si no hay red al cerrar sesión, no se vuelve a entrar con la cookie y se revoca en la
   próxima visita.
-- **Pendiente para producción:** configurar una Content-Security-Policy en el servidor que sirva el
-  build.
+- **Cabeceras:** la Content-Security-Policy y las demás cabeceras de seguridad las envía el nginx
+  del frontend (ver [Cabeceras de seguridad](#cabeceras-de-seguridad-hu-fe-21)).
 
 ## Identidad visual
 
