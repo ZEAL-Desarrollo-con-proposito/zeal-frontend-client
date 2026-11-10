@@ -13,7 +13,11 @@ ENV VITE_API_MOCKING=disabled \
 RUN npm run build && rm -f dist/mockServiceWorker.js
 
 FROM nginx:1.27-alpine
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+# Orígenes a los que la app se conecta (API, tiempo real y LiveKit): por defecto, el mismo origen
+# del balanceador. Si alguno vive en otro, se agrega al arrancar, p. ej.
+# docker run -e CSP_CONNECT_SRC="'self' wss://video.zeal.co" ...
+ENV CSP_CONNECT_SRC="'self'"
+COPY deploy/templates/ /etc/nginx/templates/
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 CMD wget -qO- http://127.0.0.1/healthz || exit 1

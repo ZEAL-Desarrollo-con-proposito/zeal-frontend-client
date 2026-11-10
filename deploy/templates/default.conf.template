@@ -1,7 +1,9 @@
 # Archivos estáticos de la SPA. Las rutas del cliente (/empleado/..., /psicologo/...) caen en index.html.
+# La imagen de nginx convierte esta plantilla en /etc/nginx/conf.d/default.conf al arrancar.
 server {
     listen 80;
     root /usr/share/nginx/html;
+    server_tokens off;
 
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
@@ -11,13 +13,17 @@ server {
         return 200 'ok';
     }
 
-    # Vite pone un hash en el nombre de cada recurso: se pueden cachear para siempre.
+    # Vite pone un hash en el nombre de cada recurso: se pueden cachear para siempre. Sin `always`:
+    # un 404 (un nodo con otra versión durante un despliegue) no se queda en la caché.
+    # Cada location que agrega cabeceras repite las de seguridad: nginx no hereda add_header.
     location /assets/ {
+        include /etc/nginx/conf.d/security-headers.inc;
         add_header Cache-Control "public, max-age=31536000, immutable";
         try_files $uri =404;
     }
 
     location / {
+        include /etc/nginx/conf.d/security-headers.inc;
         add_header Cache-Control "no-cache";
         try_files $uri $uri/ /index.html;
     }
