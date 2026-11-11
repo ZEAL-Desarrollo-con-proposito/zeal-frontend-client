@@ -8,6 +8,11 @@ import { Checkbox } from '@/shared/ui/Checkbox/Checkbox';
 import { TextField } from '@/shared/ui/TextField/TextField';
 import type { AuthenticatedHandler } from '../hooks/useLoginForm';
 import { useLoginForm } from '../hooks/useLoginForm';
+import {
+  formatLoginLockoutCountdown,
+  formatLoginLockoutDeadline,
+  LOGIN_LOCKOUT_MESSAGE,
+} from '../model/loginLockout';
 import styles from './LoginForm.module.css';
 
 /** Opciones visibles en el diseño que no hacen parte del alcance del MVP (HU-01: usuarios semilla). */
@@ -93,6 +98,20 @@ export function LoginForm({ onAuthenticated }: Readonly<LoginFormProps>) {
         </button>
       </div>
 
+      {form.isLocked && form.lockout !== null && (
+        <div className={styles.lockout} role="alert">
+          <p>{LOGIN_LOCKOUT_MESSAGE}</p>
+          <p className={styles.lockoutWait}>
+            <span aria-hidden="true">
+              Podrás intentarlo de nuevo en {formatLoginLockoutCountdown(form.lockout.remainingMs)}.
+            </span>
+            <span className="visually-hidden">
+              Podrás intentarlo de nuevo {formatLoginLockoutDeadline(form.lockout.until)}.
+            </span>
+          </p>
+        </div>
+      )}
+
       <AnimatePresence mode="wait" initial={false}>
         {form.submitError !== null && (
           <motion.p
@@ -109,7 +128,12 @@ export function LoginForm({ onAuthenticated }: Readonly<LoginFormProps>) {
         )}
       </AnimatePresence>
 
-      <Button type="submit" fullWidth disabled={form.isSubmitting} aria-busy={form.isSubmitting}>
+      <Button
+        type="submit"
+        fullWidth
+        disabled={form.isSubmitting || form.isLocked}
+        aria-busy={form.isSubmitting}
+      >
         {form.isSubmitting ? 'Ingresando…' : 'Iniciar sesión'}
       </Button>
 

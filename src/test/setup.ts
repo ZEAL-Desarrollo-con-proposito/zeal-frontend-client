@@ -3,6 +3,7 @@ import { cleanup, configure } from '@testing-library/react';
 import { MotionGlobalConfig } from 'motion/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { sessionStore } from '@/features/auth/storage/sessionStore';
+import { resetLoginThrottle } from '@/mocks/loginThrottle';
 import { forgetRefreshCookie } from '@/mocks/refreshSession';
 import { server } from '@/mocks/server';
 import { fakeMediaQueryList } from './media';
@@ -29,6 +30,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   server.resetHandlers();
+  resetLoginThrottle();
   sessionStore.clear();
   forgetRefreshCookie();
   localStorage.clear();

@@ -92,6 +92,10 @@ con variables de entorno (ver `.env.example`):
 | `VITE_API_BASE_URL` | _(vacío)_                  | URL del API Gateway; vacío = mismo origen del frontend. |
 | `VITE_REALTIME_URL` | `http://localhost:8083/ws` | Endpoint SockJS del Real-Time Gateway (sin simulador).  |
 
+El simulador de login bloquea el origen tras 5 intentos fallidos en 60 s y responde `429` con
+`Retry-After: 60`: sirve para probar el aviso y la cuenta atrás sin esperar a HU-BE-20. Un ingreso
+correcto reinicia el contador y el bloqueo no sobrevive a una recarga.
+
 El build de producción nunca incluye el simulador.
 
 ### Usuarios semilla (HU-01)
@@ -135,6 +139,25 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 
 ```json
 { "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
+```
+
+**429 Too Many Requests** o **403** del bouncer de CrowdSec
+
+El borde bloquea temporalmente el origen por exceso de intentos (SEG-1, ADR-15). La cabecera
+`Retry-After` viaja en segundos o como fecha HTTP. Sin cabecera, el cliente aplica una espera
+conservadora de 60 s; `Retry-After: 0` se trata como un segundo para evitar un bucle inmediato.
+Las esperas largas se muestran en horas o días. El frontend no muestra el `message` del servidor
+para no revelar si la cuenta existe: avisa que la red está bloqueada, cuenta atrás y deshabilita
+el envío hasta que venza. Si el API está en otro origen, el gateway debe exponer la cabecera
+(`Access-Control-Expose-Headers: Retry-After`), incluso en la respuesta 403 del bouncer.
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 45
+```
+
+```json
+{ "status": 429, "error": "Too Many Requests", "message": "Demasiados intentos desde esta red" }
 ```
 
 El login y la renovación ponen el refresh token en una cookie `httpOnly`, `Secure` y
@@ -595,6 +618,10 @@ El backend corre en varias réplicas detrás de un balanceador; el cliente toler
   para no revelar que existe. Si la lista de una pantalla responde `404` (`listing` en `useFetch` y
   `useLiveFetch`), la pantalla se reemplaza por "No encontramos esta página", sin nada de su
   contenido ni reintento. Un `403` que aún llegue se muestra como "Permiso denegado".
+- **Bloqueo por intentos (SEG-1, ADR-15):** el borde (NGINX/CrowdSec) limita los intentos por
+  origen. El login reconoce el `429` y el `403` del bouncer con o sin `Retry-After`, muestra un
+  aviso sin revelar si la cuenta existe, cuenta atrás y deshabilita el envío hasta que vence. No
+  reintenta solo el login; el simulador reproduce el bloqueo tras 5 fallos en 60 s.
 - **Token (SEG-2, ADR-07):** se envía como `Authorization: Bearer <token>` y vive solo en la memoria de la
   pestaña: nada queda en `localStorage` ni en `sessionStorage`. El frontend solo lee el claim `exp`;
   la firma la valida el servidor.

@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse } from 'msw';
 import { LOGIN_ENDPOINT, LOGOUT_ENDPOINT, REFRESH_ENDPOINT } from '@/features/auth/api/authApi';
 import type { AuthUser } from '@/features/auth/model/session';
+import { blockedSeconds, registerFailedLogin, registerSuccessfulLogin } from './loginThrottle';
 import { errorBody } from './mockAuth';
 import { createMockToken, MOCK_TOKEN_TTL_SECONDS } from './mockToken';
 import { notificationHandlers } from './notifications/handlers';
@@ -45,6 +46,14 @@ function sessionResponse(user: AuthUser) {
 const authHandlers = [
   http.post<never, LoginRequestBody>(`*${LOGIN_ENDPOINT}`, async ({ request }) => {
     await delay();
+    const blocked = blockedSeconds();
+    if (blocked > 0) {
+      return HttpResponse.json(
+        { status: 429, error: 'Too Many Requests', message: 'Demasiados intentos desde esta red' },
+        { status: 429, headers: { 'Retry-After': String(blocked) } },
+      );
+    }
+
     const { email, password, remember } = await request.json();
 
     if (typeof email !== 'string' || typeof password !== 'string') {
@@ -53,9 +62,11 @@ const authHandlers = [
 
     const user = findSeedUser(email, password);
     if (user === undefined) {
+      registerFailedLogin();
       return errorBody(401, 'Unauthorized', 'Correo o contraseña incorrectos');
     }
 
+    registerSuccessfulLogin();
     startRefreshFamily(user.id, remember === true);
     return sessionResponse(user);
   }),

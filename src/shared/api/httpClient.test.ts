@@ -103,6 +103,23 @@ describe('httpClient.request', () => {
   });
 
   it.each([
+    ['con Retry-After', { 'Retry-After': '45' }, 45],
+    ['sin Retry-After', undefined, null],
+  ])('adjunta la espera de la cabecera %s al error', async (_case, headers, expected) => {
+    server.use(
+      http.post(`*${ENDPOINT}`, () =>
+        HttpResponse.json({ message: 'Demasiados intentos' }, { status: 429, headers }),
+      ),
+    );
+
+    const error: unknown = await request(ENDPOINT, { method: 'POST' }).catch(
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toMatchObject({ status: 429, retryAfterSeconds: expected });
+  });
+
+  it.each([
     ['sin cuerpo', () => new HttpResponse(null, { status: 500 })],
     ['con un mensaje vacío', () => HttpResponse.json({ message: ' ' }, { status: 500 })],
     ['con un cuerpo que no es objeto', () => HttpResponse.json('texto', { status: 500 })],
