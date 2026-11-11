@@ -1,8 +1,9 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE_HOME_PATH } from '@/app/paths';
 import { server } from '@/mocks/server';
+import { controlClock } from '@/test/clock';
 import { DEMO_PASSWORD, seedUser } from '@/test/credentials';
 import { renderRoute } from '@/test/renderRoute';
 import type { Role } from '../model/session';
@@ -18,6 +19,29 @@ function passwordField() {
 
 function submitButton() {
   return screen.getByRole('button', { name: 'Iniciar sesión' });
+}
+
+function lockoutResponse(seconds?: number) {
+  return http.post(`*${LOGIN_ENDPOINT}`, () =>
+    HttpResponse.json(
+      { status: 429, error: 'Too Many Requests', message: 'Demasiados intentos' },
+      {
+        status: 429,
+        headers: seconds === undefined ? {} : { 'Retry-After': String(seconds) },
+      },
+    ),
+  );
+}
+
+function bouncerBlockResponse() {
+  return http.post(
+    `*${LOGIN_ENDPOINT}`,
+    () =>
+      new HttpResponse('<html><body>Blocked</body></html>', {
+        status: 403,
+        headers: { 'Content-Type': 'text/html' },
+      }),
+  );
 }
 
 describe('Pantalla de inicio de sesión', () => {
@@ -123,6 +147,107 @@ describe('Pantalla de inicio de sesión', () => {
 
     await user.click(submitButton());
     expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos');
+  });
+
+  describe('bloqueo por exceso de intentos (SEG-1)', () => {
+    beforeEach(() => {
+      controlClock();
+    });
+
+    async function requestLockout() {
+      const { user } = await renderRoute('/login');
+      await user.type(emailField(), seedUser('EMPLEADO').email);
+      await user.type(passwordField(), DEMO_PASSWORD);
+      await user.click(submitButton());
+      return { alert: await screen.findByRole('alert'), user };
+    }
+
+    it('avisa sin revelar la cuenta, conserva la contraseña y cuenta atrás', async () => {
+      server.use(lockoutResponse(45));
+      const { alert } = await requestLockout();
+
+      expect(alert).toHaveTextContent(
+        'El acceso desde esta red está bloqueado temporalmente por demasiados intentos.',
+      );
+      expect(alert).not.toHaveTextContent(seedUser('EMPLEADO').email);
+      expect(alert).not.toHaveTextContent('cuenta');
+      expect(passwordField()).toHaveValue(DEMO_PASSWORD);
+      expect(submitButton()).toBeDisabled();
+      expect(screen.getByText(/0:45/)).toBeInTheDocument();
+
+      const form = emailField().closest('form');
+      if (form !== null) {
+        fireEvent.submit(form);
+      }
+      expect(screen.getByText(/0:45/)).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+      expect(screen.getByText(/0:44/)).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(44_000);
+      });
+      expect(submitButton()).toBeEnabled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('sin Retry-After aplica una espera conservadora de un minuto', async () => {
+      server.use(lockoutResponse());
+      await requestLockout();
+
+      expect(screen.getByText(/1:00/)).toBeInTheDocument();
+      expect(submitButton()).toBeDisabled();
+
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(submitButton()).toBeEnabled();
+    });
+
+    it('trata un 403 del bouncer sin Retry-After como bloqueo de un minuto', async () => {
+      server.use(bouncerBlockResponse());
+      const { alert } = await requestLockout();
+
+      expect(alert).toHaveTextContent(/bloqueado temporalmente/);
+      expect(submitButton()).toBeDisabled();
+      expect(screen.getByText(/1:00/)).toBeInTheDocument();
+    });
+
+    it('respeta Retry-After: 0 con una espera mínima de un segundo', async () => {
+      server.use(lockoutResponse(0));
+      await requestLockout();
+
+      expect(screen.getByText(/0:01/)).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+      expect(submitButton()).toBeEnabled();
+    });
+
+    it('muestra esperas largas en días y horas', async () => {
+      server.use(lockoutResponse(3_600_000));
+      await requestLockout();
+
+      expect(screen.getByText(/41 d 16 h/)).toBeInTheDocument();
+      expect(submitButton()).toBeDisabled();
+    });
+
+    it('permite volver a intentarlo cuando el bloqueo vence', async () => {
+      server.use(lockoutResponse(5));
+      const { user } = await requestLockout();
+
+      act(() => {
+        vi.advanceTimersByTime(5_000);
+      });
+      server.resetHandlers();
+
+      await user.click(submitButton());
+
+      expect(await screen.findByRole('heading', { name: 'Hola, David' })).toBeInTheDocument();
+    });
   });
 
   it.each([

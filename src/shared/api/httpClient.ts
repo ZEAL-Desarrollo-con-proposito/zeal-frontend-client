@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/shared/config/apiBaseUrl';
 import { ApiError, NetworkError } from './errors';
+import { parseRetryAfter } from './retryAfter';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -129,7 +130,11 @@ async function sendOnce(
       return repeatAfterRenewal(path, options, renewed);
     }
   }
-  throw new ApiError(response.status, serverMessage);
+  throw new ApiError(
+    response.status,
+    serverMessage,
+    parseRetryAfter(response.headers.get('Retry-After')),
+  );
 }
 
 function repeatAfterRenewal(path: string, options: RequestOptions, token: string) {

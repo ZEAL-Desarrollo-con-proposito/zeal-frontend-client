@@ -1,4 +1,5 @@
 import { ApiError, NetworkError } from '@/shared/api/errors';
+import { isLoginLockout, LOGIN_LOCKOUT_MESSAGE } from './loginLockout';
 
 export const LOGIN_ERROR_MESSAGES = {
   invalidCredentials: 'Correo o contraseña incorrectos.',
@@ -19,6 +20,9 @@ export function describeLoginError(error: unknown): string {
   }
   if (!(error instanceof ApiError)) {
     return LOGIN_ERROR_MESSAGES.generic;
+  }
+  if (isLoginLockout(error)) {
+    return LOGIN_LOCKOUT_MESSAGE;
   }
   if (isRejectedCredentials(error)) {
     // HU-01: con credenciales inválidas se muestra el error de la respuesta 401.

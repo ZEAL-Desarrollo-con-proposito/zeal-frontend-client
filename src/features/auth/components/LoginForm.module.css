@@ -34,6 +34,22 @@
   color: var(--color-coral-strong);
 }
 
+.lockout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-coral-soft);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  color: var(--color-coral-strong);
+}
+
+.lockoutWait {
+  font-variant-numeric: tabular-nums;
+}
+
 .divider {
   display: flex;
   gap: var(--space-4);
