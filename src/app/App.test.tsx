@@ -5,7 +5,7 @@ import { App } from './App';
 
 describe('App', () => {
   it('arranca en el navegador mostrando el inicio de sesión', async () => {
-    render(<App realtimeClientFactory={() => createMockRealtimeClient()} />);
+    render(<App realtimeClientFactory={() => createMockRealtimeClient()} extraRoutes={[]} />);
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Ingresa a ZEAL' }),

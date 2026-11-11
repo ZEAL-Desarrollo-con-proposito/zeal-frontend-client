@@ -6,6 +6,8 @@ import { logout, refreshSession } from './authApi';
 const RENEWAL_LOCK = 'zeal.auth.renovacion';
 /** Marca de un cierre de sesión que no llegó al servidor. No es un secreto. */
 export const PENDING_LOGOUT_KEY = 'zeal.logout.pendiente';
+/** Marca de que esta pestaña fue a Microsoft a iniciar sesión. No es un secreto. */
+export const LOGIN_IN_PROGRESS_KEY = 'zeal.login.en-curso';
 
 let renewal: Promise<Session> | null = null;
 
@@ -25,9 +27,29 @@ export function renewSession(): Promise<Session> {
   return renewal;
 }
 
-function isLogoutPending(): boolean {
+export function isLogoutPending(): boolean {
   try {
     return localStorage.getItem(PENDING_LOGOUT_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** La pestaña se va a Microsoft a iniciar sesión: al volver, avisará a las demás pestañas. */
+export function markLoginInProgress(): void {
+  try {
+    sessionStorage.setItem(LOGIN_IN_PROGRESS_KEY, 'true');
+  } catch {
+    // Sin almacenamiento las demás pestañas no se enteran; recuperan la sesión al recargar.
+  }
+}
+
+/** Si esta pestaña volvía de iniciar sesión, lo dice una sola vez. */
+export function takeLoginInProgress(): boolean {
+  try {
+    const inProgress = sessionStorage.getItem(LOGIN_IN_PROGRESS_KEY) !== null;
+    sessionStorage.removeItem(LOGIN_IN_PROGRESS_KEY);
+    return inProgress;
   } catch {
     return false;
   }

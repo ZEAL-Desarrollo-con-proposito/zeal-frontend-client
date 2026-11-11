@@ -10,7 +10,7 @@ export interface AuthUser {
   organization: string;
 }
 
-/** Respuesta del servidor al iniciar sesión (contrato con HU-BE-01). */
+/** Sesión que entrega el servidor al renovarla con la cookie (contrato con HU-BE-22). */
 export interface LoginResponse {
   accessToken: string;
   user: AuthUser;
@@ -19,11 +19,6 @@ export interface LoginResponse {
 export interface Session extends LoginResponse {
   /** Vencimiento del token en milisegundos desde epoch (claim `exp` del JWT). */
   expiresAt: number;
-}
-
-export interface Credentials {
-  email: string;
-  password: string;
 }
 
 export function isRole(value: unknown): value is Role {

@@ -96,7 +96,10 @@ El build de producción nunca incluye el simulador.
 
 ### Usuarios semilla (HU-01)
 
-El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos: `Zeal2026*`.
+No hay registro: las empresas precargan a sus usuarios y cada persona entra con su cuenta de
+Microsoft. En el simulador, "Iniciar sesión con Microsoft" abre un selector de cuentas de prueba
+(`/simulador/microsoft`) en lugar de Microsoft; incluye una cuenta sin acceso a ZEAL
+(`persona@outlook.com`) y "Cancelar".
 
 | Rol       | Correo                      | Llega a             |
 | --------- | --------------------------- | ------------------- |
@@ -104,15 +107,28 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 | Psicóloga | `laura.martinez@zeal.co`    | `/psicologo/agenda` |
 | Admin     | `talento.humano@nexura.co`  | `/admin/panel`      |
 
-### Contrato de autenticación (acordar con HU-BE-01 y HU-BE-22)
+### Contrato de autenticación (acordar con HU-BE-22 y la tarea 484)
 
-`POST /api/auth/login`
+**Inicio de sesión con Microsoft (decisión aprobada).** ZEAL no maneja contraseñas: la persona
+entra con su cuenta de Microsoft (Outlook o Microsoft 365) por OpenID Connect, con el flujo de
+código y PKCE y el backend como cliente confidencial (patrón BFF, como recomienda _OAuth 2.0 for
+Browser-Based Apps_): los tokens de Microsoft nunca llegan al navegador.
 
-```json
-{ "email": "david.cajamarca@nexura.co", "password": "Zeal2026*", "remember": false }
-```
+1. `POST /api/auth/microsoft` con `{ "remember": false, "returnTo": "/login?desde=/empleado/mis-citas" }`
+   (con la cookie, sin `Authorization`). El backend guarda `state`, `nonce` y el verificador PKCE
+   en una cookie corta `httpOnly` y responde `200 { "authorizationUrl": "https://login.microsoftonline.com/…" }`
+   · `400` si `returnTo` no es una ruta interna. El cliente solo navega a direcciones `https` o de
+   su propio origen.
+2. El navegador va a Microsoft; la persona elige su cuenta y Microsoft vuelve a
+   `GET /api/auth/microsoft/callback?code=…&state=…` (backend). El backend valida el `state`,
+   canjea el código, valida el ID token (firma con las llaves públicas de Microsoft, emisor,
+   audiencia, `nonce` y vigencia) y busca la cuenta registrada en ZEAL por su correo.
+3. El backend redirige (`302`) a `returnTo` con la cookie de renovación de ZEAL, o a
+   `/login?error=cuenta_no_registrada`, `cancelado` o `fallo`. La app recupera la sesión con la
+   cookie (`POST /api/auth/refresh`) y, desde el login, va a la pantalla pedida (`desde`) si es de
+   su rol; si no, a su inicio. Los mensajes de error son fijos: lo que llega en la URL no se pinta.
 
-**200 OK**
+La sesión de ZEAL (`/api/auth/refresh` y `/api/auth/logout`) no cambia: **200 OK** de la renovación
 
 ```json
 {
@@ -131,20 +147,15 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 
 `role` ∈ `EMPLEADO`, `PSICOLOGO`, `ADMIN`.
 
-**401 Unauthorized**
+El callback de Microsoft y la renovación ponen el refresh token en una cookie `httpOnly`, `Secure`
+y `SameSite=Strict`: de sesión, o persistente si `remember` es `true`. Estas rutas viajan con esa
+cookie (`credentials: 'include'`) y sin `Authorization`. `POST /api/auth/login` (correo y
+contraseña) se retira.
 
-```json
-{ "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
-```
-
-El login y la renovación ponen el refresh token en una cookie `httpOnly`, `Secure` y
-`SameSite=Strict`: de sesión, o persistente si `remember` es `true`. Estas rutas viajan con
-esa cookie (`credentials: 'include'`) y sin `Authorization`.
-
-| Método y ruta            | Respuesta                                                                        |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| `POST /api/auth/refresh` | `200` como el login, con la cookie rotada · `401` sin cookie, vencida o revocada |
-| `POST /api/auth/logout`  | `204` revoca toda la familia de tokens y borra la cookie                         |
+| Método y ruta            | Respuesta                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `POST /api/auth/refresh` | `200` la sesión, con la cookie rotada · `401` sin cookie, vencida o revocada |
+| `POST /api/auth/logout`  | `204` revoca toda la familia de tokens y borra la cookie                     |
 
 Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-4).
 

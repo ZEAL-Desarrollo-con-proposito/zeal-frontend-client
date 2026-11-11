@@ -5,11 +5,13 @@ import { server } from '@/mocks/server';
 import { seedUser } from '@/test/credentials';
 import { LOGOUT_ENDPOINT, REFRESH_ENDPOINT } from './authApi';
 import {
+  markLoginInProgress,
   PENDING_LOGOUT_KEY,
   renewSession,
   restoreSession,
   revokeSession,
   setLogoutPending,
+  takeLoginInProgress,
 } from './sessionLifecycle';
 
 /** Cuenta las peticiones de cerrar sesión y de renovar. */
@@ -31,6 +33,26 @@ function blockStorage(method: 'getItem' | 'setItem' | 'removeItem') {
 
 afterEach(() => {
   server.events.removeAllListeners();
+});
+
+describe('inicio de sesión en curso (ida y vuelta a Microsoft)', () => {
+  it('la pestaña recuerda que fue a iniciar sesión y lo dice una sola vez al volver', () => {
+    markLoginInProgress();
+
+    expect(takeLoginInProgress()).toBe(true);
+    expect(takeLoginInProgress()).toBe(false);
+  });
+
+  it('sin almacenamiento no se recuerda: las demás pestañas recuperan la sesión al recargar', () => {
+    blockStorage('setItem');
+    markLoginInProgress();
+    vi.restoreAllMocks();
+    expect(takeLoginInProgress()).toBe(false);
+
+    sessionStorage.setItem('zeal.login.en-curso', 'true');
+    blockStorage('getItem');
+    expect(takeLoginInProgress()).toBe(false);
+  });
 });
 
 describe('renewSession', () => {

@@ -8,9 +8,10 @@ import { startRefreshFamily } from '@/mocks/refreshSession';
 import { server } from '@/mocks/server';
 import { request } from '@/shared/api/httpClient';
 import type { RealtimeCredentials } from '@/shared/realtime/realtimeClient';
-import { DEMO_PASSWORD, seedUser, storeSession } from '@/test/credentials';
+import { seedUser, storeSession } from '@/test/credentials';
+import { loginWithMicrosoft } from '@/test/microsoftLogin';
 import { renderRoute } from '@/test/renderRoute';
-import { LOGIN_ENDPOINT, LOGOUT_ENDPOINT, REFRESH_ENDPOINT } from './api/authApi';
+import { LOGOUT_ENDPOINT, REFRESH_ENDPOINT } from './api/authApi';
 import { PENDING_LOGOUT_KEY, renewSession } from './api/sessionLifecycle';
 import type { SessionEvent } from './context/AuthProvider';
 import { RENEW_RETRY_MS, SESSION_CHANNEL } from './context/AuthProvider';
@@ -19,19 +20,6 @@ import { sessionStore } from './storage/sessionStore';
 
 const EXPIRED_NOTICE = 'Tu sesión expiró por seguridad. Vuelve a iniciar sesión para continuar.';
 const RESTORING = 'Recuperando tu sesión…';
-
-async function loginAs(
-  user: Awaited<ReturnType<typeof renderRoute>>['user'],
-  email: string,
-  { remember = false } = {},
-) {
-  await user.type(await screen.findByLabelText('Correo corporativo'), email);
-  await user.type(screen.getByLabelText('Contraseña'), DEMO_PASSWORD);
-  if (remember) {
-    await user.click(screen.getByRole('checkbox', { name: 'Recordarme' }));
-  }
-  await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
-}
 
 /** Todo lo que el navegador guarda fuera de la memoria de la pestaña. */
 function browserStorage(): string {
@@ -73,9 +61,9 @@ function otherTab() {
 
 describe('sesión en memoria (HU-FE-21)', () => {
   it('no deja el token en el almacenamiento del navegador', async () => {
-    const { user } = await renderRoute('/login');
+    const view = await renderRoute('/login');
 
-    await loginAs(user, seedUser('EMPLEADO').email, { remember: true });
+    await loginWithMicrosoft(view, seedUser('EMPLEADO').email, { remember: true });
 
     expect(await screen.findByRole('heading', { name: 'Hola, David' })).toBeInTheDocument();
     const token = sessionStore.accessToken() ?? '';
@@ -83,26 +71,6 @@ describe('sesión en memoria (HU-FE-21)', () => {
     expect(browserStorage()).not.toContain(token);
     expect(browserStorage()).not.toContain('accessToken');
   });
-
-  it.each([true, false])(
-    'le pide al servidor recordar la sesión solo si se marca (%s)',
-    async (remember) => {
-      let received: unknown = null;
-      server.use(
-        http.post(`*${LOGIN_ENDPOINT}`, async ({ request: incoming }) => {
-          received = await incoming.json();
-          return HttpResponse.json({ message: 'Correo o contraseña incorrectos' }, { status: 401 });
-        }),
-      );
-      const { user } = await renderRoute('/login');
-
-      await loginAs(user, seedUser('ADMIN').email, { remember });
-
-      await waitFor(() => {
-        expect(received).toMatchObject({ remember });
-      });
-    },
-  );
 
   it('al recargar recupera la sesión con la cookie de refresh, sin pasar por el login', async () => {
     startRefreshFamily(seedUser('PSICOLOGO').id, true);
@@ -146,15 +114,15 @@ describe('sesión en memoria (HU-FE-21)', () => {
 
 describe('manejo de la sesión y rutas protegidas', () => {
   it('manda al login a quien abre una ruta protegida sin sesión', async () => {
-    const { router, user } = await renderRoute(ROLE_HOME_PATH.ADMIN);
+    const view = await renderRoute(ROLE_HOME_PATH.ADMIN);
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/login');
+      expect(view.router.state.location.pathname).toBe('/login');
     });
     expect(screen.queryByText(EXPIRED_NOTICE)).not.toBeInTheDocument();
 
     // Quien pidió la ruta de admin pero es empleado llega a su propia pantalla, no a un 403.
-    await loginAs(user, seedUser('EMPLEADO').email);
+    const { router } = await loginWithMicrosoft(view, seedUser('EMPLEADO').email);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(ROLE_HOME_PATH.EMPLEADO);
     });
@@ -384,10 +352,10 @@ describe('conexión en tiempo real de la sesión', () => {
   it('otra persona que inicia sesión abre su propia conexión', async () => {
     const { created, factory } = connectionSpy();
     storeSession('EMPLEADO');
-    const { user } = await renderRoute(ROLE_HOME_PATH.EMPLEADO, factory);
+    const view = await renderRoute(ROLE_HOME_PATH.EMPLEADO, factory);
 
-    await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
-    await loginAs(user, seedUser('ADMIN').email);
+    await view.user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+    await loginWithMicrosoft(view, seedUser('ADMIN').email, { factory });
 
     await waitFor(() => {
       expect(created).toHaveLength(2);
@@ -453,11 +421,11 @@ describe('varias pestañas', () => {
     expect(screen.queryByText(EXPIRED_NOTICE)).not.toBeInTheDocument();
   });
 
-  it('al iniciar sesión avisa a las demás pestañas', async () => {
+  it('al volver de iniciar sesión con Microsoft avisa a las demás pestañas', async () => {
     const tab = otherTab();
-    const { user } = await renderRoute('/login');
+    const view = await renderRoute('/login');
 
-    await loginAs(user, seedUser('EMPLEADO').email);
+    await loginWithMicrosoft(view, seedUser('EMPLEADO').email);
 
     await waitFor(() => {
       expect(tab.received).toEqual([{ type: 'started' }]);
