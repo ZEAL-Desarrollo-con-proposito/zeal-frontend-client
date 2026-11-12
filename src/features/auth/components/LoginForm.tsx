@@ -3,8 +3,20 @@ import lockIcon from '@/assets/icons/lock.svg';
 import { Button } from '@/shared/ui/Button/Button';
 import { Checkbox } from '@/shared/ui/Checkbox/Checkbox';
 import { useMicrosoftLogin } from '../hooks/useMicrosoftLogin';
+import {
+  formatLoginLockoutCountdown,
+  formatLoginLockoutDeadline,
+  LOGIN_LOCKOUT_MESSAGE,
+} from '../model/loginLockout';
 import { MicrosoftLogo } from './MicrosoftLogo';
 import styles from './LoginForm.module.css';
+
+const ALERT_MOTION = {
+  initial: { opacity: 0, y: -6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.3, ease: 'easeOut' },
+} as const;
 
 interface LoginFormProps {
   /** Ruta interna a la que se vuelve después de Microsoft. */
@@ -19,13 +31,15 @@ interface LoginFormProps {
  */
 export function LoginForm({ returnTo, returnError }: Readonly<LoginFormProps>) {
   const login = useMicrosoftLogin(returnTo);
-  const message = login.error ?? (login.redirecting ? null : returnError);
+  const { lockout } = login;
+  // Un bloqueo reemplaza al error con el que se volvió: lo vigente es la espera.
+  const message = login.error ?? (login.redirecting || lockout !== null ? null : returnError);
 
   return (
     <div className={styles.form}>
       <Button
         fullWidth
-        disabled={login.redirecting}
+        disabled={login.redirecting || lockout !== null}
         aria-busy={login.redirecting}
         onClick={() => void login.start()}
       >
@@ -44,17 +58,23 @@ export function LoginForm({ returnTo, returnError }: Readonly<LoginFormProps>) {
 
       <AnimatePresence mode="wait" initial={false}>
         {message !== null && (
-          <motion.p
-            key={message}
-            className={styles.submitError}
-            role="alert"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
+          <motion.p key={message} className={styles.submitError} role="alert" {...ALERT_MOTION}>
             {message}
           </motion.p>
+        )}
+        {lockout !== null && (
+          <motion.div key="lockout" className={styles.lockout} role="alert" {...ALERT_MOTION}>
+            <p>{LOGIN_LOCKOUT_MESSAGE}</p>
+            {/* La cuenta atrás cambia cada segundo: el lector de pantalla oye la hora una sola vez. */}
+            <p className={styles.lockoutWait}>
+              <span aria-hidden="true">
+                Podrás intentarlo de nuevo en {formatLoginLockoutCountdown(lockout.remainingMs)}.
+              </span>
+              <span className="visually-hidden">
+                Podrás intentarlo de nuevo {formatLoginLockoutDeadline(lockout.until)}.
+              </span>
+            </p>
+          </motion.div>
         )}
       </AnimatePresence>
 

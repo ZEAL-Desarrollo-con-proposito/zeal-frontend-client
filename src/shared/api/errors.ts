@@ -3,12 +3,15 @@ export class ApiError extends Error {
   readonly status: number;
   /** Mensaje legible que envió el servidor en el cuerpo de la respuesta, si lo hubo. */
   readonly serverMessage: string | undefined;
+  /** Segundos que pide esperar el servidor en `Retry-After`; `null` si no vino la cabecera. */
+  readonly retryAfterSeconds: number | null;
 
-  constructor(status: number, serverMessage?: string) {
+  constructor(status: number, serverMessage?: string, retryAfterSeconds: number | null = null) {
     super(serverMessage ?? `La petición falló con estado HTTP ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.serverMessage = serverMessage;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 

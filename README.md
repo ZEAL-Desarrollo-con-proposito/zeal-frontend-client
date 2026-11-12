@@ -165,6 +165,30 @@ contraseña) se retira.
 
 Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-4).
 
+**Fuerza bruta (SEG-1, ADR-15, contraparte HU-BE-20).** El borde frena los intentos automatizados
+antes de que lleguen al backend: NGINX limita la frecuencia de `POST /api/auth/microsoft` y del
+callback por IP, y CrowdSec bloquea la IP que acumula regresos fallidos (`cuenta_no_registrada` o
+`fallo`). El inicio de sesión espera, en `POST /api/auth/microsoft`:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 45
+```
+
+- `429` de NGINX (`limit_req_status 429`; por defecto NGINX responde `503`, que el cliente
+  tomaría por una caída) o `403` del bouncer de CrowdSec, con cualquier cuerpo.
+- `Retry-After` en segundos o como fecha HTTP. Sin cabecera, el cliente espera 60 s por prudencia;
+  `Retry-After: 0` se toma como un segundo para no reintentar en bucle. Las esperas largas se
+  muestran en horas o días.
+- El aviso no usa el `message` del servidor, para no revelar si la cuenta existe. Si el API vive en
+  otro origen, el gateway expone la cabecera (`Access-Control-Expose-Headers: Retry-After`), también
+  en el `403` del bouncer.
+
+El simulador reproduce el borde: tras 5 regresos fallidos en 60 s desde el navegador (cuenta no
+registrada o regreso inválido; cancelar no cuenta), `POST /api/auth/microsoft` responde `429` con
+`Retry-After` hasta que pasa un minuto. Un ingreso correcto reinicia la cuenta. Vive en
+`localStorage` para sobrevivir a la ida y vuelta al selector de cuentas.
+
 ### Contrato de disponibilidad (acordar con HU-BE-02)
 
 Todas las rutas exigen `Authorization: Bearer <token>` y rol `PSICOLOGO` (401 / 404). Las reglas de
@@ -685,6 +709,12 @@ también en los errores:
   para no revelar que existe. Si la lista de una pantalla responde `404` (`listing` en `useFetch` y
   `useLiveFetch`), la pantalla se reemplaza por "No encontramos esta página", sin nada de su
   contenido ni reintento. Un `403` que aún llegue se muestra como "Permiso denegado".
+- **Fuerza bruta (SEG-1, ADR-15):** el bloqueo lo hace el borde (NGINX limita la frecuencia y
+  CrowdSec bloquea la IP), nunca el navegador: un límite en el cliente se salta con cualquier
+  script. El inicio de sesión reconoce el `429` y el `403` del bouncer, con o sin `Retry-After`,
+  avisa sin revelar si la cuenta existe, cuenta atrás y deshabilita el botón hasta que vence. No
+  reintenta solo (ver [Contrato de autenticación](#contrato-de-autenticación-acordar-con-hu-be-22-y-la-tarea-484)).
+  Las contraseñas no pasan por ZEAL: su adivinación la frena Microsoft.
 - **Token (SEG-2, ADR-07):** se envía como `Authorization: Bearer <token>` y vive solo en la memoria de la
   pestaña: nada queda en `localStorage` ni en `sessionStorage`. El frontend solo lee el claim `exp`;
   la firma la valida el servidor.

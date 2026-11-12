@@ -1,9 +1,11 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EMPLOYEE_PATHS, ROLE_HOME_PATH } from '@/app/paths';
 import { UNREGISTERED_ACCOUNT } from '@/mocks/microsoft/handlers';
+import { LOGIN_MAX_FAILURES, registerFailedLogin } from '@/mocks/microsoft/loginThrottle';
 import { server } from '@/mocks/server';
+import { controlClock } from '@/test/clock';
 import { seedUser } from '@/test/credentials';
 import { loginWithMicrosoft, spyPageNavigation } from '@/test/microsoftLogin';
 import { renderRoute } from '@/test/renderRoute';
@@ -175,5 +177,133 @@ describe('Inicio de sesión con Microsoft', () => {
     await navigation.target();
     expect(revocations).toBe(2);
     expect(localStorage.getItem(PENDING_LOGOUT_KEY)).toBeNull();
+  });
+});
+
+describe('Bloqueo por fuerza bruta (SEG-1)', () => {
+  const LOCKOUT_TEXT =
+    'El acceso desde esta red está bloqueado temporalmente por demasiados intentos.';
+
+  beforeEach(() => {
+    controlClock();
+  });
+
+  /** El 429 de NGINX, con o sin `Retry-After`. */
+  function rateLimited(seconds?: number) {
+    return http.post(`*${MICROSOFT_LOGIN_ENDPOINT}`, () =>
+      HttpResponse.json(
+        { status: 429, error: 'Too Many Requests', message: 'Demasiados intentos' },
+        { status: 429, headers: seconds === undefined ? {} : { 'Retry-After': String(seconds) } },
+      ),
+    );
+  }
+
+  /** El bouncer de CrowdSec responde 403 con su página, sin `Retry-After`. */
+  function bouncerBlock() {
+    return http.post(
+      `*${MICROSOFT_LOGIN_ENDPOINT}`,
+      () =>
+        new HttpResponse('<html><body>Blocked</body></html>', {
+          status: 403,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    );
+  }
+
+  async function requestLockout(path = '/login') {
+    const view = await renderRoute(path);
+    await view.user.click(microsoftButton());
+    return { alert: await screen.findByRole('alert'), view };
+  }
+
+  function advance(ms: number) {
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  }
+
+  it('avisa sin revelar la cuenta, deshabilita el botón y cuenta atrás', async () => {
+    server.use(rateLimited(45));
+    const navigation = spyPageNavigation();
+    const { alert, view } = await requestLockout();
+
+    expect(alert).toHaveTextContent(LOCKOUT_TEXT);
+    expect(alert).not.toHaveTextContent(/cuenta/i);
+    expect(alert).toHaveTextContent('Podrás intentarlo de nuevo hoy a las 9:20.');
+    expect(screen.getByText(/en 0:45/)).toBeInTheDocument();
+    expect(microsoftButton()).toBeDisabled();
+
+    await view.user.click(microsoftButton());
+    advance(1_000);
+    expect(screen.getByText(/en 0:44/)).toBeInTheDocument();
+
+    advance(44_000);
+    expect(microsoftButton()).toBeEnabled();
+    expect(navigation.assign).not.toHaveBeenCalled();
+    // El aviso sale con su animación en el siguiente cuadro.
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  it.each([
+    ['sin Retry-After', rateLimited()],
+    ['el 403 del bouncer de CrowdSec', bouncerBlock()],
+  ])('con %s espera un minuto, por prudencia', async (_case, handler) => {
+    server.use(handler);
+    const { alert } = await requestLockout();
+
+    expect(alert).toHaveTextContent(LOCKOUT_TEXT);
+    expect(screen.getByText(/en 1:00/)).toBeInTheDocument();
+    expect(microsoftButton()).toBeDisabled();
+  });
+
+  it('Retry-After: 0 espera al menos un segundo para no reintentar en bucle', async () => {
+    server.use(rateLimited(0));
+    await requestLockout();
+
+    expect(screen.getByText(/en 0:01/)).toBeInTheDocument();
+    advance(1_000);
+    expect(microsoftButton()).toBeEnabled();
+  });
+
+  it('muestra las esperas largas en días y horas', async () => {
+    server.use(rateLimited(3_600_000));
+    await requestLockout();
+
+    expect(screen.getByText(/en 41 d 16 h/)).toBeInTheDocument();
+  });
+
+  it('el aviso reemplaza el error con el que se volvió de Microsoft', async () => {
+    server.use(rateLimited(30));
+    await requestLockout('/login?error=cuenta_no_registrada');
+
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.queryByText(/no tiene acceso a ZEAL/)).not.toBeInTheDocument();
+  });
+
+  it('al vencer el bloqueo deja ir de nuevo a Microsoft', async () => {
+    server.use(rateLimited(5));
+    const navigation = spyPageNavigation();
+    const { view } = await requestLockout();
+
+    advance(5_000);
+    server.resetHandlers();
+    // `waitFor` sondea con setInterval: para esperar la navegación, el reloj vuelve a ser real.
+    vi.useRealTimers();
+    await view.user.click(microsoftButton());
+
+    expect(await navigation.target()).toMatch(/^\/simulador\/microsoft\?state=/);
+  });
+
+  it('el simulador bloquea tras varios regresos fallidos seguidos', async () => {
+    for (let attempt = 0; attempt < LOGIN_MAX_FAILURES; attempt += 1) {
+      registerFailedLogin();
+    }
+
+    const { alert } = await requestLockout();
+
+    expect(alert).toHaveTextContent(LOCKOUT_TEXT);
+    expect(screen.getByText(/en 1:00/)).toBeInTheDocument();
   });
 });

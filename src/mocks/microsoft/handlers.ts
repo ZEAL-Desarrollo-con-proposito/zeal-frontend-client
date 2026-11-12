@@ -3,6 +3,7 @@ import { MICROSOFT_LOGIN_ENDPOINT } from '@/features/auth/api/authApi';
 import { errorBody } from '../mockAuth';
 import { startRefreshFamily } from '../refreshSession';
 import { findSeedUserByEmail } from '../seedUsers';
+import { blockedSeconds, registerFailedLogin, registerSuccessfulLogin } from './loginThrottle';
 import { startPendingLogin, takePendingLogin } from './pendingLogins';
 
 /** Página del simulador que reemplaza a login.microsoftonline.com. */
@@ -28,13 +29,27 @@ interface SimulatorBody {
   email?: unknown;
 }
 
+/** Un regreso fallido cuenta para el bloqueo por fuerza bruta (SEG-1). */
+function failedReturn(error: 'fallo' | 'cuenta_no_registrada') {
+  registerFailedLogin();
+  return HttpResponse.json({ redirectTo: `/login?error=${error}` });
+}
+
 /**
  * Inicio de sesión con Microsoft como lo hará el backend (tarea 484): la dirección de autorización
- * apunta al selector de cuentas del simulador y su regreso hace lo del callback real.
+ * apunta al selector de cuentas del simulador y su regreso hace lo del callback real. Delante, el
+ * borde frena la fuerza bruta (SEG-1) como lo hará NGINX: `429` con `Retry-After`.
  */
 export const microsoftLoginHandlers = [
   http.post<never, StartBody>(`*${MICROSOFT_LOGIN_ENDPOINT}`, async ({ request }) => {
     await delay();
+    const blocked = blockedSeconds();
+    if (blocked > 0) {
+      return HttpResponse.json(
+        { status: 429, error: 'Too Many Requests', message: 'Demasiados intentos desde esta red' },
+        { status: 429, headers: { 'Retry-After': String(blocked) } },
+      );
+    }
     const { remember, returnTo } = await request.json();
     if (typeof remember !== 'boolean' || !isInternalPath(returnTo)) {
       return errorBody(400, 'Bad Request', 'La ruta de regreso debe ser interna.');
@@ -50,15 +65,17 @@ export const microsoftLoginHandlers = [
     const { state, email } = await request.json();
     const pending = typeof state === 'string' ? takePendingLogin(state) : null;
     if (pending === null) {
-      return HttpResponse.json({ redirectTo: '/login?error=fallo' });
+      return failedReturn('fallo');
     }
+    // Cancelar en Microsoft no es un intento fallido: la persona desistió.
     if (email === null) {
       return HttpResponse.json({ redirectTo: '/login?error=cancelado' });
     }
     const user = typeof email === 'string' ? findSeedUserByEmail(email) : undefined;
     if (user === undefined) {
-      return HttpResponse.json({ redirectTo: '/login?error=cuenta_no_registrada' });
+      return failedReturn('cuenta_no_registrada');
     }
+    registerSuccessfulLogin();
     startRefreshFamily(user.id, pending.remember);
     return HttpResponse.json({ redirectTo: pending.returnTo });
   }),
