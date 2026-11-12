@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { expect } from 'vitest';
 import { SECTIONS } from '@/app/lazyPages';
 import { routes } from '@/app/routes';
+import { microsoftSimulatorRoutes } from '@/mocks/microsoft/simulatorRoutes';
 import { createMockRealtimeClient } from '@/mocks/realtime';
 import { handleChatMessage } from '@/mocks/wellbeing/chatHandlers';
 import type { RealtimeClientFactory } from '@/shared/realtime/realtimeClient';
@@ -28,7 +29,10 @@ export function renderApp(
   realtimeClientFactory: RealtimeClientFactory = (accessToken) =>
     createMockRealtimeClient(accessToken, onMockMessage),
 ) {
-  const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
+  // Como en el simulador: el selector de cuentas reemplaza a Microsoft.
+  const router = createMemoryRouter([...microsoftSimulatorRoutes, ...routes], {
+    initialEntries: [initialPath],
+  });
   const user = setupUser();
   const { factory, subscribedTo } = trackSubscriptions(realtimeClientFactory);
   const { unmount } = render(

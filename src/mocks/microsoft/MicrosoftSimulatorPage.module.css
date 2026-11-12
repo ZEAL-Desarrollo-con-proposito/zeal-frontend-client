@@ -1,0 +1,76 @@
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--space-4);
+  background: #f2f2f2;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(440px, 100%);
+  padding: 44px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+}
+
+.brand {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #5e5e5e;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1b1b1b;
+}
+
+.note {
+  font-size: var(--text-caption);
+  color: #5e5e5e;
+}
+
+.accounts {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  max-height: 50dvh;
+  overflow-y: auto;
+  border-top: 1px solid #e6e6e6;
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  border: 0;
+  border-bottom: 1px solid #e6e6e6;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account:hover,
+.account:focus-visible {
+  background: #f2f2f2;
+}
+
+.name {
+  font-weight: 600;
+  color: #1b1b1b;
+}
+
+.email {
+  font-size: var(--text-caption);
+  color: #5e5e5e;
+}

@@ -92,15 +92,14 @@ con variables de entorno (ver `.env.example`):
 | `VITE_API_BASE_URL` | _(vacío)_                  | URL del API Gateway; vacío = mismo origen del frontend. |
 | `VITE_REALTIME_URL` | `http://localhost:8083/ws` | Endpoint SockJS del Real-Time Gateway (sin simulador).  |
 
-El simulador de login bloquea el origen tras 5 intentos fallidos en 60 s y responde `429` con
-`Retry-After: 60`: sirve para probar el aviso y la cuenta atrás sin esperar a HU-BE-20. Un ingreso
-correcto reinicia el contador y el bloqueo no sobrevive a una recarga.
-
 El build de producción nunca incluye el simulador.
 
 ### Usuarios semilla (HU-01)
 
-El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos: `Zeal2026*`.
+No hay registro: las empresas precargan a sus usuarios y cada persona entra con su cuenta de
+Microsoft. En el simulador, "Iniciar sesión con Microsoft" abre un selector de cuentas de prueba
+(`/simulador/microsoft`) en lugar de Microsoft; incluye una cuenta sin acceso a ZEAL
+(`persona@outlook.com`) y "Cancelar".
 
 | Rol       | Correo                      | Llega a             |
 | --------- | --------------------------- | ------------------- |
@@ -108,15 +107,34 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 | Psicóloga | `laura.martinez@zeal.co`    | `/psicologo/agenda` |
 | Admin     | `talento.humano@nexura.co`  | `/admin/panel`      |
 
-### Contrato de autenticación (acordar con HU-BE-01 y HU-BE-22)
+### Contrato de autenticación (acordar con HU-BE-22 y la tarea 484)
 
-`POST /api/auth/login`
+**Inicio de sesión con Microsoft (decisión aprobada).** ZEAL no maneja contraseñas: la persona
+entra con su cuenta de Microsoft (Outlook o Microsoft 365) por OpenID Connect, con el flujo de
+código y PKCE y el backend como cliente confidencial (patrón BFF, como recomienda _OAuth 2.0 for
+Browser-Based Apps_): los tokens de Microsoft nunca llegan al navegador.
 
-```json
-{ "email": "david.cajamarca@nexura.co", "password": "Zeal2026*", "remember": false }
-```
+1. `POST /api/auth/microsoft` con `{ "remember": false, "returnTo": "/login?desde=/empleado/mis-citas" }`
+   (con la cookie, sin `Authorization`). El backend guarda `state`, `nonce` y el verificador PKCE
+   en una cookie corta `httpOnly` y responde `200 { "authorizationUrl": "https://login.microsoftonline.com/…" }`
+   · `400` si `returnTo` no es una ruta interna. El cliente solo navega a direcciones `https`, de
+   su propio origen o `http` del propio equipo (`localhost`, para el proveedor de prueba local).
+2. El navegador va a Microsoft; la persona elige su cuenta y Microsoft vuelve a
+   `GET /api/auth/microsoft/callback?code=…&state=…` (backend). El backend valida el `state`,
+   canjea el código, valida el ID token (firma con las llaves públicas de Microsoft, emisor,
+   audiencia, `nonce` y vigencia) y busca la cuenta registrada en ZEAL por su correo.
+3. El backend redirige (`302`) a `returnTo` con la cookie de renovación de ZEAL, o a
+   `/login?error=cuenta_no_registrada`, `cancelado` o `fallo`. La app recupera la sesión con la
+   cookie (`POST /api/auth/refresh`) y, desde el login, va a la pantalla pedida (`desde`) si es de
+   su rol; si no, a su inicio. Los mensajes de error son fijos: lo que llega en la URL no se pinta.
 
-**200 OK**
+El backend publica el contrato en `zeal-infra-compose/docs/contratos/auth-microsoft.md`. Con su
+stack local (`docker compose up` en `zeal-infra-compose`, gateway en `http://localhost:8080`),
+Microsoft se reemplaza por un proveedor OIDC de prueba en `http://localhost:8090`: en su pantalla
+se escribe cualquier usuario y, en _claims_, el correo de una cuenta semilla, p. ej.
+`{ "email": "david.cajamarca@nexura.co" }`.
+
+La sesión de ZEAL (`/api/auth/refresh` y `/api/auth/logout`) no cambia: **200 OK** de la renovación
 
 ```json
 {
@@ -135,41 +153,41 @@ El MVP no tiene registro: los usuarios vienen precargados. Contraseña de todos:
 
 `role` ∈ `EMPLEADO`, `PSICOLOGO`, `ADMIN`.
 
-**401 Unauthorized**
+El callback de Microsoft y la renovación ponen el refresh token en una cookie `httpOnly`, `Secure`
+y `SameSite=Strict`: de sesión, o persistente si `remember` es `true`. Estas rutas viajan con esa
+cookie (`credentials: 'include'`) y sin `Authorization`. `POST /api/auth/login` (correo y
+contraseña) se retira.
 
-```json
-{ "status": 401, "error": "Unauthorized", "message": "Correo o contraseña incorrectos" }
-```
+| Método y ruta            | Respuesta                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `POST /api/auth/refresh` | `200` la sesión, con la cookie rotada · `401` sin cookie, vencida o revocada |
+| `POST /api/auth/logout`  | `204` revoca toda la familia de tokens y borra la cookie                     |
 
-**429 Too Many Requests** o **403** del bouncer de CrowdSec
+Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-4).
 
-El borde bloquea temporalmente el origen por exceso de intentos (SEG-1, ADR-15). La cabecera
-`Retry-After` viaja en segundos o como fecha HTTP. Sin cabecera, el cliente aplica una espera
-conservadora de 60 s; `Retry-After: 0` se trata como un segundo para evitar un bucle inmediato.
-Las esperas largas se muestran en horas o días. El frontend no muestra el `message` del servidor
-para no revelar si la cuenta existe: avisa que la red está bloqueada, cuenta atrás y deshabilita
-el envío hasta que venza. Si el API está en otro origen, el gateway debe exponer la cabecera
-(`Access-Control-Expose-Headers: Retry-After`), incluso en la respuesta 403 del bouncer.
+**Fuerza bruta (SEG-1, ADR-15, contraparte HU-BE-20).** El borde frena los intentos automatizados
+antes de que lleguen al backend: NGINX limita la frecuencia de `POST /api/auth/microsoft` y del
+callback por IP, y CrowdSec bloquea la IP que acumula regresos fallidos (`cuenta_no_registrada` o
+`fallo`). El inicio de sesión espera, en `POST /api/auth/microsoft`:
 
 ```http
 HTTP/1.1 429 Too Many Requests
 Retry-After: 45
 ```
 
-```json
-{ "status": 429, "error": "Too Many Requests", "message": "Demasiados intentos desde esta red" }
-```
+- `429` de NGINX (`limit_req_status 429`; por defecto NGINX responde `503`, que el cliente
+  tomaría por una caída) o `403` del bouncer de CrowdSec, con cualquier cuerpo.
+- `Retry-After` en segundos o como fecha HTTP. Sin cabecera, el cliente espera 60 s por prudencia;
+  `Retry-After: 0` se toma como un segundo para no reintentar en bucle. Las esperas largas se
+  muestran en horas o días.
+- El aviso no usa el `message` del servidor, para no revelar si la cuenta existe. Si el API vive en
+  otro origen, el gateway expone la cabecera (`Access-Control-Expose-Headers: Retry-After`), también
+  en el `403` del bouncer.
 
-El login y la renovación ponen el refresh token en una cookie `httpOnly`, `Secure` y
-`SameSite=Strict`: de sesión, o persistente si `remember` es `true`. Estas rutas viajan con
-esa cookie (`credentials: 'include'`) y sin `Authorization`.
-
-| Método y ruta            | Respuesta                                                                        |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| `POST /api/auth/refresh` | `200` como el login, con la cookie rotada · `401` sin cookie, vencida o revocada |
-| `POST /api/auth/logout`  | `204` revoca toda la familia de tokens y borra la cookie                         |
-
-Reutilizar un refresh token ya rotado revoca toda la familia (escenario SEG-4).
+El simulador reproduce el borde: tras 5 regresos fallidos en 60 s desde el navegador (cuenta no
+registrada o regreso inválido; cancelar no cuenta), `POST /api/auth/microsoft` responde `429` con
+`Retry-After` hasta que pasa un minuto. Un ingreso correcto reinicia la cuenta. Vive en
+`localStorage` para sobrevivir a la ida y vuelta al selector de cuentas.
 
 ### Contrato de disponibilidad (acordar con HU-BE-02)
 
@@ -696,10 +714,12 @@ también en los errores:
   para no revelar que existe. Si la lista de una pantalla responde `404` (`listing` en `useFetch` y
   `useLiveFetch`), la pantalla se reemplaza por "No encontramos esta página", sin nada de su
   contenido ni reintento. Un `403` que aún llegue se muestra como "Permiso denegado".
-- **Bloqueo por intentos (SEG-1, ADR-15):** el borde (NGINX/CrowdSec) limita los intentos por
-  origen. El login reconoce el `429` y el `403` del bouncer con o sin `Retry-After`, muestra un
-  aviso sin revelar si la cuenta existe, cuenta atrás y deshabilita el envío hasta que vence. No
-  reintenta solo el login; el simulador reproduce el bloqueo tras 5 fallos en 60 s.
+- **Fuerza bruta (SEG-1, ADR-15):** el bloqueo lo hace el borde (NGINX limita la frecuencia y
+  CrowdSec bloquea la IP), nunca el navegador: un límite en el cliente se salta con cualquier
+  script. El inicio de sesión reconoce el `429` y el `403` del bouncer, con o sin `Retry-After`,
+  avisa sin revelar si la cuenta existe, cuenta atrás y deshabilita el botón hasta que vence. No
+  reintenta solo (ver [Contrato de autenticación](#contrato-de-autenticación-acordar-con-hu-be-22-y-la-tarea-484)).
+  Las contraseñas no pasan por ZEAL: su adivinación la frena Microsoft.
 - **Token (SEG-2, ADR-07):** se envía como `Authorization: Bearer <token>` y vive solo en la memoria de la
   pestaña: nada queda en `localStorage` ni en `sessionStorage`. El frontend solo lee el claim `exp`;
   la firma la valida el servidor.

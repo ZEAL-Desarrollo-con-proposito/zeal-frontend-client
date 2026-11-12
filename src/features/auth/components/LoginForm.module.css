@@ -4,28 +4,6 @@
   gap: 22px;
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.textLink {
-  padding: 0;
-  border: 0;
-  background: none;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-teal-600);
-  cursor: pointer;
-}
-
-.textLink:hover {
-  text-decoration: underline;
-}
-
 .submitError {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
@@ -48,32 +26,6 @@
 
 .lockoutWait {
   font-variant-numeric: tabular-nums;
-}
-
-.divider {
-  display: flex;
-  gap: var(--space-4);
-  align-items: center;
-  font-size: var(--text-caption);
-  color: var(--color-ink-500);
-}
-
-.divider::before,
-.divider::after {
-  flex: 1;
-  height: 1px;
-  background: var(--color-border);
-  content: '';
-}
-
-.notice {
-  font-size: var(--text-caption);
-  line-height: 1.45;
-  color: var(--color-teal-700);
-}
-
-.notice:empty {
-  display: none;
 }
 
 .confidentiality {

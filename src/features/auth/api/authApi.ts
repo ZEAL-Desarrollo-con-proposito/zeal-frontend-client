@@ -1,9 +1,9 @@
 import { request } from '@/shared/api/httpClient';
 import { readTokenExpiry } from '../model/jwt';
-import type { Credentials, Session } from '../model/session';
-import { isLoginResponse } from '../model/session';
+import type { Session } from '../model/session';
+import { isLoginResponse, isRecord } from '../model/session';
 
-export const LOGIN_ENDPOINT = '/api/auth/login';
+export const MICROSOFT_LOGIN_ENDPOINT = '/api/auth/microsoft';
 export const REFRESH_ENDPOINT = '/api/auth/refresh';
 export const LOGOUT_ENDPOINT = '/api/auth/logout';
 
@@ -25,17 +25,56 @@ function toSession(payload: unknown): Session {
   return { accessToken: payload.accessToken, user: payload.user, expiresAt };
 }
 
+export interface MicrosoftLoginRequest {
+  /** La cookie de renovación sobrevive al cierre del navegador. */
+  remember: boolean;
+  /** Ruta interna de la app a la que se vuelve después de Microsoft. */
+  returnTo: string;
+}
+
 /**
- * Autentica con correo y contraseña (contrato con HU-BE-01 y HU-BE-22, documentado en el README).
- * `remember` decide si la cookie de refresh sobrevive al cierre del navegador.
+ * El propio equipo: en el stack local del backend, el proveedor OIDC de prueba corre en
+ * `http://localhost:8090`. Fuera del equipo se exige https.
  */
-export async function login(credentials: Credentials, remember: boolean): Promise<Session> {
-  const payload = await request(LOGIN_ENDPOINT, {
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * A dónde se puede navegar: Microsoft (https), el proveedor de prueba del propio equipo o, en el
+ * simulador, una página de la propia app. Cualquier otra cosa (p. ej. `javascript:` o http hacia
+ * otro equipo) se rechaza aunque venga del servidor.
+ */
+function isSafeAuthorizationUrl(value: unknown): value is string {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  try {
+    const url = new URL(value, window.location.origin);
+    return (
+      url.protocol === 'https:' ||
+      url.origin === window.location.origin ||
+      (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Empieza el inicio de sesión con Microsoft (OpenID Connect con el backend como cliente
+ * confidencial; contrato en el README): el backend guarda state, nonce y PKCE en una cookie corta
+ * y responde la dirección de autorización de Microsoft. ZEAL nunca recibe la contraseña.
+ */
+export async function startMicrosoftLogin(login: MicrosoftLoginRequest): Promise<string> {
+  const payload = await request(MICROSOFT_LOGIN_ENDPOINT, {
     method: 'POST',
-    body: { ...credentials, remember },
+    body: login,
     withRefreshCookie: true,
   });
-  return toSession(payload);
+  const authorizationUrl = isRecord(payload) ? payload.authorizationUrl : undefined;
+  if (!isSafeAuthorizationUrl(authorizationUrl)) {
+    throw new InvalidSessionResponseError();
+  }
+  return authorizationUrl;
 }
 
 /** Pide un token nuevo con la cookie de refresh; el servidor la rota en cada uso (HU-BE-22). */

@@ -4,7 +4,6 @@ import {
   DEFAULT_LOGIN_LOCKOUT_SECONDS,
   formatLoginLockoutCountdown,
   formatLoginLockoutDeadline,
-  isLoginLockout,
   toLoginLockout,
 } from './loginLockout';
 
@@ -28,16 +27,9 @@ describe('toLoginLockout', () => {
   it.each([
     ['otro error', new Error('x')],
     ['401', new ApiError(401)],
+    ['503 del servidor', new ApiError(503, undefined, 30)],
   ])('no confunde %s con un bloqueo', (_case, error) => {
     expect(toLoginLockout(error, NOW)).toBeNull();
-  });
-});
-
-describe('isLoginLockout', () => {
-  it('distingue el bloqueo de un rechazo de credenciales', () => {
-    expect(isLoginLockout(new ApiError(429))).toBe(true);
-    expect(isLoginLockout(new ApiError(403))).toBe(true);
-    expect(isLoginLockout(new ApiError(401))).toBe(false);
   });
 });
 

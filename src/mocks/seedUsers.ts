@@ -1,10 +1,9 @@
 import type { AuthUser } from '@/features/auth/model/session';
 
 /**
- * Usuarios semilla del MVP (el MVP no tiene registro: HU-01). Solo existen en el API local
- * simulado; en producción los precarga el backend (HU-BE-01).
+ * Usuarios semilla (no hay registro: HU-01). Solo existen en el API local simulado; en producción
+ * los precarga el backend por empresa y la persona entra con su cuenta de Microsoft.
  */
-export const DEMO_PASSWORD = 'Zeal2026*';
 
 /** Empresa de los usuarios semilla y otra empresa cuyos datos nunca deben verse en la suya. */
 export const SEED_ORGANIZATION = 'Nexura S.A.S.';
@@ -77,10 +76,8 @@ export const SEED_USERS: readonly AuthUser[] = [
   })),
 ];
 
-export function findSeedUser(email: string, password: string): AuthUser | undefined {
-  if (password !== DEMO_PASSWORD) {
-    return undefined;
-  }
+/** La cuenta registrada en ZEAL con ese correo de Microsoft, si la hay. */
+export function findSeedUserByEmail(email: string): AuthUser | undefined {
   const normalizedEmail = email.trim().toLowerCase();
   return SEED_USERS.find((user) => user.email === normalizedEmail);
 }

@@ -6,7 +6,7 @@ import {
   renewSession,
   restoreSession,
   revokeSession,
-  setLogoutPending,
+  takeLoginInProgress,
 } from '../api/sessionLifecycle';
 import type { Session } from '../model/session';
 import { forgetLegacySession, sessionStore } from '../storage/sessionStore';
@@ -58,15 +58,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     [finish],
   );
 
-  const signIn = useCallback(
-    (next: Session) => {
-      setLogoutPending(false);
-      adopt(next);
-      channel.current?.postMessage({ type: 'started' } satisfies SessionEvent);
-    },
-    [adopt],
-  );
-
   const signOut = useCallback(() => {
     void revokeSession();
     endSession(false);
@@ -93,14 +84,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     forgetLegacySession();
   }, []);
 
-  // Sin sesión en memoria (recarga u otra pestaña): se recupera con la cookie de refresh.
+  // Sin sesión en memoria (recarga, otra pestaña o el regreso de Microsoft): se recupera con la
+  // cookie de refresh. Si la pestaña volvía de iniciar sesión, las demás la recuperan también.
   useEffect(() => {
     if (!restoring) {
       return;
     }
     void restoreSession().then((restored) => {
+      const returningFromLogin = takeLoginInProgress();
       if (restored !== null) {
         adopt(restored);
+        if (returningFromLogin) {
+          channel.current?.postMessage({ type: 'started' } satisfies SessionEvent);
+        }
       }
       setRestoring(false);
     });
@@ -153,8 +149,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, [adopt, finish]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ session, restoring, sessionExpired, signIn, signOut, renew }),
-    [session, restoring, sessionExpired, signIn, signOut, renew],
+    () => ({ session, restoring, sessionExpired, signOut, renew }),
+    [session, restoring, sessionExpired, signOut, renew],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;

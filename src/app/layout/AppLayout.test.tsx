@@ -68,7 +68,10 @@ describe('Layout base con menú por rol', () => {
     await user.click(desktopSidebar().getByRole('link', { name: 'Talleres' }));
 
     expect(await topbar.findByText('Talleres')).toBeInTheDocument();
-    expect(document.title).toBe('Talleres · ZEAL');
+    // El título de la pestaña lo pone un efecto, después de pintar la barra: bajo carga llega tarde.
+    await waitFor(() => {
+      expect(document.title).toBe('Talleres · ZEAL');
+    });
 
     unmount();
     expect(document.title).toBe('ZEAL — Cuidado de la salud mental en el trabajo');

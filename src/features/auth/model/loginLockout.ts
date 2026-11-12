@@ -16,9 +16,10 @@ export interface LoginLockout {
 }
 
 /**
- * Traduce un bloqueo del borde a una espera local: el 429 de NGINX y el 403 del bouncer de
- * CrowdSec, con o sin `Retry-After` (SEG-1, ADR-15). No usa el mensaje del servidor para no
- * revelar si la cuenta existe.
+ * Traduce el rechazo del inicio de sesión por fuerza bruta (SEG-1, ADR-15) a una espera local: el
+ * 429 de NGINX y el 403 del bouncer de CrowdSec, con o sin `Retry-After`. Solo aplica a pedir la
+ * dirección de Microsoft (desde HU-BE-21 el backend ya no responde 403 por permisos). No usa el
+ * mensaje del servidor para no revelar si la cuenta existe.
  */
 export function toLoginLockout(error: unknown, now: number = Date.now()): LoginLockout | null {
   if (!(error instanceof ApiError)) {
@@ -34,11 +35,6 @@ export function toLoginLockout(error: unknown, now: number = Date.now()): LoginL
       ? DEFAULT_LOGIN_LOCKOUT_SECONDS
       : Math.max(MIN_LOGIN_LOCKOUT_SECONDS, error.retryAfterSeconds);
   return { startedAt: now, until: now + seconds * 1000 };
-}
-
-/** El login fue rechazado por el bloqueo temporal del origen, no por las credenciales. */
-export function isLoginLockout(error: unknown): boolean {
-  return toLoginLockout(error) !== null;
 }
 
 const SECONDS_PER_MINUTE = 60;

@@ -3,56 +3,97 @@ import { describe, expect, it } from 'vitest';
 import { startRefreshFamily } from '@/mocks/refreshSession';
 import { server } from '@/mocks/server';
 import { ApiError } from '@/shared/api/errors';
-import { DEMO_PASSWORD, seedUser } from '@/test/credentials';
+import { seedUser } from '@/test/credentials';
 import {
   InvalidSessionResponseError,
-  login,
-  LOGIN_ENDPOINT,
   logout,
   LOGOUT_ENDPOINT,
+  MICROSOFT_LOGIN_ENDPOINT,
   REFRESH_ENDPOINT,
   refreshSession,
+  startMicrosoftLogin,
 } from './authApi';
 
-describe('authApi.login', () => {
-  it('devuelve el token y el usuario autenticado', async () => {
-    const employee = seedUser('EMPLEADO');
+/** La misma dirección sin TLS: lo que el cliente debe rechazar fuera del propio equipo. */
+function withoutTls(url: string): string {
+  return url.replace(/^https:/, 'http:');
+}
 
-    const session = await login({ email: employee.email, password: DEMO_PASSWORD }, false);
+describe('authApi.startMicrosoftLogin', () => {
+  it('pide al servidor la dirección de Microsoft con la cookie y sin token', async () => {
+    let received: unknown = null;
+    let credentials = '';
+    server.use(
+      http.post(`*${MICROSOFT_LOGIN_ENDPOINT}`, async ({ request }) => {
+        received = await request.json();
+        credentials = request.credentials;
+        return HttpResponse.json({
+          authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?x=1',
+        });
+      }),
+    );
 
-    expect(session.user).toEqual(employee);
-    expect(session.accessToken.split('.')).toHaveLength(3);
-    expect(session.expiresAt).toBeGreaterThan(Date.now());
+    await expect(startMicrosoftLogin({ remember: true, returnTo: '/login' })).resolves.toBe(
+      'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?x=1',
+    );
+    expect(received).toEqual({ remember: true, returnTo: '/login' });
+    expect(credentials).toBe('include');
   });
 
-  it.each([true, false])(
-    'le dice al servidor si debe recordar la sesión (%s)',
-    async (remember) => {
-      let received: unknown = null;
-      server.use(
-        http.post(`*${LOGIN_ENDPOINT}`, async ({ request }) => {
-          received = await request.json();
-          return HttpResponse.json({}, { status: 401 });
-        }),
-      );
+  it('el simulador responde una página de la propia app', async () => {
+    await expect(startMicrosoftLogin({ remember: false, returnTo: '/login' })).resolves.toMatch(
+      /^\/simulador\/microsoft\?state=/,
+    );
+  });
 
-      await login({ email: 'a@b.co', password: 'x' }, remember).catch(() => undefined);
+  it.each([
+    'http://localhost:8090/microsoft/authorize?state=x',
+    'http://127.0.0.1:8090/microsoft/authorize?state=x',
+    'http://[::1]:8090/microsoft/authorize?state=x',
+  ])('acepta el proveedor de prueba del propio equipo (%s)', async (authorizationUrl) => {
+    server.use(
+      http.post(`*${MICROSOFT_LOGIN_ENDPOINT}`, () => HttpResponse.json({ authorizationUrl })),
+    );
 
-      expect(received).toEqual({ email: 'a@b.co', password: 'x', remember });
-    },
-  );
+    await expect(startMicrosoftLogin({ remember: false, returnTo: '/login' })).resolves.toBe(
+      authorizationUrl,
+    );
+  });
 
+  it.each([
+    ['sin dirección', {}],
+    ['con una dirección que no es texto', { authorizationUrl: 7 }],
+    ['que no es https', { authorizationUrl: 'wss://login.microsoftonline.com/authorize' }],
+    [
+      'http hacia otro equipo',
+      { authorizationUrl: withoutTls('https://login.microsoftonline.com/authorize') },
+    ],
+    [
+      'http hacia un dominio parecido',
+      { authorizationUrl: withoutTls('https://localhost.evil.co/authorize') },
+    ],
+    ['que ejecuta código', { authorizationUrl: 'javascript:alert(1)' }],
+    ['mal formada', { authorizationUrl: 'https://[' }],
+    ['sin cuerpo JSON de objeto', null],
+  ])('no navega con una respuesta %s', async (_case, payload) => {
+    server.use(http.post(`*${MICROSOFT_LOGIN_ENDPOINT}`, () => HttpResponse.json(payload)));
+
+    await expect(
+      startMicrosoftLogin({ remember: false, returnTo: '/login' }),
+    ).rejects.toBeInstanceOf(InvalidSessionResponseError);
+  });
+});
+
+describe('authApi.refreshSession (forma de la sesión)', () => {
   it.each([
     ['sin token', { user: seedUser('ADMIN') }],
     ['con un rol desconocido', { accessToken: 'token', user: { ...seedUser('ADMIN'), role: 'X' } }],
     ['con un token sin vencimiento', { accessToken: 'token-opaco', user: seedUser('ADMIN') }],
     ['sin cuerpo JSON de objeto', null],
   ])('rechaza una respuesta %s', async (_case, payload) => {
-    server.use(http.post(`*${LOGIN_ENDPOINT}`, () => HttpResponse.json(payload)));
+    server.use(http.post(`*${REFRESH_ENDPOINT}`, () => HttpResponse.json(payload)));
 
-    await expect(login({ email: 'a@b.co', password: 'x' }, false)).rejects.toBeInstanceOf(
-      InvalidSessionResponseError,
-    );
+    await expect(refreshSession()).rejects.toBeInstanceOf(InvalidSessionResponseError);
   });
 });
 

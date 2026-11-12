@@ -7,7 +7,6 @@ export interface AuthContextValue {
   restoring: boolean;
   /** La última sesión terminó por vencimiento o rechazo del servidor, no por decisión del usuario. */
   sessionExpired: boolean;
-  signIn: (session: Session) => void;
   signOut: () => void;
   /** Pide un token nuevo y devuelve `null` si no se pudo; si el servidor la rechaza, la sesión termina. */
   renew: () => Promise<string | null>;

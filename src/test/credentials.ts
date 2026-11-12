@@ -1,7 +1,7 @@
 import type { AuthUser, Role, Session } from '@/features/auth/model/session';
 import { sessionStore } from '@/features/auth/storage/sessionStore';
 import { createMockToken } from '@/mocks/mockToken';
-import { DEMO_PASSWORD, SEED_USERS } from '@/mocks/seedUsers';
+import { SEED_USERS } from '@/mocks/seedUsers';
 
 export function seedUser(role: Role): AuthUser {
   const user = SEED_USERS.find((candidate) => candidate.role === role);
@@ -22,5 +22,3 @@ export function storeSession(role: Role, { expiresInMs }: { expiresInMs?: number
   sessionStore.save(session);
   return session;
 }
-
-export { DEMO_PASSWORD };
