@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { LatencyReport } from './latencyHistogram';
-import { createLiveLatency, LATENCY_REPORT_EVERY_MS, latencyEventName } from './liveLatency';
+import type { LatencyReport } from './liveLatency';
+import {
+  createLiveLatency,
+  LATENCY_MAX_EVENTS,
+  LATENCY_REPORT_EVERY_MS,
+  latencyName,
+} from './liveLatency';
 
 const EMITTED = Date.parse('2026-09-23T14:20:00.000Z');
 const TOPIC = '/topic/organizaciones/org-nexura/talleres';
-const EVENT = 'organizaciones/talleres:PUBLICADO';
 
 type Send = (report: LatencyReport, options: { keepalive: boolean }) => Promise<void>;
 
@@ -38,8 +42,8 @@ function published(ms = 0, type: unknown = 'PUBLICADO') {
   return { type, emittedAt: new Date(EMITTED + ms).toISOString(), workshop: { id: 'taller-1' } };
 }
 
-function sentSeries(send: ReturnType<typeof setup>['send']) {
-  return send.mock.calls.flatMap(([report]) => report.series);
+function sentEvents(send: ReturnType<typeof setup>['send']) {
+  return send.mock.calls.flatMap(([report]) => report.events);
 }
 
 describe('latencia de los avisos en vivo (HU-FE-24, REND-1)', () => {
@@ -61,25 +65,9 @@ describe('latencia de los avisos en vivo (HU-FE-24, REND-1)', () => {
 
     expect(send).toHaveBeenCalledExactlyOnceWith(
       {
-        type: 'LATENCIA_EN_VIVO',
-        series: [
-          {
-            event: EVENT,
-            count: 2,
-            sumMs: 780,
-            maxMs: 600,
-            le: {
-              '50': 0,
-              '100': 0,
-              '250': 1,
-              '500': 1,
-              '1000': 2,
-              '2500': 2,
-              '5000': 2,
-              '10000': 2,
-              '+Inf': 2,
-            },
-          },
+        events: [
+          { type: 'latencia', name: 'notificacion_recibida', valueMs: 180 },
+          { type: 'latencia', name: 'notificacion_recibida', valueMs: 600 },
         ],
       },
       { keepalive: false },
@@ -89,26 +77,48 @@ describe('latencia de los avisos en vivo (HU-FE-24, REND-1)', () => {
   });
 
   it.each([
-    ['/topic/organizaciones/org-nexura/talleres', 'PUBLICADO', 'organizaciones/talleres:PUBLICADO'],
-    ['/topic/talleres/taller-impostor/cupos', 'CUPOS', 'talleres/cupos:CUPOS'],
-    ['/topic/presencia/usr-empleado-001', 'PRESENCIA', 'presencia:PRESENCIA'],
-    ['/user/queue/notificaciones', 'NUEVA', 'notificaciones:NUEVA'],
-    ['/topic/franjas', 'CREADA', 'franjas:CREADA'],
-  ])('%s se reporta sin ids como %s → %s', (destination, type, name) => {
-    expect(latencyEventName(destination, type)).toBe(name);
+    ['/topic/organizaciones/org-nexura/talleres', { type: 'PUBLICADO' }, 'notificacion_recibida'],
+    ['/topic/talleres/taller-impostor/cupos', { type: 'CUPOS' }, 'notificacion_recibida'],
+    ['/user/queue/notificaciones', { type: 'NUEVA' }, 'notificacion_recibida'],
+    ['/topic/franjas', { type: 'CREADA' }, 'notificacion_recibida'],
+    ['/user/queue/chats', { type: 'MENSAJE' }, 'mensaje_recibido'],
+  ])('%s se reporta como %s sin ids ni datos personales', (destination, payload, name) => {
+    expect(latencyName(destination, payload)).toBe(name);
   });
 
-  it('un tipo que no es del contrato se agrupa como OTRO', () => {
+  it.each([
+    ['la presencia', '/topic/presencia/usr-empleado-001', { type: 'PRESENCIA' }],
+    ['el aviso de "escribiendo…"', '/user/queue/chats', { type: 'ESCRIBIENDO', typing: true }],
+  ])('no mide %s: es ruido frecuente, no un aviso', (_case, destination, payload) => {
     const { latency, send, paintAt } = setup();
 
-    latency.observe(TOPIC, published(0, 'tipo inventado'));
-    latency.observe(TOPIC, { emittedAt: new Date(EMITTED + 1).toISOString() });
+    latency.observe(destination, { ...payload, emittedAt: new Date(EMITTED).toISOString() });
     paintAt(10);
     latency.flush();
 
-    expect(sentSeries(send)).toEqual([
-      expect.objectContaining({ event: 'organizaciones/talleres:OTRO', count: 2 }),
-    ]);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('envía como máximo 20 eventos por reporte y descarta el resto de la ventana', () => {
+    const { latency, send, paintAt } = setup();
+
+    for (let i = 0; i < LATENCY_MAX_EVENTS + 5; i += 1) {
+      latency.observe(TOPIC, published(i));
+    }
+    paintAt(100);
+    latency.flush();
+
+    expect(sentEvents(send)).toHaveLength(LATENCY_MAX_EVENTS);
+  });
+
+  it('no envía valores que el backend rechazaría (más de 120 s)', () => {
+    const { latency, send, paintAt } = setup();
+
+    latency.observe(TOPIC, published());
+    paintAt(120_001);
+    latency.flush();
+
+    expect(send).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -135,7 +145,7 @@ describe('latencia de los avisos en vivo (HU-FE-24, REND-1)', () => {
     paintAt(40);
     latency.flush();
 
-    expect(sentSeries(send)).toEqual([expect.objectContaining({ event: EVENT, count: 1 })]);
+    expect(sentEvents(send)).toHaveLength(1);
   });
 
   it('con la pestaña oculta no mide: no pinta hasta que la persona vuelve', () => {
@@ -182,9 +192,9 @@ describe('latencia de los avisos en vivo (HU-FE-24, REND-1)', () => {
     paintAt(150);
     latency.flush();
 
-    expect(sentSeries(send)).toEqual([
-      expect.objectContaining({ count: 1, sumMs: 30 }),
-      expect.objectContaining({ count: 1, sumMs: 50 }),
+    expect(sentEvents(send)).toEqual([
+      { type: 'latencia', name: 'notificacion_recibida', valueMs: 30 },
+      { type: 'latencia', name: 'notificacion_recibida', valueMs: 50 },
     ]);
   });
 });

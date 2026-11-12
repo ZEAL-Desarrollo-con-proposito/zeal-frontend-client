@@ -1,30 +1,49 @@
 import { sendTelemetry } from '@/shared/telemetry/telemetryApi';
-import type { LatencyReport } from './latencyHistogram';
-import { createLatencyHistogram } from './latencyHistogram';
 
 /** Cada cuánto se envía lo medido, si llegó algún evento. */
 export const LATENCY_REPORT_EVERY_MS = 30_000;
 
-/** Prefijos de los destinos de STOMP: no dicen nada del evento. */
-const DESTINATION_PREFIX = /^\/(?:topic|user\/queue)\//;
-/** Tipos de evento del contrato (`PUBLICADO`, `CUPOS`…); cualquier otra cosa se agrupa como `OTRO`. */
-const EVENT_TYPE = /^[A-Z][A-Z_]{0,39}$/;
+/** Máximo de mediciones por envío (el backend rechaza más de 20 eventos). */
+export const LATENCY_MAX_EVENTS = 20;
 
-/**
- * Nombre del evento en la métrica, sin identificadores ni datos personales. Los destinos siguen la
- * convención recurso/{id}/subrecurso: se conservan los recursos y se descartan los ids
- * (`/topic/organizaciones/{empresa}/talleres` → `organizaciones/talleres`), y se agrega el tipo.
- */
-export function latencyEventName(destination: string, type: string): string {
-  const resources = destination
-    .replace(DESTINATION_PREFIX, '')
-    .split('/')
-    .filter((_segment, index) => index % 2 === 0);
-  return `${resources.join('/')}:${type}`;
+/** Nombres de latencia del contrato `POST /api/telemetria`. */
+export type LatencyName = 'notificacion_recibida' | 'mensaje_recibido';
+
+/** Un evento de latencia del contrato de telemetría. */
+export interface LatencyEvent {
+  type: 'latencia';
+  name: LatencyName;
+  valueMs: number;
 }
 
-/** Hora en que el servidor emitió el evento (`emittedAt`) y su tipo; `null` si no la trae. */
-function readEmission(payload: unknown): { at: number; type: string } | null {
+/** Cuerpo que acepta el backend: de 1 a 20 eventos. */
+export interface LatencyReport {
+  events: LatencyEvent[];
+}
+
+/** Máximo que acepta el backend para `valueMs`. */
+const MAX_VALUE_MS = 120_000;
+
+const CHATS_DESTINATION = '/user/queue/chats';
+const PRESENCE_PREFIX = '/topic/presencia/';
+
+/**
+ * Qué se mide de cada destino: lo que llega al chat es `mensaje_recibido` y los avisos en vivo
+ * (notificaciones, convocatorias, talleres, cupos, franjas) son `notificacion_recibida`. La presencia
+ * y los avisos de "escribiendo…" son ruido frecuente que no es un aviso para la persona: no se miden.
+ */
+export function latencyName(destination: string, payload: object): LatencyName | null {
+  if (destination.startsWith(PRESENCE_PREFIX)) {
+    return null;
+  }
+  if (destination === CHATS_DESTINATION) {
+    return 'typing' in payload ? null : 'mensaje_recibido';
+  }
+  return 'notificacion_recibida';
+}
+
+/** Hora en que el servidor emitió el evento (`emittedAt`); `null` si no la trae o no es válida. */
+function readEmission(payload: unknown): number | null {
   if (
     typeof payload !== 'object' ||
     payload === null ||
@@ -34,14 +53,7 @@ function readEmission(payload: unknown): { at: number; type: string } | null {
     return null;
   }
   const at = Date.parse(payload.emittedAt);
-  if (Number.isNaN(at)) {
-    return null;
-  }
-  const type =
-    'type' in payload && typeof payload.type === 'string' && EVENT_TYPE.test(payload.type)
-      ? payload.type
-      : 'OTRO';
-  return { at, type };
+  return Number.isNaN(at) ? null : at;
 }
 
 interface LiveLatencyDependencies {
@@ -54,11 +66,12 @@ interface LiveLatencyDependencies {
 
 /**
  * Latencia de los avisos en vivo (HU-FE-24, escenario REND-1): desde que el servidor emite un
- * evento hasta que la pantalla lo pinta. Se agrega en un histograma por tipo de evento y se envía
- * cada `LATENCY_REPORT_EVERY_MS`.
+ * evento hasta que la pantalla lo pinta. Cada medición es un evento `latencia` del contrato de
+ * telemetría; se envían juntas (hasta 20) cada `LATENCY_REPORT_EVERY_MS`. Si en una ventana se miden
+ * más de 20, el resto se descarta: es una muestra, no un conteo.
  */
 export function createLiveLatency({ now, afterPaint, isVisible, send }: LiveLatencyDependencies) {
-  const histogram = createLatencyHistogram();
+  const events: LatencyEvent[] = [];
   /** Eventos esperando el pintado: si dos pantallas escuchan el mismo destino, se mide una vez. */
   const measuring = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -68,15 +81,17 @@ export function createLiveLatency({ now, afterPaint, isVisible, send }: LiveLate
       clearTimeout(timer);
       timer = null;
     }
-    const drained = histogram.drain();
-    if (drained !== null) {
+    if (events.length > 0) {
+      const report: LatencyReport = { events: events.splice(0) };
       // Una medición perdida no afecta a la persona: el error se descarta.
-      send(drained, { keepalive }).catch(() => undefined);
+      send(report, { keepalive }).catch(() => undefined);
     }
   }
 
-  function record(event: string, ms: number) {
-    histogram.record(event, ms);
+  function record(name: LatencyName, ms: number) {
+    if (events.length < LATENCY_MAX_EVENTS) {
+      events.push({ type: 'latencia', name, valueMs: Math.round(ms) });
+    }
     timer ??= setTimeout(() => {
       report(false);
     }, LATENCY_REPORT_EVERY_MS);
@@ -85,23 +100,26 @@ export function createLiveLatency({ now, afterPaint, isVisible, send }: LiveLate
   return {
     /** Un evento llegó a una pantalla: se mide hasta que se pinta. */
     observe(destination: string, payload: unknown): void {
-      const emission = readEmission(payload);
+      const emittedAt = readEmission(payload);
       // Una pestaña oculta no pinta: su espera no es la de la interfaz.
-      if (emission === null || !isVisible()) {
+      if (emittedAt === null || typeof payload !== 'object' || payload === null || !isVisible()) {
         return;
       }
-      const event = latencyEventName(destination, emission.type);
-      const key = `${event}@${String(emission.at)}`;
+      const name = latencyName(destination, payload);
+      if (name === null) {
+        return;
+      }
+      const key = `${destination}@${String(emittedAt)}`;
       if (measuring.has(key)) {
         return;
       }
       measuring.add(key);
       afterPaint(() => {
         measuring.delete(key);
-        const ms = now() - emission.at;
-        // Negativa: el reloj del equipo va detrás del servidor y la medición no sirve.
-        if (ms >= 0) {
-          record(event, ms);
+        const ms = now() - emittedAt;
+        // Negativa: el reloj del equipo va detrás del servidor; fuera de rango: el backend la rechazaría.
+        if (ms >= 0 && ms <= MAX_VALUE_MS) {
+          record(name, ms);
         }
       });
     },

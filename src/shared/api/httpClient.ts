@@ -120,7 +120,12 @@ async function sendOnce(
   const auth = options.withRefreshCookie === true ? null : httpAuth;
   const response = await fetchResponse(path, options, renewedToken ?? auth?.accessToken);
   if (response.ok) {
-    return response.status === NO_CONTENT ? null : ((await response.json()) as unknown);
+    if (response.status === NO_CONTENT) {
+      return null;
+    }
+    // Un 202 (p. ej. la telemetría) llega sin cuerpo: no hay JSON que leer.
+    const text = await response.text();
+    return text === '' ? null : (JSON.parse(text) as unknown);
   }
 
   const serverMessage = await readServerMessage(response);

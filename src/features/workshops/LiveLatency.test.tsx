@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { EMPLOYEE_PATHS } from '@/app/paths';
 import { SEED_ORGANIZATION } from '@/mocks/seedUsers';
 import { server } from '@/mocks/server';
-import type { LatencyReport } from '@/shared/realtime/latencyHistogram';
+import type { LatencyReport } from '@/shared/realtime/liveLatency';
 import { TELEMETRY_ENDPOINT } from '@/shared/telemetry/telemetryApi';
 import { freezeTime } from '@/test/clock';
 import { storeSession } from '@/test/credentials';
@@ -83,17 +83,7 @@ describe('Latencia de un taller publicado en vivo (HU-FE-24, REND-1)', () => {
     });
     expect(reports[0]).toEqual({
       keepalive: true,
-      body: {
-        type: 'LATENCIA_EN_VIVO',
-        series: [
-          expect.objectContaining({
-            event: 'organizaciones/talleres:PUBLICADO',
-            count: 1,
-            sumMs: 180,
-            le: expect.objectContaining({ '100': 0, '250': 1, '500': 1 }) as Record<string, number>,
-          }),
-        ],
-      },
+      body: { events: [{ type: 'latencia', name: 'notificacion_recibida', valueMs: 180 }] },
     });
   });
 });

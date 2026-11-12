@@ -6,7 +6,7 @@ import { ApiError } from '@/shared/api/errors';
 import { buildSession } from '@/test/credentials';
 import { sendTelemetry, TELEMETRY_ENDPOINT } from './telemetryApi';
 
-const REPORT = { type: 'LATENCIA_EN_VIVO', series: [] };
+const REPORT = { events: [{ type: 'latencia', name: 'notificacion_recibida', valueMs: 180 }] };
 
 describe('telemetryApi.sendTelemetry', () => {
   afterEach(() => {
