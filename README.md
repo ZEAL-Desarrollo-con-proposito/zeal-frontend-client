@@ -639,6 +639,11 @@ docker build -t zeal/frontend-client .
 docker run -d --name zeal-web -p 3000:80 zeal/frontend-client   # http://localhost:3000/healthz → ok
 ```
 
+- **Imagen publicada:** cuando el CI de un push a `main` termina en verde, el workflow
+  `Publicar imagen` (`.github/workflows/publish.yml`) la construye y la publica en
+  `ghcr.io/<organización>/zeal-frontend-client` con el SHA corto del commit y con `latest`. El nodo
+  web de `zeal-infra-compose` (`deploy/nodes/web`) la descarga con `FRONTEND_TAG`; también se puede
+  lanzar a mano desde Actions.
 - **Configuración del build:** `VITE_API_BASE_URL` vacío (el API en el mismo origen) y
   `VITE_REALTIME_URL=/ws` (el Real-Time Gateway detrás del balanceador). Se cambian con
   `--build-arg` si el gateway vive en otro origen; en ese caso ese origen también va en

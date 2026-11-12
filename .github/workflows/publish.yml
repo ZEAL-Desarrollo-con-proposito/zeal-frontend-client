@@ -1,0 +1,50 @@
+name: Publicar imagen
+
+# HU-FE-19 (ADR-13): el nodo web del despliegue multinodo (zeal-infra-compose, deploy/nodes/web)
+# descarga ghcr.io/<organización>/zeal-frontend-client. Cuando el CI de un push a main termina en
+# verde, se construye la imagen de producción (Dockerfile, sin MSW) y se publica con el SHA corto y
+# con latest, igual que los servicios del backend.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # Solo pushes a main de este repositorio: un PR, aunque su rama se llame main, nunca publica.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: tag
+        run: echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construir y publicar
+        env:
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          ref="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')/zeal-frontend-client"
+          docker build -t "$ref:$TAG" -t "$ref:latest" .
+          docker push "$ref:$TAG"
+          docker push "$ref:latest"
