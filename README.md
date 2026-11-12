@@ -117,8 +117,8 @@ Browser-Based Apps_): los tokens de Microsoft nunca llegan al navegador.
 1. `POST /api/auth/microsoft` con `{ "remember": false, "returnTo": "/login?desde=/empleado/mis-citas" }`
    (con la cookie, sin `Authorization`). El backend guarda `state`, `nonce` y el verificador PKCE
    en una cookie corta `httpOnly` y responde `200 { "authorizationUrl": "https://login.microsoftonline.com/…" }`
-   · `400` si `returnTo` no es una ruta interna. El cliente solo navega a direcciones `https` o de
-   su propio origen.
+   · `400` si `returnTo` no es una ruta interna. El cliente solo navega a direcciones `https`, de
+   su propio origen o `http` del propio equipo (`localhost`, para el proveedor de prueba local).
 2. El navegador va a Microsoft; la persona elige su cuenta y Microsoft vuelve a
    `GET /api/auth/microsoft/callback?code=…&state=…` (backend). El backend valida el `state`,
    canjea el código, valida el ID token (firma con las llaves públicas de Microsoft, emisor,
@@ -127,6 +127,12 @@ Browser-Based Apps_): los tokens de Microsoft nunca llegan al navegador.
    `/login?error=cuenta_no_registrada`, `cancelado` o `fallo`. La app recupera la sesión con la
    cookie (`POST /api/auth/refresh`) y, desde el login, va a la pantalla pedida (`desde`) si es de
    su rol; si no, a su inicio. Los mensajes de error son fijos: lo que llega en la URL no se pinta.
+
+El backend publica el contrato en `zeal-infra-compose/docs/contratos/auth-microsoft.md`. Con su
+stack local (`docker compose up` en `zeal-infra-compose`, gateway en `http://localhost:8080`),
+Microsoft se reemplaza por un proveedor OIDC de prueba en `http://localhost:8090`: en su pantalla
+se escribe cualquier usuario y, en _claims_, el correo de una cuenta semilla, p. ej.
+`{ "email": "david.cajamarca@nexura.co" }`.
 
 La sesión de ZEAL (`/api/auth/refresh` y `/api/auth/logout`) no cambia: **200 OK** de la renovación
 

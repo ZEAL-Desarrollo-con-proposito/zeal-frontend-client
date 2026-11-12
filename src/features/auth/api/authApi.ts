@@ -33,8 +33,15 @@ export interface MicrosoftLoginRequest {
 }
 
 /**
- * A dónde se puede navegar: Microsoft (https) o, en el simulador, una página de la propia app.
- * Cualquier otra cosa (p. ej. `javascript:`) se rechaza aunque venga del servidor.
+ * El propio equipo: en el stack local del backend, el proveedor OIDC de prueba corre en
+ * `http://localhost:8090`. Fuera del equipo se exige https.
+ */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * A dónde se puede navegar: Microsoft (https), el proveedor de prueba del propio equipo o, en el
+ * simulador, una página de la propia app. Cualquier otra cosa (p. ej. `javascript:` o http hacia
+ * otro equipo) se rechaza aunque venga del servidor.
  */
 function isSafeAuthorizationUrl(value: unknown): value is string {
   if (typeof value !== 'string') {
@@ -42,7 +49,11 @@ function isSafeAuthorizationUrl(value: unknown): value is string {
   }
   try {
     const url = new URL(value, window.location.origin);
-    return url.protocol === 'https:' || url.origin === window.location.origin;
+    return (
+      url.protocol === 'https:' ||
+      url.origin === window.location.origin ||
+      (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname))
+    );
   } catch {
     return false;
   }

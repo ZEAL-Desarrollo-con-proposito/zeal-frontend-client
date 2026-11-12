@@ -14,6 +14,11 @@ import {
   startMicrosoftLogin,
 } from './authApi';
 
+/** La misma dirección sin TLS: lo que el cliente debe rechazar fuera del propio equipo. */
+function withoutTls(url: string): string {
+  return url.replace(/^https:/, 'http:');
+}
+
 describe('authApi.startMicrosoftLogin', () => {
   it('pide al servidor la dirección de Microsoft con la cookie y sin token', async () => {
     let received: unknown = null;
@@ -42,9 +47,31 @@ describe('authApi.startMicrosoftLogin', () => {
   });
 
   it.each([
+    'http://localhost:8090/microsoft/authorize?state=x',
+    'http://127.0.0.1:8090/microsoft/authorize?state=x',
+    'http://[::1]:8090/microsoft/authorize?state=x',
+  ])('acepta el proveedor de prueba del propio equipo (%s)', async (authorizationUrl) => {
+    server.use(
+      http.post(`*${MICROSOFT_LOGIN_ENDPOINT}`, () => HttpResponse.json({ authorizationUrl })),
+    );
+
+    await expect(startMicrosoftLogin({ remember: false, returnTo: '/login' })).resolves.toBe(
+      authorizationUrl,
+    );
+  });
+
+  it.each([
     ['sin dirección', {}],
     ['con una dirección que no es texto', { authorizationUrl: 7 }],
     ['que no es https', { authorizationUrl: 'wss://login.microsoftonline.com/authorize' }],
+    [
+      'http hacia otro equipo',
+      { authorizationUrl: withoutTls('https://login.microsoftonline.com/authorize') },
+    ],
+    [
+      'http hacia un dominio parecido',
+      { authorizationUrl: withoutTls('https://localhost.evil.co/authorize') },
+    ],
     ['que ejecuta código', { authorizationUrl: 'javascript:alert(1)' }],
     ['mal formada', { authorizationUrl: 'https://[' }],
     ['sin cuerpo JSON de objeto', null],
