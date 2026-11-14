@@ -47,9 +47,9 @@ falla el job `CI / verify`, que es el check obligatorio de `main`.
 El token se guarda en el secreto `SONAR_TOKEN` de GitHub Actions; nunca en el repositorio ni en el
 código. Las ramas `develop` siguen ejecutando `verify` y `build`, pero no se analizan con Sonar.
 
-Las pruebas corren un proceso por archivo (aislamiento del tiempo real simulado) y usan como máximo
-la mitad de los núcleos, para no saturar la máquina. Para que pasen igual con la máquina ocupada,
-no usan esperas fijas (HU-DT-04):
+Las pruebas corren un proceso por archivo (aislamiento del tiempo real simulado). En CI usan todos
+los núcleos del runner; en local, como máximo la mitad, para no saturar la máquina. Para que pasen
+igual con la máquina ocupada, no usan esperas fijas (HU-DT-04):
 
 - antes de publicar un aviso en vivo esperan a que la pantalla escuche el destino
   (`subscribedTo`, de `renderRoute`);
