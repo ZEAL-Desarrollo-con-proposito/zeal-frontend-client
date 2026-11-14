@@ -5,12 +5,18 @@ export const TELEMETRY_ENDPOINT = '/api/telemetria';
 
 /**
  * Envía un reporte de telemetría, que nunca lleva datos personales. Con `keepalive` la petición
- * termina aunque la pestaña se esté cerrando. Si falla no se reintenta: una medición perdida no
+ * termina aunque la pestaña se esté cerrando. Se usa `fetch` y no `navigator.sendBeacon` porque el
+ * endpoint exige sesión: `sendBeacon` no permite la cabecera `Authorization` ni `X-Request-Id`. Si falla no se reintenta: una medición perdida no
  * justifica más tráfico, y quien llama decide si la descarta.
  */
 export async function sendTelemetry(
   report: object,
-  { keepalive = false }: { keepalive?: boolean } = {},
+  { keepalive = false, requestId }: { keepalive?: boolean; requestId?: string } = {},
 ): Promise<void> {
-  await request(TELEMETRY_ENDPOINT, { method: 'POST', body: report, keepalive });
+  await request(TELEMETRY_ENDPOINT, {
+    method: 'POST',
+    body: report,
+    keepalive,
+    requestId,
+  });
 }

@@ -546,6 +546,15 @@ ahí hasta el primer cuadro que pinta después de procesarlo y lo envía como ev
   120 s se descarta en el cliente. Los equipos sincronizan la hora por red (NTP), así que el desfase
   suele ser de milisegundos.
 
+### Errores y uso del navegador (HU-FE-25)
+
+- Errores no capturados se reportan con el nombre del contrato (`error_js`, `error_api`, `chunk_load`,
+  `ws_desconectado`, `video_fallo`) y una ruta saneada sin identificadores.
+- Si el fallo proviene de una petición fallida, se reutiliza su `X-Request-Id` para cruzarlo con los
+  logs del backend; el propio error de telemetría no lleva texto libre ni stack.
+- Uso por funcionalidad se acumula y se envía en reportes de hasta 20 eventos cada 30 s, con
+  `keepalive` al ocultar la pestaña. Los nombres usados son solo los del contrato.
+
 ## Tiempo real (RT-2)
 
 - **Hora de emisión (HU-FE-24):** todo evento que publica el servidor trae `emittedAt`, el

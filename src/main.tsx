@@ -14,6 +14,7 @@ import { reloadOnStaleBuild } from './app/staleBuild';
 import { resolveRealtimeUrl } from './shared/config/realtimeUrl';
 import type { RealtimeClientFactory } from './shared/realtime/realtimeClient';
 import { createStompRealtimeClient } from './shared/realtime/stompRealtimeClient';
+import { installErrorTelemetry } from './shared/telemetry/errorTelemetry';
 
 const isApiMockingEnabled = import.meta.env.DEV && import.meta.env.VITE_API_MOCKING === 'enabled';
 
@@ -61,6 +62,7 @@ if (!rootElement) {
   throw new Error('No se encontró el elemento raíz #root en index.html');
 }
 
+installErrorTelemetry(window);
 reloadOnStaleBuild(window);
 
 const { realtimeClientFactory, extraRoutes } = await createBackendAdapters();

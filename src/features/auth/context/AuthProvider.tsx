@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import {
   renewSession,
   restoreSession,
@@ -95,6 +96,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (restored !== null) {
         adopt(restored);
         if (returningFromLogin) {
+          trackUsage('login');
           channel.current?.postMessage({ type: 'started' } satisfies SessionEvent);
         }
       }

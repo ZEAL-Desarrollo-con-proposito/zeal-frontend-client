@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Role } from '@/features/auth/model/session';
 import { server } from '@/mocks/server';
-import { ApiError, InvalidResponseError } from '@/shared/api/errors';
+import { InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { buildSession } from '@/test/credentials';
 import type { NewProject } from './adminProjectsApi';
@@ -36,9 +36,10 @@ describe('adminProjectsApi', () => {
   it('el servidor exige sesión y rol de administrador', async () => {
     await expect(fetchAdminProjects()).rejects.toMatchObject({ status: 401 });
     authenticateAs('EMPLEADO');
-    await expect(fetchAdminProjects()).rejects.toEqual(
-      new ApiError(404, 'No encontramos lo que buscas.'),
-    );
+    await expect(fetchAdminProjects()).rejects.toMatchObject({
+      status: 404,
+      serverMessage: 'No encontramos lo que buscas.',
+    });
     await expect(createProject(VALID)).rejects.toMatchObject({ status: 404 });
   });
 
@@ -105,16 +106,20 @@ describe('adminProjectsApi', () => {
     ],
   ])('el servidor rechaza %s', async (_case, patch, message) => {
     authenticateAs('ADMIN');
-    await expect(createProject({ ...VALID, ...patch } as never)).rejects.toEqual(
-      new ApiError(400, message),
-    );
+    await expect(createProject({ ...VALID, ...patch } as never)).rejects.toMatchObject({
+      status: 400,
+      serverMessage: message,
+    });
   });
 
   it('rechaza un título repetido entre los abiertos de la empresa', async () => {
     authenticateAs('ADMIN');
-    await expect(createProject({ ...VALID, title: 'squad de OBSERVABILIDAD' })).rejects.toEqual(
-      new ApiError(409, 'Ya tienes un proyecto abierto con ese título'),
-    );
+    await expect(
+      createProject({ ...VALID, title: 'squad de OBSERVABILIDAD' }),
+    ).rejects.toMatchObject({
+      status: 409,
+      serverMessage: 'Ya tienes un proyecto abierto con ese título',
+    });
     // Un título igual al de uno ya cerrado sí se puede volver a publicar.
     await expect(
       createProject({ ...VALID, title: 'Piloto de mentorías cruzadas' }),

@@ -9,6 +9,7 @@ import { freezeTime } from '@/test/clock';
 import { storeSession } from '@/test/credentials';
 import { scriptedRealtimeClient } from '@/test/realtime';
 import { renderRoute } from '@/test/renderRoute';
+import { flushUsage } from '@/shared/telemetry/usageTelemetry';
 import { enrollmentsEndpoint, MY_ENROLLMENTS_ENDPOINT } from './api/workshopsApi';
 import type { Enrollment } from './model/enrollment';
 import { ENROLLMENTS_QUEUE } from './model/enrollment';
@@ -40,6 +41,24 @@ function toasts() {
 
 function enrollButton(title: string) {
   return { name: `Inscribirme a ${title}` };
+}
+
+/** Nombres de uso que el navegador reporta a la telemetría desde que se llama a esta función. */
+function captureUsage(): string[] {
+  flushUsage();
+  const names: string[] = [];
+  // En `request:start` el cuerpo aún no lo consumió el servidor simulado.
+  server.events.on('request:start', ({ request }) => {
+    if (request.url.endsWith('/api/telemetria')) {
+      void request
+        .clone()
+        .json()
+        .then((report: { events: { name: string }[] }) => {
+          names.push(...report.events.map(({ name }) => name));
+        });
+    }
+  });
+  return names;
 }
 
 /** Inscripción ya guardada en el servidor simulado, como si David se hubiera inscrito antes. */
@@ -121,6 +140,41 @@ describe('Inscribirse a un taller (HU-FE-18)', () => {
     await waitFor(() => {
       expect(result.closest('p')).toHaveFocus();
     });
+  });
+
+  it('reporta el uso solo cuando la inscripción se concreta (HU-FE-25)', async () => {
+    const { user } = await openAsEmployee();
+    const reported = captureUsage();
+    const impostor = await cardOf(IMPOSTOR_TITLE);
+
+    await user.click(impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE)));
+    await user.click(dialog().getByRole('button', { name: 'Sí, inscribirme' }));
+    await impostor.findByText('Tienes tu cupo');
+    flushUsage();
+
+    await waitFor(() => {
+      expect(reported).toContain('inscribir_taller');
+    });
+  });
+
+  it('no reporta uso si el servidor rechaza la inscripción (HU-FE-25)', async () => {
+    const { user } = await openAsEmployee();
+    const reported = captureUsage();
+    const impostor = await cardOf(IMPOSTOR_TITLE);
+    await user.click(impostor.getByRole('button', enrollButton(IMPOSTOR_TITLE)));
+    const db = readWorkshopsDb();
+    const workshop = db.workshops.find(({ id }) => id === IMPOSTOR);
+    if (workshop !== undefined) {
+      workshop.occupied = 30;
+    }
+    writeWorkshopsDb(db);
+
+    await user.click(dialog().getByRole('button', { name: 'Sí, inscribirme' }));
+    await dialog().findByRole('alert');
+    flushUsage();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(reported).not.toContain('inscribir_taller');
   });
 
   it('el taller destacado también se inscribe desde su bloque', async () => {

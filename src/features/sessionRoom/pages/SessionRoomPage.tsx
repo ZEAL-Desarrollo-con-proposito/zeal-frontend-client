@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ChatConversation } from '@/features/chat/components/ChatConversation';
 import { conversationId } from '@/features/chat/model/chatMessage';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
 import { useVideoCall } from '@/features/videoCall/hooks/useVideoCall';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { ApiError } from '@/shared/api/errors';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useNow } from '@/shared/hooks/useNow';
@@ -54,11 +55,19 @@ export function SessionRoomPage({ exit }: Readonly<SessionRoomPageProps>) {
   const over = room.data !== null && OVER.has(roomPhase(room.data, now).kind);
   const joined = call.phase.kind === 'joined';
   const { leave: hangUp } = call;
+  const enteredRef = useRef(false);
   useEffect(() => {
     if (over && joined) {
       hangUp();
     }
   }, [over, joined, hangUp]);
+  useEffect(() => {
+    if (!joined || enteredRef.current) {
+      return;
+    }
+    enteredRef.current = true;
+    trackUsage('entrar_sala');
+  }, [joined]);
 
   async function activateAndJoin() {
     const activated = await activation.activate();

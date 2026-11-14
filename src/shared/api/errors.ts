@@ -5,13 +5,21 @@ export class ApiError extends Error {
   readonly serverMessage: string | undefined;
   /** Segundos que pide esperar el servidor en `Retry-After`; `null` si no vino la cabecera. */
   readonly retryAfterSeconds: number | null;
+  /** Identificador de la petición que falló, para cruzarla con los logs del backend. */
+  readonly requestId: string | undefined;
 
-  constructor(status: number, serverMessage?: string, retryAfterSeconds: number | null = null) {
+  constructor(
+    status: number,
+    serverMessage?: string,
+    retryAfterSeconds: number | null = null,
+    requestId?: string,
+  ) {
     super(serverMessage ?? `La petición falló con estado HTTP ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.serverMessage = serverMessage;
     this.retryAfterSeconds = retryAfterSeconds;
+    this.requestId = requestId;
   }
 }
 
@@ -41,10 +49,18 @@ export class InvalidResponseError extends Error {
   }
 }
 
+interface NetworkErrorOptions extends ErrorOptions {
+  requestId?: string;
+}
+
 /** La petición no llegó al servidor (sin red, CORS, servidor caído). */
 export class NetworkError extends Error {
-  constructor(options?: ErrorOptions) {
+  /** Identificador de la petición que no llegó, para cruzarla con los logs del backend. */
+  readonly requestId: string | undefined;
+
+  constructor(options: NetworkErrorOptions = {}) {
     super('No fue posible conectar con el servidor', options);
     this.name = 'NetworkError';
+    this.requestId = options.requestId;
   }
 }

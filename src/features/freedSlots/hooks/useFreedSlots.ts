@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useReducer, useRef } from 'react';
 import { describeMutationError } from '@/shared/api/describeError';
 import { ApiError } from '@/shared/api/errors';
 import { useRealtimeStatus, useRealtimeSubscription } from '@/shared/realtime/useRealtime';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { claimFreedSlot, fetchOpenOffers } from '../api/freedSlotsApi';
 import type { FreedSlotOffer } from '../model/freedSlot';
 import { remainingMs } from '../model/freedSlot';
@@ -81,6 +82,7 @@ export function useFreedSlots() {
     try {
       await claimFreedSlot(id);
       dispatch({ type: 'claim-won', id });
+      trackUsage('tomar_cupo');
     } catch (reason) {
       // El servidor respondió: 409 = otra persona lo tomó primero; cualquier otro 4xx = ya no está.
       if (reason instanceof ApiError && reason.status < 500) {

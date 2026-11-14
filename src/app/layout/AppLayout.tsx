@@ -14,6 +14,7 @@ import { ROLE_PROFILE } from '../navigation';
 import { isDismissGesture } from './drawerGesture';
 import { findPageTitle } from './pageHandle';
 import { Sidebar } from './Sidebar';
+import { useNavigationTelemetry } from './useNavigationTelemetry';
 import styles from './AppLayout.module.css';
 
 const MOBILE_MENU_ID = 'menu-movil';
@@ -24,6 +25,7 @@ export function AppLayout() {
   const user = useCurrentUser();
   const profile = ROLE_PROFILE[user.role];
   const { pathname } = useLocation();
+  useNavigationTelemetry(pathname);
   const pageTitle = findPageTitle(useMatches()) ?? profile.label;
   const [isMenuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);

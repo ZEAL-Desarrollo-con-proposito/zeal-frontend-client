@@ -1,6 +1,8 @@
 import type { StompSubscription } from '@stomp/stompjs';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { newRequestId } from '@/shared/api/requestId';
+import { reportError } from '@/shared/telemetry/errorTelemetry';
 import type { RealtimeClient, RealtimeCredentials, RealtimeListener } from './realtimeClient';
 import { createStatusStore } from './realtimeClient';
 
@@ -12,8 +14,9 @@ interface Subscription {
   listener: RealtimeListener;
 }
 
-function bearer(token: string): { Authorization: string } {
-  return { Authorization: `Bearer ${token}` };
+/** El gateway lee `x-request-id` de la cabecera nativa del CONNECT (R2-29 / HU-FE-25). */
+function stompHeaders(token: string): { Authorization: string; 'x-request-id': string } {
+  return { Authorization: `Bearer ${token}`, 'x-request-id': newRequestId() };
 }
 
 function parseBody(body: string): { ok: true; payload: unknown } | { ok: false } {
@@ -39,12 +42,14 @@ export function createStompRealtimeClient(
   const subscriptions = new Map<number, Subscription>();
   const handles = new Map<number, StompSubscription>();
   let nextId = 0;
+  let hasConnected = false;
+  let closing = false;
 
   const client = new Client({
     webSocketFactory: () => new SockJS(url),
-    connectHeaders: bearer(accessToken),
+    connectHeaders: stompHeaders(accessToken),
     beforeConnect: () => {
-      client.connectHeaders = bearer(credentials?.currentToken() ?? accessToken);
+      client.connectHeaders = stompHeaders(credentials?.currentToken() ?? accessToken);
     },
     onStompError: () => {
       credentials?.onRejected();
@@ -53,6 +58,8 @@ export function createStompRealtimeClient(
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,
     onConnect: () => {
+      hasConnected = true;
+      closing = false;
       handles.clear();
       subscriptions.forEach((subscription, id) => {
         attach(id, subscription);
@@ -60,8 +67,16 @@ export function createStompRealtimeClient(
       store.set('connected');
     },
     onWebSocketClose: () => {
-      if (client.active) {
-        store.set('reconnecting');
+      if (!client.active || closing) {
+        return;
+      }
+      store.set('reconnecting');
+      // Solo la primera caída de una conexión que llegó a estar abierta: la reconexión automática
+      // no debe convertir un bucle de reconexiones en decenas de reportes por minuto.
+      const wasConnected = hasConnected;
+      hasConnected = false;
+      if (wasConnected) {
+        reportError(undefined, { name: 'ws_desconectado' });
       }
     },
   });
@@ -78,10 +93,13 @@ export function createStompRealtimeClient(
 
   return {
     connect() {
+      closing = false;
       store.set('connecting');
       client.activate();
     },
     disconnect() {
+      closing = true;
+      hasConnected = false;
       handles.clear();
       store.set('idle');
       void client.deactivate();

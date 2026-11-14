@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { describeMutationError } from '@/shared/api/describeError';
 import { ApiError } from '@/shared/api/errors';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { cancelAppointment } from '../api/appointmentsApi';
 import type { Appointment } from '../model/appointment';
 
@@ -30,6 +31,7 @@ export function useCancelAppointment({ onCancelled }: CancelAppointmentHandlers)
     try {
       const cancelled = await cancelAppointment(appointment.id);
       setTarget(null);
+      trackUsage('cancelar_cita');
       onCancelled(cancelled);
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 404) {
