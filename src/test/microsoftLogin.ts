@@ -42,9 +42,11 @@ export async function loginWithMicrosoft(
 ): Promise<View> {
   const navigation = spyPageNavigation();
   if (remember) {
-    await view.user.click(screen.getByRole('checkbox', { name: 'Recordarme' }));
+    await view.user.click(await screen.findByRole('checkbox', { name: 'Recordarme' }));
   }
-  await view.user.click(screen.getByRole('button', { name: 'Iniciar sesión con Microsoft' }));
+  await view.user.click(
+    await screen.findByRole('button', { name: 'Iniciar sesión con Microsoft' }),
+  );
   const picker = await navigation.leave(view, 1, factory);
   await picker.user.click(await screen.findByRole('button', { name: new RegExp(email) }));
   const back = await navigation.leave(picker, 2, factory);

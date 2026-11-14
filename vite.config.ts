@@ -30,12 +30,12 @@ export default defineConfig({
     environment: 'jsdom',
     // Procesos aislados: el tiempo real simulado (BroadcastChannel) no cruza archivos de prueba.
     pool: 'forks',
-    // Cada proceso carga su propio jsdom: con la mitad de los núcleos la suite tarda lo mismo y la
-    // máquina sigue respondiendo (por defecto Vitest abre uno por núcleo y satura la CPU).
-    maxWorkers: '50%',
+    // En CI el runner es efímero: usa todos sus núcleos para no acercarse al límite de 10 minutos.
+    // En local, la mitad, para que la máquina siga respondiendo mientras corre la suite.
+    maxWorkers: process.env.CI ? '100%' : '50%',
     isolate: true,
-    testTimeout: 15000,
-    hookTimeout: 15000,
+    testTimeout: 30000,
+    hookTimeout: 30000,
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     coverage: {
