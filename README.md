@@ -5,15 +5,15 @@ bienestar emocional y desarrollo profesional.
 
 ## Stack
 
-| Área                   | Herramienta                                                                 |
-| ---------------------- | --------------------------------------------------------------------------- |
-| UI                     | React 19 + TypeScript (modo estricto)                                       |
-| Build y servidor local | Vite (puerto `3000`, según la guía de arquitectura)                         |
-| Enrutamiento           | React Router                                                                |
-| Animaciones            | Motion (antes Framer Motion)                                                |
-| Estilos                | CSS Modules + tokens de marca (`src/styles/tokens.css`)                     |
-| Pruebas                | Vitest + Testing Library, cobertura v8 con umbral del 100 %                 |
-| Calidad                | ESLint (typescript-eslint estricto, SonarJS, jsx-a11y), Prettier, SonarQube |
+| Área                   | Herramienta                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| UI                     | React 19 + TypeScript (modo estricto)                                             |
+| Build y servidor local | Vite (puerto `3000`, según la guía de arquitectura)                               |
+| Enrutamiento           | React Router                                                                      |
+| Animaciones            | Motion (antes Framer Motion)                                                      |
+| Estilos                | CSS Modules + tokens de marca (`src/styles/tokens.css`)                           |
+| Pruebas                | Vitest + Testing Library, cobertura v8 con umbral del 100 %                       |
+| Calidad                | ESLint (typescript-eslint estricto, SonarJS, jsx-a11y), Prettier, SonarQube Cloud |
 
 ## Primeros pasos
 
@@ -35,6 +35,17 @@ La aplicación queda en <http://localhost:3000>.
 | `npm run test`          | Ejecuta las pruebas                                                       |
 | `npm run test:coverage` | Pruebas con reporte de cobertura (`coverage/lcov.info` para SonarQube)    |
 | `npm run verify`        | Tipos + lint + formato + pruebas con cobertura (lo mismo que corre el CI) |
+
+## Calidad en CI (HU-FE-23)
+
+El workflow `CI` ejecuta SonarQube Cloud después de `npm run verify` en pushes a `main` y en pull
+requests dirigidos a `main`. El plan Free solo analiza la rama principal y esos pull requests, y
+aplica el gate `Sonar way` (cobertura nueva >= 80 %). Como el plan Free no publica el gate como un
+check aparte, el escaneo espera el resultado con `sonar.qualitygate.wait=true`: si el gate falla,
+falla el job `CI / verify`, que es el check obligatorio de `main`.
+
+El token se guarda en el secreto `SONAR_TOKEN` de GitHub Actions; nunca en el repositorio ni en el
+código. Las ramas `develop` siguen ejecutando `verify` y `build`, pero no se analizan con Sonar.
 
 Las pruebas corren un proceso por archivo (aislamiento del tiempo real simulado) y usan como máximo
 la mitad de los núcleos, para no saturar la máquina. Para que pasen igual con la máquina ocupada,
