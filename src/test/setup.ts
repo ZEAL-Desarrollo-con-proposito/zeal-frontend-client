@@ -9,7 +9,7 @@ import { fakeMediaQueryList } from './media';
 
 // La suite corre un proceso por archivo en paralelo; con la CPU ocupada, el primer render de una
 // página completa puede pasar de 1 s (el valor por defecto de findBy/waitFor).
-configure({ asyncUtilTimeout: 3000 });
+configure({ asyncUtilTimeout: 5000 });
 
 // Las animaciones terminan al instante: las pruebas verifican estados, no transiciones.
 MotionGlobalConfig.skipAnimations = true;

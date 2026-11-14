@@ -115,11 +115,11 @@ describe('Mi disponibilidad · eliminar franja', () => {
       'No puedes eliminar una franja reservada.',
     );
     await waitFor(() => {
+      expect(wednesday().getByText('10:00 – 10:50').nextElementSibling).toHaveTextContent(
+        'Reservada',
+      );
       expect(wednesday().queryByRole('button', { name: OPEN_SLOT })).not.toBeInTheDocument();
     });
-    expect(wednesday().getByText('10:00 – 10:50').nextElementSibling).toHaveTextContent(
-      'Reservada',
-    );
   });
 
   it('si otra sesión ya la eliminó, la da por eliminada', async () => {
