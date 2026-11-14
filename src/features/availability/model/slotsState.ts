@@ -57,12 +57,15 @@ export function slotsReducer(state: SlotsState, action: SlotsAction): SlotsState
       if (action.requestId !== state.requestId) {
         return state;
       }
-      return state.pendingEvents.reduce(applyEvent, {
-        ...state,
-        status: 'ready',
-        pendingEvents: [],
-        slots: action.slots.filter(({ id }) => !state.deletedIds.includes(id)),
-      });
+      return state.pendingEvents.reduce<SlotsState>(
+        (current, event) => applyEvent(current, event),
+        {
+          ...state,
+          status: 'ready',
+          pendingEvents: [],
+          slots: action.slots.filter(({ id }) => !state.deletedIds.includes(id)),
+        },
+      );
     case 'load-failure':
       return action.requestId === state.requestId ? { ...state, status: 'error' } : state;
     case 'created':

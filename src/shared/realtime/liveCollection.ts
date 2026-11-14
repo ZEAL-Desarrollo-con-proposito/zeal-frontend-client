@@ -55,7 +55,7 @@ export function liveCollectionReducer<T extends Versioned>(
       return {
         ...state,
         status: 'ready',
-        items: state.pending.reduce<T[]>(upsert, [...action.items]),
+        items: state.pending.reduce<T[]>((items, item) => upsert(items, item), [...action.items]),
         pending: [],
       };
     case 'load-failure':

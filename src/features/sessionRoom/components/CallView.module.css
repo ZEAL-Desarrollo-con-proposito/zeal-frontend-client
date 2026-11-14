@@ -27,7 +27,6 @@
   position: relative;
   flex: 1;
   display: grid;
-  flex: 1;
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   min-height: 320px;
 }
