@@ -1,5 +1,6 @@
 import { useSubmitting } from '@/shared/hooks/useSubmitting';
 import { useLiveCollection } from '@/shared/realtime/useLiveCollection';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { useToast } from '@/shared/ui/Toast/useToast';
 import { enrollInWorkshop, fetchMyEnrollments } from '../api/workshopsApi';
 import type { Enrollment } from '../model/enrollment';
@@ -28,6 +29,7 @@ export function useEnrollments() {
   function enroll(workshopId: string): Promise<Enrollment> {
     return submit(workshopId, async () => {
       const enrollment = await enrollInWorkshop(workshopId);
+      trackUsage('inscribir_taller');
       collection.received(enrollment);
       showToast(enrollmentToast(enrollment, Date.now()));
       return enrollment;

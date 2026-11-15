@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/shared/config/apiBaseUrl';
 import { ApiError, NetworkError } from './errors';
+import { newRequestId, REQUEST_ID_HEADER } from './requestId';
 import { parseRetryAfter } from './retryAfter';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -14,6 +15,11 @@ interface RequestOptions {
   withRefreshCookie?: boolean;
   /** La petición termina aunque la pestaña se cierre (p. ej. la telemetría al ocultarse). */
   keepalive?: boolean;
+  /**
+   * Correlación ya conocida (p. ej. la petición que falló y se reporta). Si no se indica, cada
+   * intento usa un identificador nuevo.
+   */
+  requestId?: string;
 }
 
 const NO_CONTENT = 204;
@@ -118,7 +124,12 @@ async function sendOnce(
   renewedToken?: string,
 ): Promise<unknown> {
   const auth = options.withRefreshCookie === true ? null : httpAuth;
-  const response = await fetchResponse(path, options, renewedToken ?? auth?.accessToken);
+  const { response, requestId } = await fetchResponse(
+    path,
+    options,
+    renewedToken ?? auth?.accessToken,
+  );
+  const correlationId = response.headers.get(REQUEST_ID_HEADER) ?? requestId;
   if (response.ok) {
     if (response.status === NO_CONTENT) {
       return null;
@@ -132,21 +143,32 @@ async function sendOnce(
   if (response.status === UNAUTHORIZED && auth !== null && renewedToken === undefined) {
     const renewed = await auth.renew(); // El token venció o fue revocado en el servidor.
     if (renewed !== null) {
-      return repeatAfterRenewal(path, options, renewed);
+      return repeatAfterRenewal(path, options, renewed, correlationId);
     }
   }
   throw new ApiError(
     response.status,
     serverMessage,
     parseRetryAfter(response.headers.get('Retry-After')),
+    correlationId,
   );
 }
 
-function repeatAfterRenewal(path: string, options: RequestOptions, token: string) {
+function repeatAfterRenewal(
+  path: string,
+  options: RequestOptions,
+  token: string,
+  requestId: string,
+) {
   if ((options.method ?? 'GET') !== 'GET') {
-    throw new ApiError(UNAUTHORIZED, SESSION_RENEWED_MESSAGE);
+    throw new ApiError(UNAUTHORIZED, SESSION_RENEWED_MESSAGE, null, requestId);
   }
   return sendOnce(path, options, token);
+}
+
+interface HttpAttempt {
+  response: Response;
+  requestId: string;
 }
 
 async function fetchResponse(
@@ -158,10 +180,11 @@ async function fetchResponse(
     signal,
     withRefreshCookie = false,
     keepalive = false,
+    requestId = newRequestId(),
   }: RequestOptions,
   token: string | undefined,
-): Promise<Response> {
-  const headers = new Headers({ Accept: 'application/json' });
+): Promise<HttpAttempt> {
+  const headers = new Headers({ Accept: 'application/json', [REQUEST_ID_HEADER]: requestId });
   if (body !== undefined) {
     headers.set('Content-Type', 'application/json');
   }
@@ -174,7 +197,7 @@ async function fetchResponse(
   }
 
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       method,
       headers,
       body: body === undefined ? null : JSON.stringify(body),
@@ -182,11 +205,12 @@ async function fetchResponse(
       keepalive,
       ...(withRefreshCookie ? { credentials: 'include' as const } : {}),
     });
+    return { response, requestId };
   } catch (cause) {
     if (isAbortError(cause)) {
       throw cause; // Cancelación pedida por quien llama: no es un fallo de red.
     }
-    throw new NetworkError({ cause });
+    throw new NetworkError({ cause, requestId });
   }
 }
 

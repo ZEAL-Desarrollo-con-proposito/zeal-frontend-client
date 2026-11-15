@@ -3,6 +3,7 @@ import type { Appointment } from '@/features/appointments/model/appointment';
 import type { Slot } from '@/features/availability/model/slot';
 import { describeMutationError } from '@/shared/api/describeError';
 import { ApiError } from '@/shared/api/errors';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { bookSlot } from '../api/bookingApi';
 
 interface BookSlotHandlers {
@@ -47,6 +48,7 @@ export function useBookSlot({ onBooked, onRejected }: BookSlotHandlers) {
     try {
       const appointment = await bookSlot(slot.id);
       setTarget(null);
+      trackUsage('reservar_cita');
       onBooked(appointment, slot);
     } catch (reason) {
       const message = describeMutationError(reason);

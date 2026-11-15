@@ -2,6 +2,7 @@ import { describeMutationError } from '@/shared/api/describeError';
 import { useSubmitting } from '@/shared/hooks/useSubmitting';
 import { useLiveCollection } from '@/shared/realtime/useLiveCollection';
 import { useToast } from '@/shared/ui/Toast/useToast';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { applyToProject, fetchMyApplications } from '../api/projectsApi';
 import type { Application } from '../model/application';
 import {
@@ -35,6 +36,7 @@ export function useApplications() {
       try {
         const application = await applyToProject(projectId);
         collection.received(application);
+        trackUsage('postular');
         showToast(applicationToast(application));
       } catch (error) {
         showToast({

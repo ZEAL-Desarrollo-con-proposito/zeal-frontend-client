@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '@/shared/config/apiBaseUrl';
+import { reportError } from '@/shared/telemetry/errorTelemetry';
 import type { MediaErrorReason } from '../call/mediaError';
 import { mediaErrorReason } from '../call/mediaError';
 import type {
@@ -79,7 +80,8 @@ export function useVideoCall(connector: VideoCallConnector = connectWithLiveKit)
       });
       callRef.current = call;
       await applyMedia(call, media);
-    } catch {
+    } catch (error) {
+      reportError(error, { name: 'video_fallo' });
       setPhase({ kind: 'failed' });
     }
   }

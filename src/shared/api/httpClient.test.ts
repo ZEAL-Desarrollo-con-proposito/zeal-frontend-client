@@ -25,6 +25,38 @@ describe('httpClient.request', () => {
     await expect(request(ENDPOINT)).resolves.toEqual({ contentType: null });
   });
 
+  it('envía un X-Request-Id seguro y adjunta al error el que devolvió el servidor', async () => {
+    let sent: string | null = null;
+    server.use(
+      http.get(`*${ENDPOINT}`, ({ request: incoming }) => {
+        sent = incoming.headers.get('X-Request-Id');
+        return new HttpResponse(null, {
+          status: 500,
+          headers: { 'X-Request-Id': 'servidor-12345678' },
+        });
+      }),
+    );
+
+    const error: unknown = await request(ENDPOINT).catch((reason: unknown) => reason);
+
+    expect(sent).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
+    expect(error).toMatchObject({ requestId: 'servidor-12345678' });
+  });
+
+  it('conserva el X-Request-Id indicado para correlacionar un reporte con su fallo', async () => {
+    let sent: string | null = null;
+    server.use(
+      http.post(`*${ENDPOINT}`, ({ request: incoming }) => {
+        sent = incoming.headers.get('X-Request-Id');
+        return new HttpResponse(null, { status: 202 });
+      }),
+    );
+
+    await request(ENDPOINT, { method: 'POST', body: {}, requestId: 'fallo-12345678' });
+
+    expect(sent).toBe('fallo-12345678');
+  });
+
   it('agrega los parámetros de consulta y devuelve null ante un 204', async () => {
     let search = '';
     server.use(
@@ -97,9 +129,10 @@ describe('httpClient.request', () => {
       ),
     );
 
-    await expect(request(ENDPOINT)).rejects.toEqual(
-      new ApiError(401, 'Correo o contraseña incorrectos'),
-    );
+    await expect(request(ENDPOINT)).rejects.toMatchObject({
+      status: 401,
+      serverMessage: 'Correo o contraseña incorrectos',
+    });
   });
 
   it.each([
@@ -153,7 +186,13 @@ describe('httpClient.request', () => {
         ),
       );
 
-      await expect(request(ENDPOINT)).rejects.toEqual(new ApiError(401, 'Bearer token-123'));
+      const failure = await request(ENDPOINT).catch((reason: unknown) => reason);
+      expect(failure).toBeInstanceOf(ApiError);
+      expect(failure).toMatchObject({
+        status: 401,
+        serverMessage: 'Bearer token-123',
+      });
+      expect((failure as ApiError).requestId).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
       expect(renew).toHaveBeenCalledOnce();
     });
 
@@ -212,9 +251,15 @@ describe('httpClient.request', () => {
         }),
       );
 
-      await expect(request(ENDPOINT, { method: 'POST', body: {} })).rejects.toEqual(
-        new ApiError(401, SESSION_RENEWED_MESSAGE),
+      const failure = await request(ENDPOINT, { method: 'POST', body: {} }).catch(
+        (reason: unknown) => reason,
       );
+      expect(failure).toBeInstanceOf(ApiError);
+      expect(failure).toMatchObject({
+        status: 401,
+        serverMessage: SESSION_RENEWED_MESSAGE,
+      });
+      expect((failure as ApiError).requestId).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
       expect(requests).toBe(1);
       expect(renew).toHaveBeenCalledOnce();
     });
@@ -269,6 +314,23 @@ describe('httpClient.request', () => {
       },
     );
 
+    it('cada reintento viaja con su propio X-Request-Id', async () => {
+      const ids: (string | null)[] = [];
+      let attempts = 0;
+      server.use(
+        http.get(`*${ENDPOINT}`, ({ request: incoming }) => {
+          ids.push(incoming.headers.get('X-Request-Id'));
+          attempts += 1;
+          return attempts === 1 ? new HttpResponse(null, { status: 503 }) : HttpResponse.json({});
+        }),
+      );
+
+      await request(ENDPOINT);
+
+      expect(ids).toHaveLength(2);
+      expect(ids[0]).not.toBe(ids[1]);
+    });
+
     it('repite una consulta que no llegó al servidor', async () => {
       const attempts = unavailableFirst(1, () => HttpResponse.error());
 
@@ -281,16 +343,20 @@ describe('httpClient.request', () => {
         HttpResponse.json({ message: 'ZEAL está en mantenimiento' }, { status: 503 }),
       );
 
-      await expect(request(ENDPOINT)).rejects.toEqual(
-        new ApiError(503, 'ZEAL está en mantenimiento'),
-      );
+      await expect(request(ENDPOINT)).rejects.toMatchObject({
+        status: 503,
+        serverMessage: 'ZEAL está en mantenimiento',
+      });
       expect(attempts.count).toBe(MAX_RETRIES + 1);
     });
 
-    it('lanza NetworkError cuando nunca hay conexión con el servidor', async () => {
+    it('lanza NetworkError cuando nunca hay conexión, con el ID del último intento', async () => {
       unavailableFirst(Infinity, () => HttpResponse.error());
 
-      await expect(request(ENDPOINT)).rejects.toBeInstanceOf(NetworkError);
+      const error: unknown = await request(ENDPOINT).catch((reason: unknown) => reason);
+
+      expect(error).toBeInstanceOf(NetworkError);
+      expect((error as NetworkError).requestId).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
     });
 
     it.each([

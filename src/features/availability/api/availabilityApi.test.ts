@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
 import { readWellbeingDb } from '@/mocks/wellbeing/db';
 import { server } from '@/mocks/server';
-import { ApiError, InvalidResponseError } from '@/shared/api/errors';
+import { InvalidResponseError } from '@/shared/api/errors';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { buildSession } from '@/test/credentials';
 import type { Role } from '@/features/auth/model/session';
@@ -51,9 +51,10 @@ describe('availabilityApi.fetchMySlots', () => {
     await expect(fetchMySlots(WEEK)).rejects.toMatchObject({ status: 401 });
 
     authenticateAs('EMPLEADO');
-    await expect(fetchMySlots(WEEK)).rejects.toEqual(
-      new ApiError(404, 'No encontramos lo que buscas.'),
-    );
+    await expect(fetchMySlots(WEEK)).rejects.toMatchObject({
+      status: 404,
+      serverMessage: 'No encontramos lo que buscas.',
+    });
   });
 
   it.each(['?desde=ayer', ''])(
@@ -87,9 +88,10 @@ describe('availabilityApi.fetchMySlots', () => {
 
     authenticateAs('PSICOLOGO');
 
-    await expect(createSlot({ startsAt: 'hoy', endsAt: 'mañana' })).rejects.toEqual(
-      new ApiError(400, 'La hora de fin debe ser posterior a la de inicio'),
-    );
+    await expect(createSlot({ startsAt: 'hoy', endsAt: 'mañana' })).rejects.toMatchObject({
+      status: 400,
+      serverMessage: 'La hora de fin debe ser posterior a la de inicio',
+    });
   });
 
   it('el servidor rechaza un cuerpo sin horas', async () => {
@@ -109,9 +111,10 @@ describe('availabilityApi.fetchMySlots', () => {
     await expect(deleteSlot('franja-1')).rejects.toMatchObject({ status: 401 });
 
     authenticateAs('PSICOLOGO');
-    await expect(deleteSlot('franja-inexistente')).rejects.toEqual(
-      new ApiError(404, 'La franja ya no existe'),
-    );
+    await expect(deleteSlot('franja-inexistente')).rejects.toMatchObject({
+      status: 404,
+      serverMessage: 'La franja ya no existe',
+    });
 
     // Cualquier franja disponible de la semilla sirve: no dependemos de un id fijo.
     const db = readWellbeingDb();

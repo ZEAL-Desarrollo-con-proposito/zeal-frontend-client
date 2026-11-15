@@ -1,5 +1,6 @@
 import { useCallback, useReducer } from 'react';
 import { useFetch } from '@/shared/hooks/useFetch';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import {
   useRealtimePublish,
   useRealtimeStatus,
@@ -66,6 +67,7 @@ export function useChatClient({ conversationId }: ChatClientOptions) {
         return;
       }
       publish(chatSendDestination(conversationId), { text: trimmed } satisfies ChatOutgoing);
+      trackUsage('chat_enviado');
     },
     [publish, conversationId],
   );

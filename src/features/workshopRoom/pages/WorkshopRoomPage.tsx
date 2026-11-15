@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '@/shared/api/errors';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
@@ -11,6 +11,7 @@ import { ArrowLeftIcon, LockIcon } from '@/shared/ui/icons';
 import { GroupCallView } from '../components/GroupCallView';
 import { WorkshopRoomLobby } from '../components/WorkshopRoomLobby';
 import { useVideoCall } from '@/features/videoCall/hooks/useVideoCall';
+import { trackUsage } from '@/shared/telemetry/usageTelemetry';
 import { useWorkshopRoom } from '../hooks/useWorkshopRoom';
 import type { WorkshopRoom } from '../model/workshopRoom';
 import { workshopRoomPhase } from '../model/workshopRoom';
@@ -55,6 +56,14 @@ export function WorkshopRoomPage({ exit }: Readonly<WorkshopRoomPageProps>) {
   const finished = phase?.kind === 'finished';
   const joined = call.phase.kind === 'joined';
   const { leave } = call;
+  const enteredRef = useRef(false);
+  useEffect(() => {
+    if (!joined || enteredRef.current) {
+      return;
+    }
+    enteredRef.current = true;
+    trackUsage('entrar_taller');
+  }, [joined]);
   useEffect(() => {
     if (finished && joined) {
       leave();

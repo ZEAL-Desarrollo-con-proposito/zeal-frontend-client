@@ -86,20 +86,26 @@ describe('createStompRealtimeClient', () => {
     const { config } = fake();
     expect(client.getStatus()).toBe('connecting');
     expect(fake().activate).toHaveBeenCalledOnce();
-    expect(config.connectHeaders).toEqual({ Authorization: 'Bearer token-abc' });
+    expect(config.connectHeaders).toMatchObject({ Authorization: 'Bearer token-abc' });
+    expect(config.connectHeaders?.['x-request-id']).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
     expect(config.reconnectDelay).toBe(RECONNECT_DELAY_MS);
     expect(config.heartbeatIncoming).toBe(HEARTBEAT_MS);
     expect(config.webSocketFactory?.()).toEqual({ url: 'https://rt.zeal.test/ws' });
   });
 
   describe('con la sesión (HU-FE-21)', () => {
-    /** Lo que hace la biblioteca justo antes de abrir cada conexión. */
-    function headersOfNextConnection() {
-      void fake().config.beforeConnect?.(fake() as never);
-      return (fake() as unknown as { connectHeaders: unknown }).connectHeaders;
+    interface StompHeaders {
+      Authorization: string;
+      'x-request-id': string;
     }
 
-    it('cada reconexión usa el token vigente, no el de la primera conexión', () => {
+    /** Lo que hace la biblioteca justo antes de abrir cada conexión. */
+    function headersOfNextConnection(): StompHeaders {
+      void fake().config.beforeConnect?.(fake() as never);
+      return (fake() as unknown as { connectHeaders: StompHeaders }).connectHeaders;
+    }
+
+    it('cada reconexión usa el token vigente y un X-Request-Id nuevo', () => {
       let token = 'token-1';
       createStompRealtimeClient('https://rt.zeal.test/ws', 'token-1', {
         currentToken: () => token,
@@ -107,8 +113,12 @@ describe('createStompRealtimeClient', () => {
       });
 
       token = 'token-2';
+      const first = headersOfNextConnection();
+      const second = headersOfNextConnection();
 
-      expect(headersOfNextConnection()).toEqual({ Authorization: 'Bearer token-2' });
+      expect(first.Authorization).toBe('Bearer token-2');
+      expect(first['x-request-id']).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
+      expect(first['x-request-id']).not.toBe(second['x-request-id']);
     });
 
     it('sin token vigente, o sin sesión que lo informe, usa el de la primera conexión', () => {
@@ -116,10 +126,10 @@ describe('createStompRealtimeClient', () => {
         currentToken: () => null,
         onRejected: () => undefined,
       });
-      expect(headersOfNextConnection()).toEqual({ Authorization: 'Bearer token-1' });
+      expect(headersOfNextConnection()).toMatchObject({ Authorization: 'Bearer token-1' });
 
       createStompRealtimeClient('https://rt.zeal.test/ws', 'token-3');
-      expect(headersOfNextConnection()).toEqual({ Authorization: 'Bearer token-3' });
+      expect(headersOfNextConnection()).toMatchObject({ Authorization: 'Bearer token-3' });
     });
 
     it('si el servidor rechaza la conexión, avisa a quien maneja la sesión', () => {
@@ -190,6 +200,7 @@ describe('createStompRealtimeClient', () => {
 
     fake().drop();
     expect(client.getStatus()).toBe('reconnecting');
+
     unsubscribe(); // Sin conexión no se avisa al broker: la suscripción ya murió con el socket.
     expect(fake().unsubscribed).toEqual([]);
 
@@ -214,6 +225,14 @@ describe('createStompRealtimeClient', () => {
     expect(fake().published).toEqual([
       { destination: '/app/salas/r-1/senales', body: '{"type":"LISTO"}' },
     ]);
+  });
+
+  it('una caída antes de abrir la conexión no reporta desconexión', () => {
+    const client = createStompRealtimeClient('https://rt.zeal.test/ws', 'token-abc');
+    client.connect();
+    fake().drop();
+
+    expect(client.getStatus()).toBe('reconnecting');
   });
 
   it('al desconectarse queda inactivo y no reporta reconexión', () => {
