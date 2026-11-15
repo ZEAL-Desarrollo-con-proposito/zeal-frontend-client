@@ -49,7 +49,10 @@ export function notificationsReducer(
       return {
         ...state,
         status: 'ready',
-        items: state.pending.reduce(upsert, [...action.items].sort(byNewest)),
+        items: state.pending.reduce(
+          (items, notification) => upsert(items, notification),
+          [...action.items].sort(byNewest),
+        ),
         pending: [],
       };
     case 'load-failure':

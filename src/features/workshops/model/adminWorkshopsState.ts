@@ -43,7 +43,10 @@ export function adminWorkshopsReducer(
         ...state,
         status: 'ready',
         pending: [],
-        workshops: state.pending.reduce(insertIfAbsent, action.workshops),
+        workshops: state.pending.reduce(
+          (workshops, workshop) => insertIfAbsent(workshops, workshop),
+          action.workshops,
+        ),
       };
     case 'load-failure':
       return action.requestId === state.requestId ? { ...state, status: 'error' } : state;

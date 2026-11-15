@@ -42,7 +42,10 @@ export function adminProjectsReducer(
         ...state,
         status: 'ready',
         pending: [],
-        projects: state.pending.reduce(insertIfAbsent, action.projects),
+        projects: state.pending.reduce(
+          (projects, project) => insertIfAbsent(projects, project),
+          action.projects,
+        ),
       };
     case 'load-failure':
       return action.requestId === state.requestId ? { ...state, status: 'error' } : state;

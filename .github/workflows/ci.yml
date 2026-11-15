@@ -5,14 +5,17 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
-permissions:
-  contents: read
-  pull-requests: read
+# Sin permisos por defecto: cada job pide solo los suyos.
+permissions: {}
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -21,7 +24,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      # Sin scripts de instalación: ninguna dependencia ejecuta código al instalarse.
+      - run: npm ci --ignore-scripts
       - name: Tipos, lint, formato y pruebas con cobertura
         run: npm run verify
       - name: Calidad con SonarQube Cloud
@@ -34,3 +38,35 @@ jobs:
             -Dsonar.qualitygate.wait=true
       - name: Build de producción
         run: npm run build
+
+  # HU-FE-19 (ADR-13): el nodo web del despliegue (zeal-infra-compose) descarga
+  # ghcr.io/<organización>/zeal-frontend-client. Solo un push a main (o una ejecución manual sobre
+  # main) que pasó `verify` publica la imagen, con el SHA corto y con latest. Un PR nunca publica.
+  publish:
+    needs: verify
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publish-${{ github.repository }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - id: tag
+        run: echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construir y publicar
+        env:
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          ref="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')/zeal-frontend-client"
+          docker build -t "$ref:$TAG" -t "$ref:latest" .
+          docker push "$ref:$TAG"
+          docker push "$ref:latest"
