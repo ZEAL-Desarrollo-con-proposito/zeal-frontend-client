@@ -2,3 +2,5 @@ dist
 coverage
 package-lock.json
 public/mockServiceWorker.js
+# Reportes generados por Lighthouse (evidencia, no se editan)
+docs/evidencias/lighthouse/*.html

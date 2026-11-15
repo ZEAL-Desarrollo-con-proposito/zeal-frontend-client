@@ -78,6 +78,10 @@ sección, la pantalla anterior sigue a la vista hasta que llega la nueva. El SDK
 (`livekit-client`, ≈520 kB) solo se descarga al entrar a una sala de video: es la única excepción
 al límite de 500 kB por paquete (`vite.config.ts`).
 
+**Lighthouse en el despliegue (REND-1):** 97 en móvil y 99 en escritorio para el inicio de sesión;
+96 y 100 para el catálogo de talleres (meta: 90 o más). Reportes y método en
+[`docs/evidencias/lighthouse/`](docs/evidencias/lighthouse/README.md).
+
 ## Estructura
 
 ```
