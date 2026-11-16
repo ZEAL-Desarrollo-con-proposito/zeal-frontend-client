@@ -4,7 +4,12 @@ import { server } from '@/mocks/server';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/errors';
 import { buildSession } from '@/test/credentials';
-import { sendTelemetry, TELEMETRY_ENDPOINT } from './telemetryApi';
+import {
+  sendTelemetry,
+  TELEMETRY_ENDPOINT,
+  TELEMETRY_MAX_EVENTS,
+  TELEMETRY_MAX_VALUE_MS,
+} from './telemetryApi';
 
 const REPORT = { events: [{ type: 'latencia', name: 'notificacion_recibida', valueMs: 180 }] };
 
@@ -61,7 +66,7 @@ describe('telemetryApi.sendTelemetry', () => {
     await expect(sendTelemetry(REPORT)).rejects.toBeInstanceOf(ApiError);
   });
 
-  describe('contrato simulado de vistas e interacción (propuesta a HU-BE-25)', () => {
+  describe('contrato del backend (TelemetryBatch del Real-Time Gateway)', () => {
     beforeEach(() => {
       configureHttpAuth({
         accessToken: buildSession('EMPLEADO').accessToken,
@@ -69,35 +74,52 @@ describe('telemetryApi.sendTelemetry', () => {
       });
     });
 
-    it('acepta una vista y un tiempo de interacción con ruta saneada', async () => {
+    it('acepta errores, uso y latencias, con ruta saneada y tiempos de 0 a 2 minutos', async () => {
       await expect(
         sendTelemetry({
           events: [
-            { type: 'vista', route: '/empleado/mis-citas' },
-            { type: 'interaccion', route: '/empleado/mis-citas', seconds: 42 },
+            { type: 'error', name: 'error_api', route: '/empleado/mis-citas' },
+            { type: 'uso', name: 'vista', route: '/empleado/mis-citas' },
+            {
+              type: 'latencia',
+              name: 'interaccion',
+              route: '/empleado/mis-citas',
+              valueMs: TELEMETRY_MAX_VALUE_MS,
+            },
+            { type: 'latencia', name: 'notificacion_recibida', valueMs: 0 },
           ],
         }),
       ).resolves.toBeUndefined();
     });
 
+    const event = { type: 'uso', name: 'vista', route: '/empleado/mis-citas' };
+
     it.each([
-      ['una vista sin ruta', { type: 'vista' }],
-      ['una vista con identificadores en la ruta', { type: 'vista', route: '/empleado/usr-001' }],
-      ['una interacción sin segundos', { type: 'interaccion', route: '/empleado/mis-citas' }],
+      ['un evento que no es un objeto', [null]],
+      ['un tipo fuera del contrato (la vista de antes)', [{ type: 'vista', route: '/empleado' }]],
       [
-        'una interacción de cero segundos',
-        { type: 'interaccion', route: '/empleado/mis-citas', seconds: 0 },
+        'un tipo fuera del contrato (la interacción de antes)',
+        [{ type: 'interaccion', route: '/empleado', seconds: 42 }],
       ],
+      ['un evento sin nombre', [{ type: 'uso', route: '/empleado' }]],
+      ['un nombre con mayúsculas', [{ ...event, name: 'Vista' }]],
+      ['una ruta con identificadores', [{ ...event, route: '/empleado/usr-001' }]],
+      ['una ruta que no es texto', [{ ...event, route: 7 }]],
+      ['un valueMs que no es número', [{ ...event, valueMs: '42' }]],
+      ['un valueMs con decimales', [{ ...event, valueMs: 1.5 }]],
+      ['un valueMs negativo', [{ ...event, valueMs: -1 }]],
+      ['un valueMs de más de 2 minutos', [{ ...event, valueMs: TELEMETRY_MAX_VALUE_MS + 1 }]],
+      ['ningún evento', []],
       [
-        'una interacción de más de 30 minutos',
-        { type: 'interaccion', route: '/empleado/mis-citas', seconds: 1801 },
+        `más de ${String(TELEMETRY_MAX_EVENTS)} eventos`,
+        Array.from({ length: TELEMETRY_MAX_EVENTS + 1 }, () => event),
       ],
-      [
-        'una interacción con segundos decimales',
-        { type: 'interaccion', route: '/empleado/mis-citas', seconds: 1.5 },
-      ],
-    ])('rechaza %s', async (_caso, event) => {
-      await expect(sendTelemetry({ events: [event] })).rejects.toMatchObject({ status: 400 });
+    ])('rechaza %s', async (_caso, events) => {
+      await expect(sendTelemetry({ events })).rejects.toMatchObject({ status: 400 });
+    });
+
+    it('rechaza un cuerpo sin eventos', async () => {
+      await expect(sendTelemetry({ reporte: [event] })).rejects.toMatchObject({ status: 400 });
     });
   });
 });

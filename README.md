@@ -558,6 +558,23 @@ ahí hasta el primer cuadro que pinta después de procesarlo y lo envía como ev
   logs del backend; el propio error de telemetría no lleva texto libre ni stack.
 - Uso por funcionalidad se acumula y se envía en reportes de hasta 20 eventos cada 30 s, con
   `keepalive` al ocultar la pestaña. Los nombres usados son solo los del contrato.
+- **Navegación (tablero de negocio):** cada sección visitada es un evento de uso `vista`, y el
+  tiempo con la pantalla visible es una latencia `interaccion`, de donde sale el tiempo promedio de
+  interacción. Ambos llevan la ruta saneada. Un tramo de menos de 1 s no cuenta como interacción, y
+  uno largo se recorta a 2 min, el mayor `valueMs` del contrato. Se envían al dejar la pantalla o
+  al ocultar la pestaña, en lotes de máximo 20.
+
+```json
+{
+  "events": [
+    { "type": "uso", "name": "vista", "route": "/empleado/mis-citas" },
+    { "type": "latencia", "name": "interaccion", "route": "/empleado/mis-citas", "valueMs": 42400 }
+  ]
+}
+```
+
+El simulador valida las mismas reglas que el backend (`TelemetryBatch`): un evento de otro tipo,
+sin nombre, con identificadores en la ruta o con un `valueMs` fuera de 0–120 000 recibe `400`.
 
 ## Tiempo real (RT-2)
 

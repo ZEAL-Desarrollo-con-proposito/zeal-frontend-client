@@ -1,17 +1,23 @@
-import { sendTelemetry } from './telemetryApi';
+import { sendTelemetry, TELEMETRY_MAX_EVENTS, TELEMETRY_MAX_VALUE_MS } from './telemetryApi';
 
 /** Un tramo de menos de este tiempo es un paso por la pantalla, no una interacción. */
 export const MIN_INTERACTION_MS = 1000;
 
-/** Tope de un tramo: una pestaña olvidada abierta no debe inflar el tiempo promedio. */
-export const MAX_INTERACTION_SECONDS = 1800;
+/**
+ * Tope de un tramo: el mayor `valueMs` del contrato (2 min). Además, una pestaña olvidada abierta
+ * no infla el tiempo promedio.
+ */
+export const MAX_INTERACTION_MS = TELEMETRY_MAX_VALUE_MS;
 
 /**
- * Eventos de navegación que se proponen a HU-BE-25 para el tablero de negocio ("funcionalidades
- * más usadas" y "tiempo promedio de interacción"). Solo llevan la ruta saneada y segundos.
+ * Eventos de navegación para el tablero de negocio, en el formato de `POST /api/telemetria`: la
+ * vista de una sección es un evento de uso (`vista`) y el tiempo con la pantalla visible, una
+ * latencia (`interaccion`, de donde sale el tiempo promedio de interacción). Solo llevan la ruta
+ * saneada.
  */
 export type NavigationEvent =
-  { type: 'vista'; route: string } | { type: 'interaccion'; route: string; seconds: number };
+  | { type: 'uso'; name: 'vista'; route: string }
+  | { type: 'latencia'; name: 'interaccion'; route: string; valueMs: number };
 
 export interface NavigationReport {
   events: NavigationEvent[];
@@ -51,18 +57,18 @@ export function createNavigationTelemetry({
   function recordInteraction(): void {
     closeVisibleSpan();
     if (route !== null && visibleMs >= MIN_INTERACTION_MS) {
-      const seconds = Math.min(MAX_INTERACTION_SECONDS, Math.round(visibleMs / 1000));
-      pending.push({ type: 'interaccion', route, seconds });
+      const valueMs = Math.min(MAX_INTERACTION_MS, Math.round(visibleMs));
+      pending.push({ type: 'latencia', name: 'interaccion', route, valueMs });
     }
     visibleMs = 0;
   }
 
+  /** Envía lo acumulado en reportes de máximo 20 eventos: uno con más se rechazaría entero. */
   function flush(): void {
-    if (pending.length === 0) {
-      return;
+    while (pending.length > 0) {
+      // Una medición perdida no justifica más tráfico: no se reintenta el reporte.
+      void send({ events: pending.splice(0, TELEMETRY_MAX_EVENTS) }).catch(() => undefined);
     }
-    // Una medición perdida no justifica más tráfico: no se reintenta el reporte.
-    void send({ events: pending.splice(0) }).catch(() => undefined);
   }
 
   return {
@@ -71,8 +77,12 @@ export function createNavigationTelemetry({
       recordInteraction();
       route = next ?? null;
       if (route !== null) {
-        pending.push({ type: 'vista', route });
+        pending.push({ type: 'uso', name: 'vista', route });
         visibleSince = isVisible() ? now() : null;
+      }
+      // Quien navega mucho sin ocultar la pestaña no acumula sin límite: el lote lleno se envía.
+      if (pending.length >= TELEMETRY_MAX_EVENTS) {
+        flush();
       }
     },
     /** La persona dejó la pantalla (navegó a otra o cerró sesión): se envía lo acumulado. */

@@ -1,81 +1,61 @@
 import { http, HttpResponse } from 'msw';
-import { TELEMETRY_ENDPOINT } from '@/shared/telemetry/telemetryApi';
+import {
+  TELEMETRY_ENDPOINT,
+  TELEMETRY_MAX_EVENTS,
+  TELEMETRY_MAX_VALUE_MS,
+} from '@/shared/telemetry/telemetryApi';
 import { authenticate, errorBody } from './mockAuth';
 
-/** Eventos por envío que acepta el backend. */
-const MAX_EVENTS = 20;
-
-/** Tamaño máximo de un reporte, como el límite que pondrá el backend (tarea 461). */
+/** Tamaño máximo de un reporte, como el límite del backend. */
 const MAX_REPORT_BYTES = 16 * 1024;
 
-/** Ruta del SPA sin identificadores, según el contrato `POST /api/telemetria`. */
+/** Tipos de evento del contrato (`TelemetryBatch.Type` en el Real-Time Gateway). */
+const EVENT_TYPES = new Set(['error', 'uso', 'latencia']);
+
+/** Nombre de un evento: minúsculas, dígitos y guion bajo. */
+const EVENT_NAME_PATTERN = /^[a-z0-9_]{1,40}$/;
+
+/** Ruta del SPA sin identificadores. */
 const TELEMETRY_ROUTE_PATTERN = /^(\/[a-z-]{1,30}){0,4}\/?$/;
 
-/** Tiempo máximo de un tramo de interacción, igual que el que aplica el cliente. */
-const MAX_INTERACTION_SECONDS = 1800;
-
-function isTelemetryReport(value: unknown): value is { events: unknown } {
-  return typeof value === 'object' && value !== null && 'events' in value;
-}
-
-function isErrorEvent(value: unknown): value is { type: 'error'; route?: unknown } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    (value as { type?: unknown }).type === 'error'
-  );
-}
-
-function isNavigationEvent(
-  value: unknown,
-): value is { type: 'vista' | 'interaccion'; route?: unknown; seconds?: unknown } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    ((value as { type?: unknown }).type === 'vista' ||
-      (value as { type?: unknown }).type === 'interaccion')
-  );
-}
-
-function isValidRoute(route: unknown): boolean {
-  return typeof route === 'string' && TELEMETRY_ROUTE_PATTERN.test(route);
-}
-
-function isValidInteractionTime(seconds: unknown): boolean {
-  return (
-    typeof seconds === 'number' &&
-    Number.isInteger(seconds) &&
-    seconds >= 1 &&
-    seconds <= MAX_INTERACTION_SECONDS
-  );
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 /**
- * Motivo por el que un evento no cumple el contrato; `null` si lo cumple. Los errores y las vistas
- * llevan una ruta saneada (propuesta a HU-BE-25 para las vistas); la interacción suma de 1 s a
- * 30 min.
+ * Motivo por el que un evento no cumple el contrato de `POST /api/telemetria`; `null` si lo
+ * cumple. Valida lo mismo que el backend (`TelemetryBatch`): tipo y nombre obligatorios, ruta
+ * opcional sin identificadores y `valueMs` opcional de 0 a 120 000.
  */
 function rejectionOf(event: unknown): string | null {
-  if (isErrorEvent(event) && !isValidRoute(event.route)) {
-    return 'La ruta del error no cumple el contrato.';
+  if (!isRecord(event) || typeof event.type !== 'string' || !EVENT_TYPES.has(event.type)) {
+    return 'El tipo de evento no es error, uso ni latencia.';
   }
-  if (!isNavigationEvent(event)) {
-    return null;
+  if (typeof event.name !== 'string' || !EVENT_NAME_PATTERN.test(event.name)) {
+    return 'Nombre inválido';
   }
-  if (!isValidRoute(event.route)) {
-    return 'La ruta de la vista no cumple el contrato.';
+  if (
+    event.route !== undefined &&
+    (typeof event.route !== 'string' || !TELEMETRY_ROUTE_PATTERN.test(event.route))
+  ) {
+    return 'Ruta inválida';
   }
-  return event.type === 'interaccion' && !isValidInteractionTime(event.seconds)
-    ? 'El tiempo de interacción no cumple el contrato.'
-    : null;
+  if (
+    event.valueMs !== undefined &&
+    (typeof event.valueMs !== 'number' ||
+      !Number.isInteger(event.valueMs) ||
+      event.valueMs < 0 ||
+      event.valueMs > TELEMETRY_MAX_VALUE_MS)
+  ) {
+    return 'valueMs debe estar entre 0 y 120000.';
+  }
+  return null;
 }
 
 /**
- * Endpoint de telemetría simulado (HU-BE-25): solo con sesión, `{ events: [1 a 20] }`, ruta válida para
- * errores y límite de tamaño. Acepta el reporte sin guardarlo; en el navegador se ve en la pestaña de
- * red de las herramientas.
+ * Endpoint de telemetría simulado (HU-BE-25), con las mismas reglas que el backend: solo con sesión,
+ * `{ events: [1 a 20] }` con eventos válidos y límite de tamaño. Acepta el reporte sin guardarlo; en
+ * el navegador se ve en la pestaña de red de las herramientas.
  */
 export const telemetryHandlers = [
   http.post(`*${TELEMETRY_ENDPOINT}`, async ({ request }) => {
@@ -93,22 +73,20 @@ export const telemetryHandlers = [
     } catch {
       return errorBody(400, 'Bad Request', 'El reporte no es JSON.');
     }
-    const events = isTelemetryReport(report) ? report.events : null;
-    if (!Array.isArray(events) || events.length < 1 || events.length > MAX_EVENTS) {
+    const events = isRecord(report) ? report.events : null;
+    if (!Array.isArray(events) || events.length < 1 || events.length > TELEMETRY_MAX_EVENTS) {
       return errorBody(
         400,
         'Bad Request',
-        `El reporte debe traer de 1 a ${String(MAX_EVENTS)} eventos.`,
+        `El reporte debe traer de 1 a ${String(TELEMETRY_MAX_EVENTS)} eventos.`,
       );
     }
-
     for (const event of events) {
       const rejection = rejectionOf(event);
       if (rejection !== null) {
         return errorBody(400, 'Bad Request', rejection);
       }
     }
-
     const correlationId = request.headers.get('X-Request-Id');
     return new HttpResponse(null, {
       status: 202,
