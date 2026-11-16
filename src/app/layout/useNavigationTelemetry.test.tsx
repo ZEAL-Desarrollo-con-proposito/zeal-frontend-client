@@ -7,6 +7,7 @@ import { registerAppTelemetryRoutes } from '../telemetryRoutes';
 
 interface Reported {
   type: string;
+  name: string;
   route?: string;
 }
 
@@ -21,7 +22,7 @@ function captureNavigation(): Reported[] {
         .json()
         .then((report: { events: Reported[] }) => {
           events.push(
-            ...report.events.filter(({ type }) => type === 'vista' || type === 'interaccion'),
+            ...report.events.filter(({ name }) => name === 'vista' || name === 'interaccion'),
           );
         });
     }
@@ -51,10 +52,10 @@ describe('Telemetría de navegación (HU-FE-25)', () => {
     );
 
     await waitFor(() => {
-      expect(reported).toContainEqual({ type: 'vista', route: '/empleado/inicio' });
+      expect(reported).toContainEqual({ type: 'uso', name: 'vista', route: '/empleado/inicio' });
     });
     await waitFor(() => {
-      expect(reported).toContainEqual({ type: 'vista', route: '/empleado/mis-citas' });
+      expect(reported).toContainEqual({ type: 'uso', name: 'vista', route: '/empleado/mis-citas' });
     });
     expect(reported.every(({ route }) => route?.startsWith('/empleado/'))).toBe(true);
   });

@@ -1,10 +1,10 @@
-import { sendTelemetry } from '@/shared/telemetry/telemetryApi';
+import { sendTelemetry, TELEMETRY_MAX_EVENTS } from '@/shared/telemetry/telemetryApi';
 
 /** Cada cuánto se envía el uso acumulado, si hay algo que reportar. */
 export const USAGE_REPORT_EVERY_MS = 30_000;
 
 /** Máximo de eventos por envío (el backend rechaza más de 20). */
-export const USAGE_MAX_EVENTS = 20;
+export const USAGE_MAX_EVENTS = TELEMETRY_MAX_EVENTS;
 
 /** Nombres de uso del contrato `POST /api/telemetria`. */
 export type UsageTelemetryName =

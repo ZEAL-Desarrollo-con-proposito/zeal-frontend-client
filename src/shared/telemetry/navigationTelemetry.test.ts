@@ -4,16 +4,25 @@ import { server } from '@/mocks/server';
 import { configureHttpAuth } from '@/shared/api/httpClient';
 import { buildSession } from '@/test/credentials';
 import type { NavigationReport } from './navigationTelemetry';
-import { TELEMETRY_ENDPOINT } from './telemetryApi';
+import { TELEMETRY_ENDPOINT, TELEMETRY_MAX_EVENTS } from './telemetryApi';
 import {
   createNavigationTelemetry,
-  MAX_INTERACTION_SECONDS,
+  MAX_INTERACTION_MS,
   MIN_INTERACTION_MS,
   stopTrackingViews,
   trackView,
 } from './navigationTelemetry';
 
 type Send = (report: NavigationReport) => Promise<void>;
+
+/** Eventos del contrato de `POST /api/telemetria`. */
+const vista = (route: string) => ({ type: 'uso', name: 'vista', route });
+const interaccion = (route: string, valueMs: number) => ({
+  type: 'latencia',
+  name: 'interaccion',
+  route,
+  valueMs,
+});
 
 function setup({ visible = true }: { visible?: boolean } = {}) {
   const clock = { now: 1_000_000 };
@@ -37,10 +46,7 @@ describe('navigationTelemetry', () => {
 
     expect(send).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledWith({
-      events: [
-        { type: 'vista', route: '/empleado/mis-citas' },
-        { type: 'interaccion', route: '/empleado/mis-citas', seconds: 42 },
-      ],
+      events: [vista('/empleado/mis-citas'), interaccion('/empleado/mis-citas', 42_400)],
     });
   });
 
@@ -56,10 +62,7 @@ describe('navigationTelemetry', () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[1]?.[0]).toEqual({
-      events: [
-        { type: 'vista', route: '/empleado/talleres' },
-        { type: 'interaccion', route: '/empleado/talleres', seconds: 7 },
-      ],
+      events: [vista('/empleado/talleres'), interaccion('/empleado/talleres', 7_000)],
     });
   });
 
@@ -70,7 +73,7 @@ describe('navigationTelemetry', () => {
     clock.now += MIN_INTERACTION_MS - 1;
     navigation.leave();
 
-    expect(send).toHaveBeenCalledWith({ events: [{ type: 'vista', route: '/empleado/inicio' }] });
+    expect(send).toHaveBeenCalledWith({ events: [vista('/empleado/inicio')] });
   });
 
   it('una pestaña olvidada abierta no pasa del tope de interacción', () => {
@@ -80,11 +83,9 @@ describe('navigationTelemetry', () => {
     clock.now += 3 * 60 * 60 * 1000;
     navigation.leave();
 
-    expect(send.mock.calls[0]?.[0].events[1]).toEqual({
-      type: 'interaccion',
-      route: '/empleado/inicio',
-      seconds: MAX_INTERACTION_SECONDS,
-    });
+    expect(send.mock.calls[0]?.[0].events[1]).toEqual(
+      interaccion('/empleado/inicio', MAX_INTERACTION_MS),
+    );
   });
 
   it('solo cuenta el tiempo con la pestaña visible', () => {
@@ -100,13 +101,10 @@ describe('navigationTelemetry', () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[0]?.[0]).toEqual({
-      events: [
-        { type: 'vista', route: '/empleado/inicio' },
-        { type: 'interaccion', route: '/empleado/inicio', seconds: 10 },
-      ],
+      events: [vista('/empleado/inicio'), interaccion('/empleado/inicio', 10_000)],
     });
     expect(send.mock.calls[1]?.[0]).toEqual({
-      events: [{ type: 'interaccion', route: '/empleado/inicio', seconds: 5 }],
+      events: [interaccion('/empleado/inicio', 5_000)],
     });
   });
 
@@ -119,7 +117,7 @@ describe('navigationTelemetry', () => {
     clock.now += 3_000;
     navigation.leave();
 
-    expect(send.mock.calls[0]?.[0].events[1]).toMatchObject({ seconds: 3 });
+    expect(send.mock.calls[0]?.[0].events[1]).toMatchObject({ valueMs: 3_000 });
   });
 
   it('una ruta que no se reporta no envía nada ni cuenta tiempo', () => {
@@ -155,6 +153,21 @@ describe('navigationTelemetry', () => {
     await Promise.resolve();
 
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it(`quien navega mucho sin ocultar la pestaña envía lotes de máximo ${String(TELEMETRY_MAX_EVENTS)} eventos`, () => {
+    const { clock, send, navigation } = setup();
+
+    for (let screen = 0; screen < 11; screen += 1) {
+      navigation.enter('/empleado/inicio');
+      clock.now += 2_000;
+    }
+    navigation.leave();
+
+    const reports = send.mock.calls.map(([report]) => report.events);
+    expect(reports.every((events) => events.length <= TELEMETRY_MAX_EVENTS)).toBe(true);
+    expect(reports.flat()).toHaveLength(22);
+    expect(reports.flat().filter(({ type }) => type === 'uso')).toHaveLength(11);
   });
 });
 
@@ -198,11 +211,33 @@ describe('navegación de la pestaña', () => {
     });
 
     expect(reports[0]?.events).toEqual([
-      { type: 'vista', route: '/empleado/inicio' },
-      { type: 'interaccion', route: '/empleado/inicio', seconds: 4 },
+      vista('/empleado/inicio'),
+      interaccion('/empleado/inicio', 4_000),
     ]);
-    expect(reports[1]?.events).toEqual([
-      { type: 'interaccion', route: '/empleado/inicio', seconds: 2 },
-    ]);
+    expect(reports[1]?.events).toEqual([interaccion('/empleado/inicio', 2_000)]);
+  });
+
+  it('el backend acepta lo que reporta la pestaña (contrato de POST /api/telemetria)', async () => {
+    const statuses: number[] = [];
+    server.events.on('response:mocked', ({ response }) => {
+      statuses.push(response.status);
+    });
+    configureHttpAuth({
+      accessToken: buildSession('EMPLEADO').accessToken,
+      renew: () => Promise.resolve(null),
+    });
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    trackView('/empleado/inicio');
+    vi.advanceTimersByTime(4_000);
+    trackView('/empleado/mis-citas');
+    vi.advanceTimersByTime(3 * 60 * 60 * 1000);
+    stopTrackingViews();
+    await vi.waitFor(() => {
+      expect(statuses).toHaveLength(1);
+    });
+    server.events.removeAllListeners();
+
+    expect(statuses).toEqual([202]);
   });
 });
