@@ -9,16 +9,9 @@ import settingsIcon from '@/assets/icons/settings.svg';
 import starIcon from '@/assets/icons/star.svg';
 import trendingIcon from '@/assets/icons/trending.svg';
 import usersIcon from '@/assets/icons/users.svg';
-import videoIcon from '@/assets/icons/video.svg';
 import type { Role } from '@/features/auth/model/session';
 import type { AvatarTone } from '@/shared/ui/Avatar/Avatar';
-import {
-  ADMIN_PATHS,
-  EMPLOYEE_PATHS,
-  PSYCHOLOGIST_PATHS,
-  ROLE_BASE_PATH,
-  ROLE_HOME_PATH,
-} from './paths';
+import { ADMIN_PATHS, EMPLOYEE_PATHS, PSYCHOLOGIST_PATHS, ROLE_HOME_PATH } from './paths';
 
 export interface NavItem {
   label: string;
@@ -26,10 +19,6 @@ export interface NavItem {
   icon: string;
   /** Qué encuentra la persona en la sección (accesos rápidos y estado vacío). */
   description: string;
-}
-
-function section(role: Role, segment: string): string {
-  return `${ROLE_BASE_PATH[role]}/${segment}`;
 }
 
 /** Menú lateral de cada rol (Figma: componentes Nav / Empleado, Nav / Psicologo y Nav / Admin). */
@@ -65,12 +54,6 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
       icon: briefcaseIcon,
       description: 'Postúlate a convocatorias internas y gana experiencia.',
     },
-    {
-      label: 'ZEAL Path',
-      path: section('EMPLEADO', 'zeal-path'),
-      icon: trendingIcon,
-      description: 'Sigue tu plan de desarrollo profesional.',
-    },
 
     {
       label: 'Mensajes',
@@ -87,34 +70,16 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
       description: 'Tus reservas del día y el acceso a cada sesión.',
     },
     {
-      label: 'Pacientes',
-      path: section('PSICOLOGO', 'pacientes'),
-      icon: usersIcon,
-      description: 'Las personas que acompañas y su historial de sesiones.',
-    },
-    {
       label: 'Mensajes',
       path: PSYCHOLOGIST_PATHS.messages,
       icon: messageIcon,
       description: 'Conversa en tiempo real con tus pacientes.',
     },
     {
-      label: 'Talleres',
-      path: section('PSICOLOGO', 'talleres'),
-      icon: videoIcon,
-      description: 'Programa y dirige talleres comunitarios en vivo.',
-    },
-    {
       label: 'Disponibilidad',
       path: PSYCHOLOGIST_PATHS.availability,
       icon: clockIcon,
       description: 'Crea y elimina franjas que los empleados ven al instante.',
-    },
-    {
-      label: 'Resumen',
-      path: section('PSICOLOGO', 'resumen'),
-      icon: trendingIcon,
-      description: 'Un vistazo a tu actividad profesional.',
     },
   ],
   ADMIN: [
@@ -144,15 +109,15 @@ export const NAVIGATION: Record<Role, readonly NavItem[]> = {
     },
     {
       label: 'Reportes',
-      path: section('ADMIN', 'reportes'),
+      path: ADMIN_PATHS.reports,
       icon: trendingIcon,
       description: 'Reportes agregados de la organización, nunca individuales.',
     },
     {
       label: 'Organización',
-      path: section('ADMIN', 'organizacion'),
+      path: ADMIN_PATHS.organization,
       icon: settingsIcon,
-      description: 'Configura los datos de tu empresa.',
+      description: 'Los datos de tu empresa y de las personas que la forman en ZEAL.',
     },
   ],
 };

@@ -19,14 +19,10 @@ describe('Layout base con menú por rol', () => {
   it.each<[Role, string[], string]>([
     [
       'EMPLEADO',
-      ['Inicio', 'Bienestar', 'Mis citas', 'Talleres', 'Proyectos', 'ZEAL Path', 'Mensajes'],
+      ['Inicio', 'Bienestar', 'Mis citas', 'Talleres', 'Proyectos', 'Mensajes'],
       'Nexura S.A.S. · Empleado',
     ],
-    [
-      'PSICOLOGO',
-      ['Mi agenda', 'Pacientes', 'Mensajes', 'Talleres', 'Disponibilidad', 'Resumen'],
-      'ZEAL · Psicólogo/a',
-    ],
+    ['PSICOLOGO', ['Mi agenda', 'Mensajes', 'Disponibilidad'], 'ZEAL · Psicólogo/a'],
     [
       'ADMIN',
       ['Panel', 'Empleados', 'Proyectos', 'Talleres', 'Reportes', 'Organización'],
@@ -159,9 +155,9 @@ describe('Layout base con menú por rol', () => {
 
       await user.click(screen.getByRole('button', { name: 'Abrir menú' }));
       const dialog = screen.getByRole('dialog', { name: 'Menú' });
-      await user.click(within(dialog).getByRole('link', { name: 'ZEAL Path' }));
+      await user.click(within(dialog).getByRole('link', { name: 'Proyectos' }));
 
-      expect(router.state.location.pathname).toBe('/empleado/zeal-path');
+      expect(router.state.location.pathname).toBe('/empleado/proyectos');
       await waitFor(() => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       });

@@ -52,6 +52,12 @@ export const PsychologistMessagesPage = lazy(() =>
 export const EmployeesPage = lazy(() =>
   admin().then((section) => ({ default: section.EmployeesPage })),
 );
+export const ReportsPage = lazy(() =>
+  admin().then((section) => ({ default: section.ReportsPage })),
+);
+export const OrganizationPage = lazy(() =>
+  admin().then((section) => ({ default: section.OrganizationPage })),
+);
 export const AdminProjectsPage = lazy(() =>
   admin().then((section) => ({ default: section.AdminProjectsPage })),
 );
