@@ -36,6 +36,8 @@ export const ADMIN_PATHS = {
   workshops: `${ROLE_BASE_PATH.ADMIN}/talleres`,
   workshopRoom: `${ROLE_BASE_PATH.ADMIN}/talleres/sala/:workshopId`,
   employees: `${ROLE_BASE_PATH.ADMIN}/empleados`,
+  reports: `${ROLE_BASE_PATH.ADMIN}/reportes`,
+  organization: `${ROLE_BASE_PATH.ADMIN}/organizacion`,
 } as const;
 
 export const EMPLOYEE_PATHS = {

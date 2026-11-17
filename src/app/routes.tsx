@@ -17,10 +17,12 @@ import {
   EmployeeMessagesPage,
   EmployeesPage,
   MyWorkshopsPage,
+  OrganizationPage,
   ProjectDetailPage,
   ProjectsPage,
   PsychologistMessagesPage,
   PsychologistPage,
+  ReportsPage,
   SessionRoomPage,
   WorkshopRoomPage,
   WorkshopsPage,
@@ -30,19 +32,11 @@ import { AccessBoundary } from './pages/AccessBoundary';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { SectionPage } from './pages/SectionPage';
 import { UnexpectedErrorPage } from './pages/UnexpectedErrorPage';
-import {
-  ADMIN_PATHS,
-  EMPLOYEE_PATHS,
-  PATHS,
-  PSYCHOLOGIST_PATHS,
-  ROLE_BASE_PATH,
-  ROLE_HOME_PATH,
-} from './paths';
+import { ADMIN_PATHS, EMPLOYEE_PATHS, PATHS, PSYCHOLOGIST_PATHS, ROLE_BASE_PATH } from './paths';
 import { RootLayout } from './RootLayout';
 
-/** Secciones del menú que ya tienen su pantalla; el resto muestra su estado vacío. */
+/** Pantalla de cada sección del menú (las que no están aquí son la pantalla de llegada del rol). */
 const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [PSYCHOLOGIST_PATHS.agenda]: <AgendaPage />,
   [PSYCHOLOGIST_PATHS.availability]: <AvailabilityPage />,
@@ -50,6 +44,8 @@ const SECTION_PAGES: Partial<Record<string, ReactElement>> = {
   [ADMIN_PATHS.projects]: <AdminProjectsPage />,
   [ADMIN_PATHS.workshops]: <AdminWorkshopsPage />,
   [ADMIN_PATHS.employees]: <EmployeesPage />,
+  [ADMIN_PATHS.reports]: <ReportsPage />,
+  [ADMIN_PATHS.organization]: <OrganizationPage />,
   [EMPLOYEE_PATHS.wellbeing]: <DirectoryPage />,
   [EMPLOYEE_PATHS.appointments]: <AppointmentsPage />,
   [EMPLOYEE_PATHS.messages]: <EmployeeMessagesPage />,
@@ -114,8 +110,9 @@ const FULLSCREEN_ROUTES: Record<Role, RouteObject[]> = {
   ],
 };
 
-function sectionElement(path: string, isHome: boolean, fallback: ReactElement): ReactElement {
-  return SECTION_PAGES[path] ?? (isHome ? <HomePage /> : fallback);
+/** Todo ítem del menú tiene su pantalla; los que no están en el mapa son la pantalla de llegada del rol. */
+function sectionElement(path: string): ReactElement {
+  return SECTION_PAGES[path] ?? <HomePage />;
 }
 
 export const routes: RouteObject[] = [
@@ -137,11 +134,7 @@ export const routes: RouteObject[] = [
                 return {
                   path: section.path,
                   handle,
-                  element: sectionElement(
-                    section.path,
-                    section.path === ROLE_HOME_PATH[role],
-                    <SectionPage section={section} />,
-                  ),
+                  element: sectionElement(section.path),
                 };
               }),
               ...(ROLE_ROUTES[role] ?? []),
